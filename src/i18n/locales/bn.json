@@ -1,0 +1,392 @@
+{
+  "notifications": {
+    "notifications": "নোটিফিকেশন",
+    "title": "বিজ্ঞপ্তি",
+    "empty": "আপনার কোনো বিজ্ঞপ্তি নেই।"
+  },
+  "appointmentcard": {
+    "no_upcoming_appointments": "কোনো আসন্ন অ্যাপয়েন্টমেন্ট নেই",
+    "book_a_consultation_to_get_sta": "শুরু করতে একটি পরামর্শ বুক করুন।",
+    "next_appointment": "পরবর্তী অ্যাপয়েন্টমেন্ট"
+  },
+  "appointmentqueuecard": {
+    "yrs": "বছর •",
+    "reason": "কারণ:"
+  },
+  "digestcard": {
+    "preconsultation_digest": "প্রাক-পরামর্শ ডাইজেস্ট",
+    "the_following_information_will": "নিম্নলিখিত তথ্যগুলি এই পরামর্শের জন্য আপনার ডাক্তারের সাথে শেয়ার করা হবে।",
+    "recent_vitals": "সাম্প্রতিক ভাইটালস",
+    "bp": "রক্তচাপ",
+    "heart_rate": "হৃদস্পন্দন",
+    "bpm": "বিপিএম",
+    "temp": "তাপমাত্রা",
+    "f": "°F",
+    "weight": "ওজন",
+    "kg": "কেজি",
+    "current_medicines": "বর্তমান ওষুধ",
+    "attached_reports": "সংযুক্ত রিপোর্ট"
+  },
+  "doctorcard": {
+    "no_recent_doctors": "কোনো সাম্প্রতিক ডাক্তার নেই",
+    "explore_the_directory_to_find_": "একজন ডাক্তার খুঁজে পেতে ডিরেক্টরি অন্বেষণ করুন।",
+    "recent_doctor": "সাম্প্রতিক ডাক্তার"
+  },
+  "hospitalcard": {
+    "km": "কিমি",
+    "er": "ইআর",
+    "24x7": "২৪x৭"
+  },
+  "medicationcard": {
+    "no_prescription_scheduled": "কোনো প্রেসক্রিপশন নির্ধারিত নেই",
+    "your_scheduled_medicines_will_appear": "আপনার নির্ধারিত ওষুধগুলি এখানে প্রদর্শিত হবে।",
+    "next_medication": "পরবর্তী ওষুধ"
+  },
+  "doctordashboard": {
+    "doctor_dashboard": "ডাক্তারের ড্যাশবোর্ড",
+    "welcome_back_dr_smith": "স্বাগতম, ডা. স্মিথ",
+    "pending": "অপেক্ষমাণ",
+    "completed": "সম্পন্ন",
+    "total_today": "আজকের মোট",
+    "todays_queue": "আজকের সিরিয়াল",
+    "no_appointments_today": "আজ কোনো অ্যাপয়েন্টমেন্ট নেই",
+    "schedule": "শিডিউল",
+    "qa_inbox": "প্রশ্নোত্তর ইনবক্স",
+    "patients": "রোগী"
+  },
+  "authotpform": {
+    "enter_the_6digit_code_sent_to": "এখানে পাঠানো ৬-সংখ্যার কোডটি লিখুন",
+    "dev_otp_123456": "(ডেভ ওটিপি: ১২৩৪৫৬)",
+    "resend_code": "কোড পুনরায় পাঠান"
+  },
+  "authphoneform": {
+    "phone_number": "ফোন নম্বর",
+    "enter_your_phone_number": "আপনার ফোন নম্বর লিখুন"
+  },
+  "doctorregistrationform": {
+    "doctor_accounts_require_verifi": "ডাক্তার অ্যাকাউন্টগুলি যাচাই করা প্রয়োজন। প্রমাণপত্রাদি পর্যালোচনা না হওয়া পর্যন্ত আপনার অ্যাকাউন্টটি অপেক্ষমাণ থাকবে।"
+  },
+  "adherencetracker": {
+    "todays_adherence": "আজকের ওষুধ সেবন",
+    "no_medicines_scheduled_for_tod": "আজকের জন্য কোনো ওষুধ নির্ধারিত নেই।",
+    "taken": "নেওয়া হয়েছে",
+    "pending": "অপেক্ষমাণ",
+    "missed": "বাদ পড়েছে",
+    "status": "স্ট্যাটাস"
+  },
+  "aidisclaimer": {
+    "aigenerated_summary": "এআই-উত্পাদিত সারাংশ",
+    "this_interpretation_is_generat": "এই ব্যাখ্যাটি শুধুমাত্র তথ্যগত উদ্দেশ্যে এআই দ্বারা তৈরি করা হয়েছে এবং এটি পেশাদার চিকিৎসা পরামর্শের বিকল্প নয়। কোনো আনুষ্ঠানিক রোগ নির্ণয়ের জন্য সর্বদা একজন লাইসেন্সপ্রাপ্ত স্বাস্থ্যসেবা প্রদানকারীর সাথে পরামর্শ করুন।"
+  },
+  "answercomposer": {
+    "write_your_answer": "আপনার উত্তর লিখুন...",
+    "submit_answer": "উত্তর জমা দিন"
+  },
+  "biomarkerrow": {
+    "ref": "রেফ:"
+  },
+  "medicinecomparecard": {
+    "similarities": "মিল",
+    "differences": "পার্থক্য"
+  },
+  "prescriptioncard": {
+    "prescription": "প্রেসক্রিপশন",
+    "issued": "ইস্যু করা হয়েছে:",
+    "dr_id": "ডা. আইডি:"
+  },
+  "questioncard": {
+    "doctor_response": "ডাক্তারের প্রতিক্রিয়া"
+  },
+  "reportcard": {
+    "attention": "মনোযোগ"
+  },
+  "errorstate": {
+    "retry": "পুনরায় চেষ্টা করুন"
+  },
+  "ai-chat": {
+    "select_consultation": "পরামর্শ নির্বাচন করুন",
+    "choose_a_past_consultation_to_": "আপনার রোগ নির্ণয় এবং প্রেসক্রিপশন সম্পর্কে এআই-কে প্রশ্ন জিজ্ঞাসা করতে একটি পূর্ববর্তী পরামর্শ চয়ন করুন।",
+    "no_past_consultations_found": "কোনো পূর্ববর্তী পরামর্শ পাওয়া যায়নি।"
+  },
+  "doctors": {
+    "doctors_directory": "ডাক্তার ডিরেক্টরি",
+    "find_specialists_and_book_appo": "বিশেষজ্ঞদের খুঁজুন এবং অ্যাপয়েন্টমেন্ট বুক করুন",
+    "consultation_history": "পরামর্শের ইতিহাস",
+    "explore_all_doctors": "সব ডাক্তার খুঁজুন",
+    "specialties": "বিশেষত্ব",
+    "no_doctors_found": "কোনো ডাক্তার পাওয়া যায়নি",
+    "online_doctors": "অনলাইন ডাক্তার",
+    "view_all": "সব দেখুন",
+    "departments": "বিভাগসমূহ",
+    "view_all_departments": "সব বিভাগ দেখুন"
+  },
+  "hospitals": {
+    "locating_nearby_hospitals": "আশেপাশের হাসপাতাল খোঁজা হচ্ছে...",
+    "location_unavailable": "লোকেশন অনুপলব্ধ",
+    "we_need_access_to_your_locatio": "আশেপাশের হাসপাতাল এবং জরুরি কেন্দ্রগুলি খুঁজে পেতে আমাদের আপনার লোকেশনে অ্যাক্সেস প্রয়োজন। অনুগ্রহ করে আপনার ডিভাইসের সেটিংসে লোকেশন পরিষেবা চালু করুন।",
+    "retry": "পুনরায় চেষ্টা করুন"
+  },
+  "prescriptions": {
+    "no_active_prescriptions": "কোনো সক্রিয় প্রেসক্রিপশন নেই।",
+    "my_prescriptions": "আমার প্রেসক্রিপশন",
+    "active_prescriptions": "সক্রিয় প্রেসক্রিপশন",
+    "prescriptions": "প্রেসক্রিপশন"
+  },
+  "reports": {
+    "no_reports_yet": "এখনো কোনো রিপোর্ট নেই",
+    "upload_or_scan_your_lab_report": "এআই-চালিত ব্যাখ্যা পেতে এবং আপনার স্বাস্থ্য মেট্রিক্স ট্র্যাক করতে আপনার ল্যাব রিপোর্ট এবং মেডিকেল ডকুমেন্টগুলি আপলোড বা স্ক্যান করুন।",
+    "my_reports": "আমার রিপোর্ট"
+  },
+  "[consultationid]": {
+    "medicon_ai_assistant": "মেডিকন এআই সহকারী"
+  },
+  "[id]": {
+    "doctor_not_found": "ডাক্তার পাওয়া যায়নি",
+    "profile": "প্রোফাইল",
+    "reviews": "রিভিউ",
+    "experience": "অভিজ্ঞতা",
+    "about": "সম্পর্কে",
+    "consultation_fee": "পরামর্শ ফি",
+    "license_number": "লাইসেন্স নম্বর",
+    "book_appointment": "অ্যাপয়েন্টমেন্ট বুক করুন",
+    "go_back": "ফিরে যান",
+    "er": "(ইআর)",
+    "er_available": "ইআর উপলব্ধ",
+    "24x7_open": "২৪x৭ খোলা",
+    "available_doctors": "প্রাপ্তিসাধ্য ডাক্তার",
+    "no_doctors_currently_listed_fo": "এই হাসপাতালের জন্য বর্তমানে কোনো ডাক্তার তালিকাভুক্ত নেই।",
+    "prescription_details": "প্রেসক্রিপশনের বিবরণ",
+    "issued_on": "ইস্যু করা হয়েছে:",
+    "doctor_id": "ডাক্তার আইডি:",
+    "medicines": "ওষুধ",
+    "ai_demystifier": "এআই ডিমিস্টিফায়ার",
+    "report_details": "রিপোর্টের বিবরণ",
+    "detected_biomarkers": "সনাক্ত করা বায়োমার্কার",
+    "no_specific_biomarkers_were_ex": "এই রিপোর্ট থেকে কোনো নির্দিষ্ট বায়োমার্কার বের করা হয়নি।",
+    "view_original_document": "মূল ডকুমেন্ট দেখুন"
+  },
+  "history": {
+    "history": "ইতিহাস",
+    "no_history_found": "কোনো ইতিহাস পাওয়া যায়নি",
+    "you_havent_had_any_consultatio": "আপনার এখনো কোনো পরামর্শ হয়নি।",
+    "find_a_doctor": "একজন ডাক্তার খুঁজুন"
+  },
+  "[protocol]": {
+    "protocol_not_found": "প্রোটোকল পাওয়া যায়নি।",
+    "call_911_now": "এখনই ৯১১ এ কল করুন",
+    "treating_a_child_or_infant": "একটি শিশু বা নবজাতকের চিকিৎসা করছেন?",
+    "view_pediatric_guidelines": "শিশুরোগ নির্দেশিকা দেখুন",
+    "child_1_yr_puberty": "শিশু (১ বছর - বয়ঃসন্ধি)",
+    "infant_under_1_yr": "নবজাতক (১ বছরের নিচে)",
+    "standard_protocol_applies_for_": "এই বয়স গোষ্ঠীর জন্য স্ট্যান্ডার্ড প্রোটোকল প্রযোজ্য।"
+  },
+  "emergency": {
+    "call_911": "৯১১ এ কল করুন",
+    "emergency_triage": "জরুরি ট্রায়াজ",
+    "life_threatening_instruction": "গুরুতর জরুরি অবস্থার জন্য ৯১১ এ কল করুন, অথবা অফলাইন নির্দেশনার জন্য একটি পরিস্থিতি বেছে নিন।"
+  },
+  "protocol": {
+    "protocol": "প্রোটোকল"
+  },
+  "comparator": {
+    "comparator": "তুলনাকারী"
+  },
+  "compare": {
+    "medicine_comparator": "ওষুধের তুলনাকারী",
+    "medicine_a": "ওষুধ এ",
+    "medicine_b": "ওষুধ বি",
+    "compare": "তুলনা করুন"
+  },
+  "detail": {
+    "detail": "বিস্তারিত"
+  },
+  "explainer": {
+    "medicine_explainer": "ওষুধের ব্যাখ্যাকারী",
+    "class": "শ্রেণী:",
+    "available_forms": "উপলব্ধ ফর্ম",
+    "common_side_effects": "সাধারণ পার্শ্বপ্রতিক্রিয়া",
+    "dietary_conflicts": "খাদ্যতালিকাগত দ্বন্দ্ব",
+    "ai_summary": "এআই সারাংশ",
+    "enter_medicine_name": "ওষুধের নাম লিখুন...",
+    "analyze": "বিশ্লেষণ করুন"
+  },
+  "medicine": {
+    "medicine_intelligence": "মেডিসিন ইন্টেলিজেন্স",
+    "explore_aidriven_insights_abou": "আপনার ওষুধ সম্পর্কে এআই-চালিত অন্তর্দৃষ্টি অন্বেষণ করুন। আরও জানতে, তুলনা করতে বা সম্ভাব্য প্রতিক্রিয়া পরীক্ষা করতে নীচের একটি বিকল্প চয়ন করুন।",
+    "medicine_explainer": "ওষুধের ব্যাখ্যাকারী",
+    "learn_about_forms_side_effects": "ফর্ম, পার্শ্ব প্রতিক্রিয়া এবং খাদ্যতালিকাগত দ্বন্দ্ব সম্পর্কে জানুন।",
+    "medicine_comparator": "ওষুধের তুলনাকারী",
+    "sidebyside_comparison_with_ai_": "এআই যুক্তির সাথে পাশাপাশি তুলনা।",
+    "interaction_checker": "মিথস্ক্রিয়া পরীক্ষক",
+    "crossreference_new_meds_with_y": "আপনার সক্রিয় প্রেসক্রিপশনের সাথে নতুন ওষুধের ক্রস-রেফারেন্স করুন।"
+  },
+  "interaction-checker": {
+    "interaction_checker": "মিথস্ক্রিয়া পরীক্ষক",
+    "crossreferencing_against": "এর বিরুদ্ধে ক্রস-রেফারেন্স করা হচ্ছে",
+    "active_medicines_from_your_pre": "আপনার প্রেসক্রিপশন থেকে সক্রিয় ওষুধ।",
+    "results_for": "এর জন্য ফলাফল",
+    "no_active_prescriptions_to_che": "চেক করার জন্য কোনো সক্রিয় প্রেসক্রিপশন নেই।",
+    "enter_new_medicine_to_check": "চেক করতে নতুন ওষুধ লিখুন...",
+    "check_interactions": "মিথস্ক্রিয়া পরীক্ষা করুন"
+  },
+  "interaction": {
+    "interaction": "মিথস্ক্রিয়া"
+  },
+  "pediatric": {
+    "call_911": "৯১১ এ কল করুন",
+    "pediatric_triage": "শিশুরোগ ট্রায়াজ",
+    "emergency_guidance_for_childre": "শিশু এবং নবজাতকদের জন্য জরুরি নির্দেশনা"
+  },
+  "report": {
+    "report": "রিপোর্ট"
+  },
+  "upload": {
+    "analyzing_report": "রিপোর্ট বিশ্লেষণ করা হচ্ছে...",
+    "our_ai_is_scanning_the_documen": "আমাদের এআই ডকুমেন্ট স্ক্যান করছে এবং ক্লিনিকাল বায়োমার্কারগুলি বের করছে। এতে কয়েক সেকেন্ড সময় লাগতে পারে।",
+    "review_document": "ডকুমেন্ট পর্যালোচনা করুন",
+    "choose_different_file": "Choose Different Report",
+    "submit_for_interpretation": "Continue",
+    "upload_report": "রিপোর্ট আপলোড করুন",
+    "upload_a_lab_report_or_medical": "একটি ল্যাব রিপোর্ট বা মেডিকেল ডকুমেন্ট আপলোড করুন। আমাদের এআই স্বয়ংক্রিয়ভাবে বায়োমার্কারগুলি বের করবে এবং একটি সাধারণ-ভাষার সারাংশ প্রদান করবে।",
+    "choose_from_gallery": "গ্যালারি থেকে চয়ন করুন",
+    "upload_an_image_jpg_png": "একটি ছবি আপলোড করুন (JPG, PNG)",
+    "upload_pdf_document": "PDF ডকুমেন্ট আপলোড করুন",
+    "browse_files_on_your_device": "আপনার ডিভাইসে ফাইল ব্রাউজ করুন",
+    "choose_different_report": "Choose Different Report",
+    "continue": "Continue"
+  },
+  "theme": {
+    "theme": "থিম"
+  },
+  "results": {
+    "ai_recommendations": "এআই সুপারিশ",
+    "doctors_for": "এর জন্য ডাক্তার \"",
+    "no_matching_doctors_found_for_": "এই লক্ষণগুলির জন্য কোনো মিলে যাওয়া ডাক্তার পাওয়া যায়নি।",
+    "book_consultation": "পরামর্শ বুক করুন"
+  },
+  "triage": {
+    "triage": "ট্রায়াজ"
+  },
+  "vitals": {
+    "vitals": "ভাইটালস"
+  },
+  "login": {
+    "change_phone_number": "← ফোন নম্বর পরিবর্তন করুন"
+  },
+  "onboarding": {
+    "skip": "এড়িয়ে যান",
+    "back": "পিছনে",
+    "get_started": "শুরু করুন",
+    "next": "পরবর্তী"
+  },
+  "register": {
+    "choose_your_role": "আপনার ভূমিকা চয়ন করুন",
+    "select_how_you_will_use_medico": "আপনি মেডিকন কীভাবে ব্যবহার করবেন তা নির্বাচন করুন।",
+    "patient": "রোগী",
+    "book_appointments_track_health": "অ্যাপয়েন্টমেন্ট বুক করুন, স্বাস্থ্যের রেকর্ড ট্র্যাক করুন এবং এআই-চালিত অন্তর্দৃষ্টি পান।",
+    "doctor": "ডাক্তার",
+    "manage_consultations_review_pa": "পরামর্শ পরিচালনা করুন, রোগীর রেকর্ড পর্যালোচনা করুন এবং যত্ন প্রদান করুন।",
+    "requires_verification": "যাচাইকরণ প্রয়োজন",
+    "back": "← পিছনে",
+    "complete_your_profile_to_get_s": "শুরু করতে আপনার প্রোফাইল সম্পূর্ণ করুন।"
+  },
+  "confirmation": {
+    "booking_confirmed": "বুকিং নিশ্চিত হয়েছে!",
+    "your_appointment": "আপনার অ্যাপয়েন্টমেন্ট",
+    "has_been_successfully_schedule": "সফলভাবে নির্ধারিত হয়েছে।",
+    "back_to_home": "হোমে ফিরে যান"
+  },
+  "digest": {
+    "could_not_load_booking_details": "বুকিং বিবরণ লোড করা যায়নি",
+    "review_confirm": "পর্যালোচনা এবং নিশ্চিত করুন",
+    "appointment_details": "অ্যাপয়েন্টমেন্টের বিবরণ",
+    "dr": "ডা.",
+    "confirm_booking": "বুকিং নিশ্চিত করুন"
+  },
+  "booking": {
+    "doctor_not_found": "ডাক্তার পাওয়া যায়নি",
+    "book_appointment": "অ্যাপয়েন্টমেন্ট বুক করুন",
+    "consultation_type": "পরামর্শের ধরন",
+    "video_call": "ভিডিও কল",
+    "in_person": "সশরীরে",
+    "select_date": "তারিখ নির্বাচন করুন",
+    "available_time": "উপলব্ধ সময়",
+    "continue": "চালিয়ে যান"
+  },
+  "video-call": {
+    "video_call_room": "ভিডিও কল রুম",
+    "placeholder_video_integration_": "প্লেসহোল্ডার: ভিডিও ইন্টিগ্রেশন মাইলস্টোন ২.১১-এ স্থগিত করা হয়েছে",
+    "waiting_for_doctor_to_join_app": "অ্যাপয়েন্টমেন্টে যোগদানের জন্য ডাক্তারের অপেক্ষায় #",
+    "end_call_mock": "কল শেষ করুন (মক)"
+  },
+  "ask": {
+    "ask_a_doctor": "একজন ডাক্তারকে জিজ্ঞাসা করুন",
+    "select_department": "বিভাগ নির্বাচন করুন",
+    "route_your_question_to_the_rig": "সঠিক বিশেষজ্ঞদের কাছে আপনার প্রশ্ন পাঠান।",
+    "your_question": "আপনার প্রশ্ন",
+    "describe_your_symptoms_or_ask_": "আপনার লক্ষণগুলি বর্ণনা করুন বা আপনার চিকিৎসা সংক্রান্ত প্রশ্নটি স্পষ্টভাবে জিজ্ঞাসা করুন...",
+    "submit_question": "প্রশ্ন জমা দিন"
+  },
+  "qna": {
+    "my_questions": "আমার প্রশ্ন",
+    "you_havent_asked_any_questions": "আপনি এখনও কোনো প্রশ্ন জিজ্ঞাসা করেননি।",
+    "department_inbox": "বিভাগ ইনবক্স",
+    "no_questions_in_your_departmen": "আপনার বিভাগ ইনবক্সে কোনো প্রশ্ন নেই।"
+  },
+  "dashboard": {
+    "welcomeBack": "স্বাগতম ফিরে এসেছেন 👋",
+    "healthOverview": "এখানে আপনার স্বাস্থ্য পর্যালোচনা",
+    "emergencyAccessibility": "ইমারজেন্সি এসওএস। জরুরি প্রোটোকলগুলি অ্যাক্সেস করতে দুবার ট্যাপ করুন।",
+    "emergencySOS": "ইমারজেন্সি এসওএস",
+    "doctors": "ডাক্তার",
+    "reports": "রিপোর্ট",
+    "hospitals": "হাসপাতাল",
+    "meds": "ওষুধ",
+    "pillAi": "পিল এআই",
+    "aiChat": "এআই চ্যাট",
+    "askDoctor": "ডাক্তারকে জিজ্ঞাসা করুন"
+  },
+  "settings": {
+    "title": "সেটিংস",
+    "profile": "প্রোফাইল",
+    "dependents": "নির্ভরশীলরা",
+    "editDependent": "নির্ভরশীল",
+    "language": "ভাষা",
+    "languageSelection": "ভাষা নির্বাচন করুন",
+    "logout": "লগ আউট"
+  },
+  "profile": {
+    "fullName": "পুরো নাম",
+    "fullNamePlaceholder": "আপনার পুরো নাম লিখুন",
+    "phone": "ফোন নম্বর",
+    "phonePlaceholder": "আপনার ফোন নম্বর লিখুন"
+  },
+  "search": {
+    "placeholder": "উপসর্গ দিয়ে খুঁজুন...",
+    "suggestions_title": "সাধারণ স্বাস্থ্য সমস্যা",
+    "fever_cold": "জ্বর/ঠান্ডা",
+    "allergies": "অ্যালার্জি",
+    "child_health": "শিশু রোগ",
+    "weight": "ওজন হ্রাস/বৃদ্ধি",
+    "skin_problems": "চুলকানি, ব্রণ ও ত্বকের সমস্যা",
+    "hair_loss": "চুল পড়া ও খুশকি",
+    "acidity": "অ্যাসিডিটি ও বদহজম",
+    "diarrhoea": "ডায়রিয়া ও কোষ্ঠকাঠিন্য",
+    "nose_ear_throat": "নাক, কান ও গলার সমস্যা",
+    "stress_depression": "মানসিক চাপ বা বিষণ্নতা",
+    "joint_pain": "জয়েন্ট/পেশির ব্যথা",
+    "stomach_pain": "পেট ব্যথা/শরীর ব্যথা",
+    "headache": "মাথা ব্যথা/মাইগ্রেন",
+    "eye_problems": "চোখের সমস্যা",
+    "hormonal": "হরমোনজনিত সমস্যা",
+    "sexual_health": "যৌন সমস্যা",
+    "menstrual": "পিরিয়ড/গাইনি সমস্যা",
+    "pregnancy": "গর্ভাবস্থার সমস্যা",
+    "kidney": "কিডনির সমস্যা",
+    "chest_heart": "বুকে ব্যথা/হার্টের সমস্যা",
+    "breathing_asthma": "শ্বাসকষ্ট/অ্যাজমা",
+    "uti": "ইউরিন ইনফেকশন",
+    "diabetes": "ডায়াবেটিস",
+    "blood_pressure": "রক্তচাপ"
+  }
+}

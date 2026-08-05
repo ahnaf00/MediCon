@@ -1,0 +1,13 @@
+import React from 'react';
+import { PlaceholderScreen } from '../../../src/components/navigation/PlaceholderScreen';
+import { useTranslation } from 'react-i18next';
+
+export default function TriageScreen() {
+  const { t } = useTranslation();
+  return (
+    <PlaceholderScreen
+      title={t('triage.triage') || 'Triage'}
+      description="Placeholder for app/(app)/symptom/triage.tsx"
+    />
+  );
+}

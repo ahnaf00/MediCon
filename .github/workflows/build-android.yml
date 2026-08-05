@@ -1,0 +1,81 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Configure Gradle
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g" >> ~/.gradle/gradle.properties
+          echo "org.gradle.daemon=false" >> ~/.gradle/gradle.properties
+          echo "org.gradle.parallel=false" >> ~/.gradle/gradle.properties
+
+      - name: Run Expo Prebuild
+        run: npx expo prebuild --platform android --clean
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_NO_DEV_CLIENT: 1
+
+      - name: Build APK
+        run: |
+          cd android
+          ./gradlew assembleRelease --no-daemon -x lint -x lintVitalAnalyzeRelease -x lintVitalRelease
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g"
+
+      - name: Sign APK
+        run: |
+          keytool -genkeypair -v \
+            -keystore medicon-demo.keystore \
+            -alias medicon \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storepass medicon123 \
+            -keypass medicon123 \
+            -dname "CN=MediCon Demo, OU=Demo, O=MediCon, L=Dhaka, S=Dhaka, C=BD"
+          
+          APK_PATH=$(find android/app/build/outputs/apk/release -maxdepth 1 -name "*.apk" | head -n 1)
+          $ANDROID_HOME/build-tools/$(ls $ANDROID_HOME/build-tools/ | sort -V | tail -1)/apksigner sign \
+            --ks medicon-demo.keystore \
+            --ks-key-alias medicon \
+            --ks-pass pass:medicon123 \
+            --key-pass pass:medicon123 \
+            --out android/app/build/outputs/apk/release/app-signed.apk \
+            $APK_PATH
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: medicon-demo
+          path: android/app/build/outputs/apk/release/app-signed.apk
+          retention-days: 7

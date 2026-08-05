@@ -1,0 +1,49 @@
+﻿{
+  "id": "f08cea7a-b23a-4700-9f74-de9e8b63154b",
+  "status": "ERRORED",
+  "platform": "ANDROID",
+  "error": {
+    "errorCode": "UNKNOWN_ERROR",
+    "message": "Unknown error. See logs of the Install dependencies build phase for more information."
+  },
+  "artifacts": {},
+  "fingerprint": {
+    "id": "019f68ca-e6fc-7c8e-bbb6-dcbe96431a7b",
+    "hash": "d302ffc9be0498d70823ed41345ca423a7fda9f9"
+  },
+  "initiatingActor": {
+    "id": "df0bfbe4-9b1d-410f-9922-7365d05338d4",
+    "displayName": "efte_sarker"
+  },
+  "logFiles": [
+    "https://storage.googleapis.com/eas-workflows-production/logs/fc59c36e-7707-4744-924a-aad648c925c8/f08cea7a-b23a-4700-9f74-de9e8b63154b/2026-07-16T02%3A39%3A18Z-c7c0b17c-2d3e-4465-9fd9-e26e529cde91.txt?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=www-production%40exponentjs.iam.gserviceaccount.com%2F20260716%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20260716T030803Z&X-Goog-Expires=900&X-Goog-SignedHeaders=host&X-Goog-Signature=b2ca8b67e6ffb3f1de99dd0ec0368ea13e7d46f616d0fd5a3849f4ca1e25b5924864bfe275008ecb0e5298bc4e780c71f963c909adecc09b1dc284931c684a4215ddd03b012da3628958704bd55754736b15321dd04969515275ee61da6547f3a52eb7e4e81d4ddf3c5bfc25d24367ceaad6f101f3d35f8947dcc719ef94a880891684f8845d95e5f406a9b385e8b3f79d14a2b36bd87b53e928d744083b43056991314ca7ad3f6e682085e852a93f737b10d97d53106b80ef0b1feca57ab049a7a535ea2090388aa8e4581595eaeab9c64b349e864943ff6e78f006bd4754078e899b82b5d1500acef3abb27f53c9948e25855af0c9604a18dcf05d8bdfbb9e"
+  ],
+  "project": {
+    "id": "fc59c36e-7707-4744-924a-aad648c925c8",
+    "name": "medicon",
+    "slug": "medicon",
+    "ownerAccount": {
+      "id": "af9c0a6f-e897-42ce-98ad-e9e845a3001a",
+      "name": "efte_sarker"
+    }
+  },
+  "distribution": "INTERNAL",
+  "buildProfile": "preview",
+  "sdkVersion": "56.0.0",
+  "appVersion": "1.0.0",
+  "appBuildVersion": "1",
+  "runtimeVersion": "1.0.0",
+  "gitCommitHash": "b290b111b9e8f7eee4b976cd51589aba95ebacac",
+  "gitCommitMessage": "Update react-native-worklets and fix dependencies",
+  "priority": "NORMAL",
+  "createdAt": "2026-07-16T02:39:15.668Z",
+  "updatedAt": "2026-07-16T02:39:32.076Z",
+  "completedAt": "2026-07-16T02:39:31.880Z",
+  "expirationDate": "2026-07-30T02:39:15.703Z",
+  "isForIosSimulator": false,
+  "metrics": {
+    "buildWaitTime": 2478,
+    "buildQueueTime": 4788,
+    "buildDuration": 8946
+  }
+}
