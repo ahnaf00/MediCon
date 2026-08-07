@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from './storage';
 
 export type UserRole = 'patient' | 'doctor';
-export type UserStatus = 'active' | 'pending';
+export type UserStatus = 'active' | 'pending' | 'suspended';
 
 interface AuthState {
   token: string | null;

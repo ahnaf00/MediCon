@@ -12,7 +12,7 @@ export const hospitalsService = {
       params.lat = lat;
       params.lng = lng;
     }
-    const response = await axiosClient.get('/hospitals', { params });
+    const response = (await axiosClient.get('/hospitals', { params })) as any;
     
     // Fallback images if not provided by backend
     return response.map((h: any) => ({
@@ -40,7 +40,7 @@ export const hospitalsService = {
     }
 
     // Since we don't have a /hospitals/{id}/doctors route, we fetch all doctors and filter locally (or backend might support `?hospital_id=x`)
-    const doctorsResponse = await axiosClient.get('/doctors');
+    const doctorsResponse = (await axiosClient.get('/doctors')) as any;
     const doctors = doctorsResponse.map((doc: any, index: number) => ({
       ...doc,
       image: doc.avatar_url ? { uri: doc.avatar_url } : doctorPlaceholders[index % doctorPlaceholders.length],

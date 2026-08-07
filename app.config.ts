@@ -1,6 +1,6 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
-const IS_DEV = process.env.APP_VARIANT === 'development';
+const IS_DEV = process.env.APP_VARIANT === 'development' || process.env.NODE_ENV === 'development';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
@@ -34,6 +34,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   updates: {
     url: 'https://u.expo.dev/fc59c36e-7707-4744-924a-aad648c925c8',
+    enabled: !IS_DEV,
+    checkAutomatically: IS_DEV ? 'NEVER' : 'ON_LOAD',
   },
   runtimeVersion: {
     policy: 'appVersion',

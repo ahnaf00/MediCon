@@ -62,7 +62,7 @@ export default function LoginScreen(): React.JSX.Element {
           token: result.token,
           role: result.user.role,
           status: result.user.status,
-          userId: result.user.id,
+          userId: String(result.user.id),
         });
         router.replace('/(app)/(tabs)');
       }
@@ -157,6 +157,22 @@ export default function LoginScreen(): React.JSX.Element {
               </Text>
             </Pressable>
           )}
+
+          {/* Demo Mode / Guest bypass button */}
+          <Pressable
+            style={styles.guestButton}
+            onPress={() => {
+              login({
+                token: 'demo-guest-token',
+                role: 'patient',
+                status: 'active',
+                userId: 'guest-user-123',
+              });
+              router.replace('/(app)/(tabs)');
+            }}
+          >
+            <Text style={styles.guestButtonText}>⚡ Explore App as Guest</Text>
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -198,5 +214,17 @@ const styles = StyleSheet.create({
     ...TextStyles.body,
     color: Colors.primary,
     marginTop: Spacing.lg,
+  },
+  guestButton: {
+    marginTop: Spacing.xl,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: 8,
+    backgroundColor: Colors.tertiary,
+  },
+  guestButtonText: {
+    ...TextStyles.body,
+    color: Colors.primary,
+    fontWeight: 'bold',
   },
 });

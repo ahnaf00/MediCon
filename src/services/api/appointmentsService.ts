@@ -40,9 +40,9 @@ class AppointmentsService {
    */
   async getAvailableSlots(doctorId: string, date: string): Promise<TimeSlot[]> {
     // Laravel API: GET /doctors/{id}/slots
-    const response = await axiosClient.get(`/doctors/${doctorId}/slots`, {
+    const response = (await axiosClient.get(`/doctors/${doctorId}/slots`, {
       params: { date }
-    });
+    })) as any;
     
     // The backend might return an array of strings or objects. We map them.
     return response.map((slot: any) => ({
@@ -83,13 +83,13 @@ class AppointmentsService {
    */
   async bookAppointment(details: BookingDetails): Promise<BookingResult> {
     // Laravel API: POST /appointments
-    const response = await axiosClient.post('/appointments', {
+    const response = (await axiosClient.post('/appointments', {
       doctor_id: details.doctorId,
       appointment_date: details.date,
       appointment_time: details.timeSlotId,
       type: details.type,
       notes: details.symptoms || '',
-    });
+    })) as any;
 
     return {
       success: true,

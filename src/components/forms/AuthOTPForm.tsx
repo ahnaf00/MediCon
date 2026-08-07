@@ -1,5 +1,5 @@
 // 1. IMPORTS
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -33,7 +33,18 @@ export const AuthOTPForm = ({
 }: AuthOTPFormProps): React.JSX.Element => {
   const { t } = useTranslation();
   const [digits, setDigits] = useState<string[]>(Array(OTP_LENGTH).fill(''));
+  const [timeLeft, setTimeLeft] = useState<number>(60);
   const inputRefs = useRef<(TextInput | null)[]>([]);
+
+  useEffect(() => {
+    if (timeLeft <= 0) return;
+
+    const timerId = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timerId);
+  }, [timeLeft]);
 
   const handleChange = (text: string, index: number) => {
     const sanitized = text.replace(/\D/g, '');
@@ -108,13 +119,23 @@ export const AuthOTPForm = ({
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={onResend}
-        style={styles.resendButton}
+        onPress={() => {
+          if (timeLeft === 0) {
+            onResend();
+            setTimeLeft(60);
+          }
+        }}
+        style={[styles.resendButton, timeLeft > 0 && styles.resendButtonDisabled]}
         activeOpacity={0.7}
+        disabled={timeLeft > 0}
         accessibilityLabel="Resend OTP button"
         accessibilityRole="button"
       >
-        <Text style={styles.resendText}>{t('authotpform.resend_code') || 'Resend Code'}</Text>
+        <Text style={[styles.resendText, timeLeft > 0 && styles.resendTextDisabled]}>
+          {timeLeft > 0 
+            ? `${t('authotpform.resend_code_in', 'Resend code in')} ${timeLeft}s`
+            : t('authotpform.resend_code', 'Resend Code')}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -188,5 +209,11 @@ const styles = StyleSheet.create({
     ...TextStyles.body,
     color: Colors.primary,
     fontFamily: FontFamily.semiBold,
+  },
+  resendButtonDisabled: {
+    opacity: 0.5,
+  },
+  resendTextDisabled: {
+    color: Colors.textSecondary,
   },
 });

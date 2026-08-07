@@ -20,12 +20,7 @@ export default function SettingsLayout() {
         name="index"
         options={{ headerShown: false, title: t('settings.title') || 'Settings' }}
       />
-      <Stack.Screen name="profile" options={{ title: t('settings.profile') || 'Profile' }} />
-      <Stack.Screen name="language" options={{ title: t('settings.language') || 'Language' }} />
-      <Stack.Screen
-        name="dependents/index"
-        options={{ title: t('settings.dependents') || 'Dependents' }}
-      />
+      <Stack.Screen name="theme" options={{ title: t('settings.theme') || 'Theme' }} />
       <Stack.Screen
         name="dependents/[id]"
         options={{ title: t('settings.editDependent') || 'Dependent' }}

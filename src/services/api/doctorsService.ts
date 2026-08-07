@@ -70,7 +70,7 @@ export const doctorsService = {
       const cat = categories.find(c => c.id === categoryId);
       if (cat) params.department = cat.name;
     }
-    const doctors = await axiosClient.get('/doctors', { params });
+    const doctors = (await axiosClient.get('/doctors', { params })) as any;
     // Add placeholder images if missing
     return doctors.map((doc: any, index: number) => ({
       ...doc,
@@ -83,7 +83,7 @@ export const doctorsService = {
    */
   getDoctorDetails: async (id: string): Promise<Doctor | null> => {
     // Laravel API: GET /doctors/{id}
-    const doc = await axiosClient.get(`/doctors/${id}`);
+    const doc = (await axiosClient.get(`/doctors/${id}`)) as any;
     if (!doc) return null;
     return {
       ...doc,
@@ -96,7 +96,7 @@ export const doctorsService = {
    * Based on Laravel routes: GET /appointments
    */
   getConsultationHistory: async (): Promise<ConsultationHistoryItem[]> => {
-    const appointments = await axiosClient.get('/appointments');
+    const appointments = (await axiosClient.get('/appointments')) as any;
     return appointments.map((appt: any) => ({
       id: appt.id.toString(),
       doctorId: appt.doctor_id.toString(),
