@@ -244,8 +244,9 @@ export default function ConsultationDetailScreen(): React.JSX.Element {
     let isMounted = true;
     const fetchPrescription = async () => {
       try {
-        const rx = await prescriptionsService.getScheduledPrescription();
-        if (isMounted) setActivePrescription(rx);
+        const prescriptions = await prescriptionsService.getPrescriptions();
+        const rx = prescriptions.find((p) => p.status === 'active') ?? prescriptions[0] ?? null;
+        if (isMounted) setActivePrescription(rx as any);
       } catch (err) {
         // handle error silently for mock
       } finally {

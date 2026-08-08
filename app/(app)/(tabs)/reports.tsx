@@ -24,8 +24,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../../src/theme';
-import { Report } from '../../../src/types/medical.types';
-import { reportsService } from '../../../src/services/api/reportsService';
+import { MedicalRecord, reportsService } from '../../../src/services/api/reportsService';
 import { ReportCard } from '../../../src/components/medical/ReportCard';
 import { createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
@@ -35,7 +34,7 @@ export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const router = useRouter();
-  const [reports, setReports] = useState<Report[]>([]);
+  const [reports, setReports] = useState<MedicalRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
@@ -124,7 +123,7 @@ export default function ReportsScreen() {
   const [optionsVisible, setOptionsVisible] = useState(false);
   const [renameMode, setRenameMode] = useState(false);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [selectedReport, setSelectedReport] = useState<MedicalRecord | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [panY] = useState(() => new Animated.Value(0));
@@ -170,8 +169,8 @@ export default function ReportsScreen() {
 
   const loadReports = useCallback(async () => {
     try {
-      const data = await reportsService.getReports();
-      setReports(data);
+      const data = await reportsService.getRecords();
+      setReports(data as any);
     } catch (err) {
       setError(createAppError('NETWORK_ERROR', String(err)));
     }
@@ -200,9 +199,9 @@ export default function ReportsScreen() {
     setRefreshing(false);
   };
 
-  const handleOptionsPress = (report: Report) => {
+  const handleOptionsPress = (report: MedicalRecord) => {
     setSelectedReport(report);
-    setNewTitle(report.title);
+    setNewTitle((report as any).title ?? `Record #${report.id}`);
     setRenameMode(false);
     setOptionsVisible(true);
   };
@@ -213,7 +212,7 @@ export default function ReportsScreen() {
     // Standard OS alert is retained for the final destructive confirmation
     Alert.alert(
       'Delete Report',
-      `Are you sure you want to delete "${selectedReport.title}"? This action cannot be undone.`,
+      `Are you sure you want to delete "${(selectedReport as any).title ?? `Record #${selectedReport.id}`}"? This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -222,7 +221,7 @@ export default function ReportsScreen() {
           onPress: async () => {
             try {
               setLoading(true);
-              await reportsService.deleteReport(selectedReport.id);
+              await reportsService.deleteRecord(Number(selectedReport.id));
               await loadReports();
             } catch {
               Alert.alert('Error', 'Failed to delete report.');
@@ -236,17 +235,8 @@ export default function ReportsScreen() {
   };
 
   const handleRename = async () => {
-    if (!selectedReport || !newTitle.trim()) return;
-    try {
-      setIsUpdating(true);
-      await reportsService.updateReport(selectedReport.id, { title: newTitle.trim() });
-      await loadReports();
-      setOptionsVisible(false);
-    } catch {
-      Alert.alert('Error', 'Failed to rename report.');
-    } finally {
-      setIsUpdating(false);
-    }
+    // Note: MedicalRecord has no title field — rename is not supported by the backend yet.
+    setOptionsVisible(false);
   };
 
   const renderEmptyComponent = () => {
@@ -314,7 +304,7 @@ export default function ReportsScreen() {
           <FlashList
             data={reports}
             keyboardShouldPersistTaps="handled"
-            keyExtractor={(item) => item.id}
+            keyExtractor={(item) => String(item.id)}
             numColumns={2}
             renderItem={({ item, index }) => (
               <View
@@ -325,9 +315,9 @@ export default function ReportsScreen() {
                 ]}
               >
                 <ReportCard
-                  report={item}
+                  report={item as any}
                   onPress={() => router.push(`/(app)/report/${item.id}`)}
-                  onOptionsPress={handleOptionsPress}
+                  onOptionsPress={handleOptionsPress as any}
                 />
               </View>
             )}

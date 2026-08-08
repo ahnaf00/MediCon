@@ -1,6 +1,6 @@
 // 1. IMPORTS
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontFamily, FontSize } from '@theme';
@@ -8,6 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { doctorsService, ConsultationHistoryItem } from '../../../src/services/api/doctorsService';
 import { DoctorCard } from '../../../src/components/cards/DoctorCard';
+import { appointmentsService } from '../../../src/services/api/appointmentsService';
 import { useTranslation } from 'react-i18next';
 
 // 2. TYPES
@@ -22,17 +23,36 @@ export default function ConsultationHistoryScreen(): React.JSX.Element {
   const [history, setHistory] = useState<ConsultationHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchHistory = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await doctorsService.getConsultationHistory();
+      setHistory(data);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const fetchHistory = async () => {
-      try {
-        setLoading(true);
-        const data = await doctorsService.getConsultationHistory();
-        setHistory(data);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchHistory();
+  }, [fetchHistory]);
+
+  const handleCancel = useCallback((id: string) => {
+    Alert.alert('Cancel Appointment', 'Are you sure you want to cancel this appointment?', [
+      { text: 'No', style: 'cancel' },
+      {
+        text: 'Yes',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await appointmentsService.cancelAppointment(id);
+            fetchHistory();
+          } catch (error) {
+            Alert.alert('Error', 'Failed to cancel appointment. Please try again.');
+          }
+        },
+      },
+    ]);
   }, []);
 
   const renderItem = useCallback(
@@ -47,11 +67,12 @@ export default function ConsultationHistoryScreen(): React.JSX.Element {
             onBookPress={() =>
               router.push(`/(app)/doctors/booking/digest?doctorId=${item.doctorId}&type=video`)
             }
+            onCancelPress={() => handleCancel(item.id)}
           />
         </View>
       );
     },
-    [router],
+    [router, handleCancel],
   );
 
   return (

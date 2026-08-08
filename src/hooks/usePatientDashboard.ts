@@ -72,8 +72,10 @@ export const usePatientDashboard = (): PatientDashboardData => {
       let isMounted = true;
       const fetchActivePrescription = async () => {
         try {
-          const rx = await prescriptionsService.getScheduledPrescription();
+          // Fetch the first active prescription from the real API
+          const prescriptions = await prescriptionsService.getPrescriptions();
           if (!isMounted) return;
+          const rx = prescriptions.find((p) => p.status === 'active') ?? prescriptions[0] ?? null;
 
           if (!rx) {
             setNextMedicine(null);
@@ -87,44 +89,44 @@ export const usePatientDashboard = (): PatientDashboardData => {
             medicines: DashboardMedicationItem[];
           }[] = [];
 
-          const mapMed = (m: any) => {
-            const mealTiming = getMealTiming(m.instructions);
+          const mapMed = (m: typeof rx.medicines[0]) => {
+            const mealTiming = getMealTiming(m.instructions ?? undefined);
             const formattedInstructions = mealTiming
               ? `Take ${mealTiming.toLowerCase()}`
               : m.instructions || '';
 
             return {
-              id: m.id,
+              id: String(m.id),
               name: m.name,
               instructions: formattedInstructions,
-              scheduleFormat: m.dosagePattern || '',
+              scheduleFormat: m.scheduleFormat || (m as any).dosagePattern || '',
               dosage: m.dosage,
             };
           };
 
-          const morningMeds = rx.medicines.filter((m) => m.dosageSchedule?.morning);
+          const morningMeds = rx.medicines.filter((m: typeof rx.medicines[0]) => (m.dosageSchedule as any)?.morning);
           if (morningMeds.length > 0) {
             periods.push({
               name: 'Morning',
-              time: morningMeds[0].dosageSchedule!.morning!,
+              time: (morningMeds[0].dosageSchedule as any).morning,
               medicines: morningMeds.map(mapMed),
             });
           }
 
-          const noonMeds = rx.medicines.filter((m) => m.dosageSchedule?.noon);
+          const noonMeds = rx.medicines.filter((m: typeof rx.medicines[0]) => (m.dosageSchedule as any)?.noon);
           if (noonMeds.length > 0) {
             periods.push({
               name: 'Noon',
-              time: noonMeds[0].dosageSchedule!.noon!,
+              time: (noonMeds[0].dosageSchedule as any).noon,
               medicines: noonMeds.map(mapMed),
             });
           }
 
-          const nightMeds = rx.medicines.filter((m) => m.dosageSchedule?.night);
+          const nightMeds = rx.medicines.filter((m: typeof rx.medicines[0]) => (m.dosageSchedule as any)?.night);
           if (nightMeds.length > 0) {
             periods.push({
               name: 'Night',
-              time: nightMeds[0].dosageSchedule!.night!,
+              time: (nightMeds[0].dosageSchedule as any).night,
               medicines: nightMeds.map(mapMed),
             });
           }

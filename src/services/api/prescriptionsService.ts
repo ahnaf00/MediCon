@@ -1,138 +1,81 @@
-import { Prescription, AdherenceRecord } from '../../types/medical.types';
+// src/services/api/prescriptionsService.ts
+// ─────────────────────────────────────────────────────────────────────────────
+// Prescriptions Service — GET/POST /api/v1/prescriptions
+//
+// Goal: Replace the in-memory MOCK_DOCTOR_PRESCRIPTIONS and MOCK_UPLOADED_PRESCRIPTIONS
+// arrays with real HTTP calls to the Laravel backend PrescriptionController.
+//
+// How it works:
+//   - GET /api/v1/prescriptions: Backend filters automatically by the authenticated
+//     user's role. Patients see prescriptions issued to them; doctors see prescriptions
+//     they issued. No client-side filtering needed.
+//   - POST /api/v1/prescriptions: Doctor-only (enforced server-side by role:doctor
+//     middleware). Creates a new prescription with one or more medicine items.
+//
+// Note on type mapping:
+//   The backend PrescriptionResource uses camelCase field names that differ from
+//   the old frontend mock Prescription type. The ApiPrescription type below matches
+//   the backend shape exactly. Adherence tracking (TAKEN/PENDING/MISSED) is not
+//   yet in the backend, so those methods are kept as local state for now.
+// ─────────────────────────────────────────────────────────────────────────────
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { axiosClient } from './axiosClient';
+import { AdherenceRecord, Prescription } from '../../types/medical.types';
 
-// ─── Mock data: Doctor-issued prescriptions ───────────────────────────────────
+// ─── Types (matching PrescriptionResource & StorePrescriptionRequest exactly) ──
 
-const MOCK_DOCTOR_PRESCRIPTIONS: Prescription[] = [
-  {
-    id: 'rx-doc-1',
-    patientId: 'pat-1',
-    doctorId: 'doc-1',
-    doctorName: 'Dr. Rahim Uddin',
-    source: 'DOCTOR',
-    issuedAt: '2026-06-15T08:30:00Z',
-    imageUrl: 'https://placehold.co/800x1000/F4FAFC/40566d?text=Prescription+Rx-001',
-    medicines: [
-      {
-        id: 'med-doc-1',
-        name: 'Amoxicillin',
-        dosage: '500mg',
-        durationDays: 7,
-        timesPerDay: 3,
-        times: ['08:00', '14:00', '20:00'],
-        dosageSchedule: { morning: '08:00', noon: '14:00', night: '20:00' },
-        dosagePattern: '1+1+1',
-        frequency: 'Three times daily',
-        instructions: 'Take in the morning, noon and night after meals.',
-        explanation:
-          'Amoxicillin is an antibiotic that fights bacterial infections by stopping bacteria from forming cell walls. Take every 8 hours after eating to avoid stomach upset. Complete the full 7-day course even if you start feeling better — stopping early can allow bacteria to survive and develop resistance.',
-        aiDemystifierSummary:
-          'An antibiotic used to treat bacterial infections. It works by stopping the growth of bacteria. Finish the entire course even if you feel better.',
-      },
-      {
-        id: 'med-doc-2',
-        name: 'Ibuprofen',
-        dosage: '400mg',
-        durationDays: 3,
-        timesPerDay: 2,
-        times: ['08:00', '20:00'],
-        dosageSchedule: { morning: '08:00', night: '20:00' },
-        dosagePattern: '1+0+1',
-        frequency: 'Twice daily, as needed',
-        instructions: 'Take in the morning and night after meals.',
-        explanation:
-          'Ibuprofen is an anti-inflammatory painkiller (NSAID). It reduces fever and relieves pain by blocking chemicals in the body that cause inflammation. Take it with a meal or snack to prevent stomach irritation. Do not exceed the prescribed dose or take it for longer than 3 days without consulting your doctor.',
-        aiDemystifierSummary:
-          'A nonsteroidal anti-inflammatory drug (NSAID) used to reduce fever and treat pain or inflammation.',
-      },
-    ],
-  },
-  {
-    id: 'rx-doc-2',
-    patientId: 'pat-1',
-    doctorId: 'doc-2',
-    doctorName: 'Dr. Nasrin Begum',
-    source: 'DOCTOR',
-    issuedAt: '2026-07-01T10:00:00Z',
-    imageUrl: 'https://placehold.co/800x1000/F4FAFC/40566d?text=Prescription+Rx-002',
-    medicines: [
-      {
-        id: 'med-doc-3',
-        name: 'Lisinopril',
-        dosage: '10mg',
-        durationDays: 30,
-        timesPerDay: 1,
-        times: ['08:00'],
-        dosageSchedule: { morning: '08:00' },
-        dosagePattern: '1+0+0',
-        frequency: 'Once daily',
-        instructions: 'Take in the morning after meals.',
-        explanation:
-          'Lisinopril is an ACE inhibitor prescribed to manage high blood pressure (hypertension). It works by relaxing blood vessels so your heart does not have to work as hard. Take it at the same time every morning. Do not stop taking it without consulting Dr. Begum — sudden discontinuation can cause blood pressure to spike.',
-        aiDemystifierSummary:
-          'An ACE inhibitor used to treat high blood pressure. It relaxes blood vessels so blood flows more smoothly.',
-      },
-      {
-        id: 'med-doc-4',
-        name: 'Amlodipine',
-        dosage: '5mg',
-        durationDays: 30,
-        timesPerDay: 1,
-        times: ['08:00'],
-        dosageSchedule: { morning: '08:00' },
-        dosagePattern: '1+0+0',
-        frequency: 'Once daily',
-        instructions: 'Take in the morning after meals.',
-        explanation:
-          'Amlodipine is a calcium channel blocker that helps lower blood pressure and reduce chest pain. It works by relaxing blood vessels so blood can flow more easily. It is safe to take with Lisinopril as prescribed — both medicines complement each other for blood pressure control.',
-        aiDemystifierSummary:
-          'A calcium channel blocker that lowers blood pressure by relaxing blood vessels.',
-      },
-    ],
-  },
-];
+export interface ApiPrescriptionMedicine {
+  id: number;
+  /** Medicine name (mapped from medicine_name column). */
+  name: string;
+  dosage: string;
+  /** Free-form schedule object, e.g. { morning: "08:00", night: "20:00" }. */
+  dosageSchedule: Record<string, string> | null;
+  /** Human-readable schedule format string from backend, e.g. "1+0+1". */
+  scheduleFormat: string | null;
+  instructions: string | null;
+  durationDays: number;
+}
 
-// ─── Mock data: User-uploaded prescriptions ───────────────────────────────────
+export interface ApiPrescription {
+  id: number;
+  appointmentId: number | null;
+  diagnosisSummary: string;
+  status: 'active' | 'expired' | 'cancelled';
+  doctor: {
+    id: number;
+    name: string;
+    avatarUrl: string | null;
+  };
+  patient: {
+    id: number;
+    name: string;
+    avatarUrl: string | null;
+  };
+  medicines: ApiPrescriptionMedicine[];
+  createdAt: string; // ISO 8601 — maps to frontend's "issuedAt"
+}
 
-const MOCK_UPLOADED_PRESCRIPTIONS: Prescription[] = [
-  {
-    id: 'rx-upload-1',
-    patientId: 'pat-1',
-    source: 'UPLOADED',
-    issuedAt: '2026-05-20T09:00:00Z',
-    imageUrl: 'https://placehold.co/800x1000/F4FAFC/40566d?text=Uploaded+Prescription',
-    medicines: [
-      {
-        id: 'med-upload-1',
-        name: 'Metformin',
-        dosage: '500mg',
-        durationDays: 90,
-        timesPerDay: 2,
-        times: ['07:30', '20:00'],
-        dosageSchedule: { morning: '07:30', night: '20:00' },
-        dosagePattern: '1+0+1',
-        frequency: 'Twice daily',
-        instructions: 'Take in the morning and night before meals.',
-        explanation:
-          'Metformin is a first-line medication for type 2 diabetes. It works by reducing the amount of glucose your liver releases into the blood and making your body more responsive to insulin. Always take it with food to minimise the risk of nausea or stomach upset.',
-        aiDemystifierSummary: 'An oral diabetes medication that helps control blood sugar levels.',
-      },
-    ],
-  },
-];
+export interface StorePrescriptionPayload {
+  patient_user_id: number;
+  diagnosis_summary: string;
+  appointment_id?: number;
+  medicines: Array<{
+    medicine_name: string;
+    dosage: string;
+    duration_days: number;
+    dosage_schedule?: Record<string, string>;
+    instructions?: string;
+  }>;
+}
 
-// ─── Scheduled prescription state ─────────────────────────────────────────────
-// In Phase 2 this will be driven by the backend. For now it is an in-memory
-// mock that enforces the single-active-prescription invariant.
-
-let _scheduledPrescriptionId: string | null = null;
-
-// ─── Adherence records (unchanged from original) ──────────────────────────────
+// ─── Adherence records (local state only — no backend endpoint yet) ────────────
 
 const MOCK_ADHERENCE: AdherenceRecord[] = [
   {
     id: 'adh-1',
-    prescriptionId: 'rx-doc-1',
-    medicineId: 'med-doc-1',
+    prescriptionId: '1',
+    medicineId: '1',
     date: new Date().toISOString().split('T')[0],
     status: 'TAKEN',
     scheduledTime: '08:00',
@@ -140,103 +83,91 @@ const MOCK_ADHERENCE: AdherenceRecord[] = [
   },
   {
     id: 'adh-2',
-    prescriptionId: 'rx-doc-1',
-    medicineId: 'med-doc-1',
+    prescriptionId: '1',
+    medicineId: '1',
     date: new Date().toISOString().split('T')[0],
     status: 'PENDING',
     scheduledTime: '14:00',
   },
-  {
-    id: 'adh-3',
-    prescriptionId: 'rx-doc-2',
-    medicineId: 'med-doc-3',
-    date: new Date().toISOString().split('T')[0],
-    status: 'MISSED',
-    scheduledTime: '09:00',
-  },
 ];
 
-// ─── Service ──────────────────────────────────────────────────────────────────
+// ─── Mapper Function ────────────────────────────────────────────────────────────
+
+const mapApiToPrescription = (api: ApiPrescription): Prescription => {
+  return {
+    id: api.id.toString(),
+    issuedAt: api.createdAt,
+    diagnosisSummary: api.diagnosisSummary,
+    status: api.status,
+    doctor: api.doctor,
+    patient: api.patient,
+    source: api.doctor ? 'DOCTOR' : 'UPLOADED',
+    doctorName: api.doctor?.name,
+    doctorId: api.doctor?.id?.toString(),
+    appointmentId: api.appointmentId ?? undefined,
+    medicines: api.medicines.map((m) => ({
+      id: m.id.toString(),
+      name: m.name,
+      dosage: m.dosage,
+      durationDays: m.durationDays,
+      dosageSchedule: m.dosageSchedule || undefined,
+      scheduleFormat: m.scheduleFormat,
+      instructions: m.instructions,
+      dosagePattern: m.scheduleFormat || undefined,
+    })),
+  };
+};
+
+// ─── Raw Service ──────────────────────────────────────────────────────────────
 
 export const prescriptionsService = {
-  /** Returns all doctor-issued prescriptions. */
-  getDoctorPrescriptions: async (): Promise<Prescription[]> =>
-    new Promise((resolve) => setTimeout(() => resolve([...MOCK_DOCTOR_PRESCRIPTIONS]), 600)),
-
-  /** Returns all user-uploaded prescriptions. */
-  getUploadedPrescriptions: async (): Promise<Prescription[]> =>
-    new Promise((resolve) => setTimeout(() => resolve([...MOCK_UPLOADED_PRESCRIPTIONS]), 600)),
-
-  /** Returns all prescriptions merged (doctor-issued + uploaded). */
-  getPrescriptions: async (): Promise<Prescription[]> =>
-    new Promise((resolve) =>
-      setTimeout(
-        () => resolve([...MOCK_DOCTOR_PRESCRIPTIONS, ...MOCK_UPLOADED_PRESCRIPTIONS]),
-        600,
-      ),
-    ),
-
-  /** Returns details of a single prescription by ID. */
-  getPrescriptionDetails: async (id: string): Promise<Prescription> =>
-    new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const all = [...MOCK_DOCTOR_PRESCRIPTIONS, ...MOCK_UPLOADED_PRESCRIPTIONS];
-        const rx = all.find((r) => r.id === id);
-        if (rx) resolve(rx);
-        else reject(new Error('Prescription not found'));
-      }, 400);
-    }),
-
-  /** Returns the ID of the currently scheduled prescription (or null). */
-  getScheduledPrescriptionId: (): string | null => _scheduledPrescriptionId,
+  /**
+   * Goal: Retrieve all prescriptions visible to the authenticated user.
+   * How: GET /api/v1/prescriptions — backend role-filters automatically:
+   *      patients receive prescriptions issued to them,
+   *      doctors receive prescriptions they have issued.
+   */
+  getPrescriptions: async (): Promise<Prescription[]> => {
+    const res = (await axiosClient.get('/prescriptions')) as any;
+    const items = Array.isArray(res) ? res : res?.data ?? [];
+    return items.map(mapApiToPrescription);
+  },
 
   /**
-   * Schedules a prescription for active use.
-   * Enforces the global rule: only ONE prescription can be scheduled at a time.
-   * Scheduling a new one automatically unschedules the previous one.
+   * Goal: Retrieve details for a single prescription.
+   * How: GET /api/v1/prescriptions/{id}.
    */
-  schedulePrescription: async (id: string): Promise<void> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        _scheduledPrescriptionId = id;
-        resolve();
-      }, 300);
-    });
+  getPrescriptionById: async (id: number): Promise<Prescription> => {
+    const res = (await axiosClient.get(`/prescriptions/${id}`)) as any;
+    const api = res?.prescription ?? res;
+    return mapApiToPrescription(api);
   },
 
-  /** Unschedules the currently active prescription. */
-  unschedulePrescription: async (): Promise<void> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        _scheduledPrescriptionId = null;
-        resolve();
-      }, 300);
-    });
+  /**
+   * Goal: Issue a new prescription for a patient (doctor-only action).
+   * How: POST /api/v1/prescriptions — protected by role:doctor middleware.
+   *      Requires patient_user_id, diagnosis_summary, and at least one medicine.
+   * The backend returns { message, prescription: { id, ... } }.
+   */
+  createPrescription: async (payload: StorePrescriptionPayload): Promise<ApiPrescription> => {
+    const res = (await axiosClient.post('/prescriptions', payload)) as any;
+    return res?.prescription ?? res;
   },
 
-  /** Returns the full Prescription object that is currently scheduled, or null. */
-  getScheduledPrescription: async (): Promise<Prescription | null> => {
+  /**
+   * Goal: Retrieve today's adherence records (local state — no backend yet).
+   * How: Filters in-memory MOCK_ADHERENCE by date string.
+   */
+  getDailyAdherence: async (date: string): Promise<AdherenceRecord[]> => {
     return new Promise((resolve) => {
-      setTimeout(() => {
-        if (!_scheduledPrescriptionId) {
-          resolve(null);
-          return;
-        }
-        const all = [...MOCK_DOCTOR_PRESCRIPTIONS, ...MOCK_UPLOADED_PRESCRIPTIONS];
-        const rx = all.find((r) => r.id === _scheduledPrescriptionId);
-        resolve(rx ?? null);
-      }, 400);
-    });
-  },
-
-  getDailyAdherence: async (date: string): Promise<AdherenceRecord[]> =>
-    new Promise((resolve) => {
       setTimeout(() => {
         const records = MOCK_ADHERENCE.filter((a) => a.date === date);
         resolve(records);
-      }, 300);
-    }),
+      }, 100);
+    });
+  },
 
+  /** Adherence threshold classifier (pure utility, no API call). */
   calculateAdherenceThreshold: (taken: number, total: number): 'GOOD' | 'FAIR' | 'POOR' => {
     if (total === 0) return 'GOOD';
     const percentage = (taken / total) * 100;
@@ -244,52 +175,36 @@ export const prescriptionsService = {
     if (percentage >= 50) return 'FAIR';
     return 'POOR';
   },
+};
 
-  /** Updates the medicine schedule (times and name) */
-  updateMedicineSchedule: async (
-    prescriptionId: string,
-    medicineId: string,
-    updates: {
-      name?: string;
-      dosageSchedule?: { morning?: string; noon?: string; night?: string };
+// ─── TanStack Query v5 Hooks ──────────────────────────────────────────────────
+
+/** Fetch and cache all prescriptions for the current user. */
+export const usePrescriptions = () =>
+  useQuery({
+    queryKey: ['prescriptions'],
+    queryFn: prescriptionsService.getPrescriptions,
+  });
+
+/** Fetch a single prescription by ID. Only runs when id is truthy. */
+export const usePrescription = (id: number) =>
+  useQuery({
+    queryKey: ['prescriptions', id],
+    queryFn: () => prescriptionsService.getPrescriptionById(id),
+    enabled: !!id,
+  });
+
+/**
+ * Create a new prescription (doctor-only).
+ * Invalidates the prescriptions cache on success so both the doctor's and
+ * the patient's list screens refresh automatically.
+ */
+export const useCreatePrescription = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: prescriptionsService.createPrescription,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['prescriptions'] });
     },
-  ): Promise<void> => {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const all = [...MOCK_DOCTOR_PRESCRIPTIONS, ...MOCK_UPLOADED_PRESCRIPTIONS];
-        const rx = all.find((r) => r.id === prescriptionId);
-        if (!rx) {
-          reject(new Error('Prescription not found'));
-          return;
-        }
-        const med = rx.medicines.find((m) => m.id === medicineId);
-        if (!med) {
-          reject(new Error('Medicine not found'));
-          return;
-        }
-
-        if (updates.name !== undefined) {
-          med.name = updates.name;
-        }
-        if (updates.dosageSchedule !== undefined) {
-          med.dosageSchedule = updates.dosageSchedule;
-
-          // Calculate new dosage pattern based on morning/noon/night
-          const m = med.dosageSchedule.morning ? '1' : '0';
-          const n = med.dosageSchedule.noon ? '1' : '0';
-          const e = med.dosageSchedule.night ? '1' : '0';
-          med.dosagePattern = `${m}+${n}+${e}`;
-
-          // Keep times array in sync for backward compatibility
-          const newTimes: string[] = [];
-          if (med.dosageSchedule.morning) newTimes.push(med.dosageSchedule.morning);
-          if (med.dosageSchedule.noon) newTimes.push(med.dosageSchedule.noon);
-          if (med.dosageSchedule.night) newTimes.push(med.dosageSchedule.night);
-          med.times = newTimes;
-          med.timesPerDay = newTimes.length;
-        }
-        resolve();
-      }, 300);
-    });
-  },
+  });
 };

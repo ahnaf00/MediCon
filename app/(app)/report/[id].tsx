@@ -6,14 +6,15 @@ import {
   ActivityIndicator,
   TouchableOpacity,
   ScrollView,
+  Linking,
+  Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius, Layout } from '../../../src/theme';
-import { reportsService } from '../../../src/services/api/reportsService';
-import { Report } from '../../../src/types/medical.types';
+import { reportsService, MedicalRecord } from '../../../src/services/api/reportsService';
 import { BiomarkerRow } from '../../../src/components/medical/BiomarkerRow';
 import { useTranslation } from 'react-i18next';
 
@@ -26,7 +27,7 @@ export default function ReportDetailScreen() {
   type ActiveTab = 'analysis' | 'results';
   const [activeTab, setActiveTab] = useState<ActiveTab>('analysis');
 
-  const [report, setReport] = useState<Report | null>(null);
+  const [report, setReport] = useState<MedicalRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +36,7 @@ export default function ReportDetailScreen() {
       try {
         setLoading(true);
         if (!id) throw new Error('No report ID provided');
-        const data = await reportsService.getReportDetails(id);
+        const data = await reportsService.getRecordById(Number(id));
         setReport(data);
       } catch {
         setError('Failed to load report details.');
@@ -65,7 +66,7 @@ export default function ReportDetailScreen() {
     );
   }
 
-  const formattedDate = new Date(report.date).toLocaleDateString('en-US', {
+  const formattedDate = new Date((report as any).createdAt ?? (report as any).date).toLocaleDateString('en-US', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -96,14 +97,14 @@ export default function ReportDetailScreen() {
       <View style={{ paddingHorizontal: Spacing.base, paddingTop: Spacing.lg }}>
         {/* Meta card */}
         <View style={styles.metaCard}>
-          <Text style={styles.reportTitle}>{report.title}</Text>
+          <Text style={styles.reportTitle}>{(report as any).title ?? `Record #${report.id}`}</Text>
           <View style={styles.divider} />
           <View style={styles.metaRow}>
             <View style={styles.metaLeft}>
               <MaterialCommunityIcons name="flask-outline" size={18} color={Colors.primary} />
               <View style={styles.metaText}>
                 <Text style={styles.metaLabel}>Laboratory</Text>
-                <Text style={styles.metaValue}>{report.laboratory || 'Unknown Laboratory'}</Text>
+                <Text style={styles.metaValue}>{(report as any).laboratory ?? 'Medical Record'}</Text>
               </View>
             </View>
             <View style={styles.metaRight}>
@@ -144,7 +145,7 @@ export default function ReportDetailScreen() {
       >
         {activeTab === 'results' && (
           <View style={styles.section}>
-            {report.biomarkers && report.biomarkers.length > 0 ? (
+            {(report as any).biomarkers && (report as any).biomarkers.length > 0 ? (
               (() => {
                 const groupedData: {
                   category: string;
@@ -152,12 +153,12 @@ export default function ReportDetailScreen() {
                     testGroup: string;
                     subGroups: {
                       subGroup: string;
-                      biomarkers: typeof report.biomarkers;
+                      biomarkers: any[];
                     }[];
                   }[];
                 }[] = [];
 
-                report.biomarkers.forEach((b) => {
+                (report as any).biomarkers.forEach((b: any) => {
                   const catName = b.category || 'General';
                   const testName = b.testGroup || 'Tests';
                   const subName = b.subGroup || 'All';
@@ -219,7 +220,7 @@ export default function ReportDetailScreen() {
                                 )}
 
                                 <View style={styles.biomarkerList}>
-                                  {sg.biomarkers.map((b, bIdx) => (
+                                  {(report as any).biomarkers?.map((b: any, bIdx: number) => (
                                     <BiomarkerRow
                                       key={b.id}
                                       biomarker={b}
@@ -246,10 +247,10 @@ export default function ReportDetailScreen() {
             )}
           </View>
         )}
-        {activeTab === 'analysis' && report.aiSummary && (
+        {activeTab === 'analysis' && (report as any).aiSummary && (
           <View style={styles.section}>
             <View style={styles.aiSummaryContainer}>
-              <Text style={styles.aiSummaryText}>{report.aiSummary}</Text>
+              <Text style={styles.aiSummaryText}>{(report as any).aiSummary}</Text>
             </View>
           </View>
         )}
@@ -262,6 +263,18 @@ export default function ReportDetailScreen() {
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel="View original document"
+          onPress={() => {
+            if (report?.fileUrl) {
+              let urlToOpen = report.fileUrl;
+              // Patch for Android emulator testing against local Laravel server
+              if (Platform.OS === 'android') {
+                urlToOpen = urlToOpen.replace(/localhost|127\.0\.0\.1/, '10.0.2.2');
+              }
+              Linking.openURL(urlToOpen).catch((err) => {
+                console.error('Failed to open URL:', err);
+              });
+            }
+          }}
         >
           <MaterialCommunityIcons name="file-eye-outline" size={18} color={Colors.surface} />
           <Text style={styles.showOriginalFullBtnText}>

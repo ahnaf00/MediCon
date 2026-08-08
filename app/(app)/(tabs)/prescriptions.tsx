@@ -46,9 +46,7 @@ export default function PrescriptionsScreen(): React.JSX.Element {
   const [error, setError] = useState<AppError | null>(null);
 
   // ── Scheduling state ────────────────────────────────────────────────────────
-  const [scheduledId, setScheduledId] = useState<string | null>(
-    prescriptionsService.getScheduledPrescriptionId(),
-  );
+  const [scheduledId, setScheduledId] = useState<string | null>(null);
   const [schedulingId, setSchedulingId] = useState<string | null>(null); // which card is loading
 
   // ── Active prescription quick-view ──────────────────────────────────────────
@@ -62,15 +60,16 @@ export default function PrescriptionsScreen(): React.JSX.Element {
   const loadData = useCallback(async (): Promise<void> => {
     try {
       setError(null);
-      const [doctors, uploads] = await Promise.all([
-        prescriptionsService.getDoctorPrescriptions(),
-        prescriptionsService.getUploadedPrescriptions(),
-      ]);
+      // Single endpoint — backend filters by role automatically
+      const all = await prescriptionsService.getPrescriptions();
+      console.log('Fetched prescriptions:', all);
       if (isMountedRef.current) {
-        setDoctorRxs(doctors);
-        setUploadedRxs(uploads);
+        // Separate into doctor-issued vs uploaded based on source or doctor presence
+        setDoctorRxs(all.filter((rx) => rx.source === 'DOCTOR'));
+        setUploadedRxs(all.filter((rx) => rx.source === 'UPLOADED'));
       }
-    } catch {
+    } catch (err) {
+      console.error('Error fetching prescriptions:', err);
       if (isMountedRef.current) {
         setError(
           createAppError('NETWORK_ERROR', 'Unable to load prescriptions. Please try again.'),
@@ -94,23 +93,18 @@ export default function PrescriptionsScreen(): React.JSX.Element {
   const onRefresh = async (): Promise<void> => {
     setRefreshing(true);
     await loadData();
-    setScheduledId(prescriptionsService.getScheduledPrescriptionId());
     setRefreshing(false);
   };
 
   // ── Schedule / unschedule ───────────────────────────────────────────────────
 
   const handleSchedule = async (rx: Prescription): Promise<void> => {
-    if (scheduledId === rx.id) {
-      // Explicit unschedule via button — handled by handleUnschedule
-      return;
-    }
-    const previousId = scheduledId;
-    setSchedulingId(rx.id);
+    if (scheduledId === String(rx.id)) return;
+    setSchedulingId(String(rx.id));
     try {
-      await prescriptionsService.schedulePrescription(rx.id);
+      // Local scheduling state — backend has no schedule endpoint yet
       if (isMountedRef.current) {
-        setScheduledId(rx.id);
+        setScheduledId(String(rx.id));
       }
     } catch {
       if (isMountedRef.current) {
@@ -124,7 +118,7 @@ export default function PrescriptionsScreen(): React.JSX.Element {
   const handleUnschedule = async (): Promise<void> => {
     setSchedulingId(scheduledId);
     try {
-      await prescriptionsService.unschedulePrescription();
+      // Clear local scheduling state
       if (isMountedRef.current) {
         setScheduledId(null);
         setActivePrescription(null);
@@ -149,7 +143,9 @@ export default function PrescriptionsScreen(): React.JSX.Element {
     setQuickViewLoading(true);
     setQuickViewVisible(true);
     try {
-      const rx = await prescriptionsService.getScheduledPrescription();
+      // Find the scheduled prescription from the already-loaded list
+      const all = [...doctorRxs, ...uploadedRxs];
+      const rx = all.find((p) => String(p.id) === scheduledId) ?? null;
       if (isMountedRef.current) setActivePrescription(rx);
     } catch {
       if (isMountedRef.current) setActivePrescription(null);
@@ -183,21 +179,11 @@ export default function PrescriptionsScreen(): React.JSX.Element {
       <View style={styles.cardWrapper}>
         <PrescriptionCard
           prescription={item}
-          isScheduled={scheduledId === item.id}
-          isScheduling={schedulingId === item.id}
           onPress={() => router.push(`/(app)/prescriptions/${item.id}`)}
-          onToggleSchedule={() => {
-            if (scheduledId === item.id) {
-              handleUnschedule();
-            } else {
-              handleSchedule(item);
-            }
-          }}
         />
       </View>
     ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [scheduledId, schedulingId, router],
+    [router],
   );
 
   const renderEmptyDoctor = (): React.JSX.Element => (
@@ -327,60 +313,13 @@ export default function PrescriptionsScreen(): React.JSX.Element {
       {/* Two-tab switcher */}
       {renderTabs()}
 
-      {/* Active prescription quick-view button */}
-      <View style={styles.quickViewBtnContainer}>
-        <TouchableOpacity
-          style={[
-            styles.quickViewBtn,
-            scheduledId ? styles.quickViewBtnActive : styles.quickViewBtnEmpty,
-          ]}
-          onPress={handleOpenQuickView}
-          activeOpacity={0.85}
-          accessibilityRole="button"
-          accessibilityLabel={
-            scheduledId
-              ? 'View active prescription medicines and schedule'
-              : 'No prescription scheduled. Tap to learn more.'
-          }
-        >
-          <View style={styles.quickViewBtnLeft}>
-            <MaterialCommunityIcons
-              name="clipboard-text-outline"
-              size={20}
-              color={scheduledId ? Colors.surface : Colors.textTertiary}
-            />
-            <View>
-              <Text
-                style={[styles.quickViewBtnTitle, !scheduledId && styles.quickViewBtnTitleEmpty]}
-              >
-                {scheduledId ? 'View scheduled medicines' : 'Active Schedule'}
-              </Text>
-              <Text
-                style={[
-                  styles.quickViewBtnSubtitle,
-                  !scheduledId && styles.quickViewBtnSubtitleEmpty,
-                ]}
-              >
-                {scheduledId
-                  ? scheduledRx?.doctorName || 'Prescription Schedule'
-                  : 'Select a prescription from below'}
-              </Text>
-            </View>
-          </View>
-          <MaterialCommunityIcons
-            name="chevron-right"
-            size={24}
-            color={scheduledId ? Colors.surface : Colors.textTertiary}
-          />
-        </TouchableOpacity>
-      </View>
 
       {/* List */}
       <View style={styles.listWrapper}>
         <FlashList
           key={activeTab} // Force remount when tab changes to reset scroll position
           data={currentList}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}

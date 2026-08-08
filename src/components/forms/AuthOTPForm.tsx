@@ -132,7 +132,7 @@ export const AuthOTPForm = ({
         accessibilityRole="button"
       >
         <Text style={[styles.resendText, timeLeft > 0 && styles.resendTextDisabled]}>
-          {timeLeft > 0 
+          {timeLeft > 0
             ? `${t('authotpform.resend_code_in', 'Resend code in')} ${timeLeft}s`
             : t('authotpform.resend_code', 'Resend Code')}
         </Text>

@@ -37,7 +37,7 @@ export default function InteractionCheckerScreen() {
         const prescriptions = await prescriptionsService.getPrescriptions();
         if (isMounted) {
           const meds = prescriptions.flatMap((p) =>
-            p.medicines.map((m) => ({ id: m.id, name: m.name })),
+            p.medicines.map((m) => ({ id: String(m.id), name: m.name })),
           );
           setActiveMedicines(meds);
         }
@@ -56,7 +56,9 @@ export default function InteractionCheckerScreen() {
     setLoading(true);
     setConflicts(null);
     try {
-      const data = await medicineAiService.checkInteractions(newMedicine.trim(), activeMedicines);
+      // Build peer array: the new medicine + all active medicines
+      const allMedicines = [newMedicine.trim(), ...activeMedicines.map((m) => m.name)];
+      const data = await medicineAiService.checkInteractions(allMedicines);
       setConflicts(data);
     } catch (err) {
       setError(createAppError('AI_SERVICE_ERROR', String(err)));

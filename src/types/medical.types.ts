@@ -33,31 +33,49 @@ export interface Appointment {
   notes?: string;
 }
 
+/**
+ * Prescription shape matching the backend PrescriptionResource.
+ * Fields that existed only in the old frontend mock are marked optional
+ * and suffixed with a comment so existing UI code doesn't break immediately.
+ */
 export interface Prescription {
-  id: string;
-  patientId: string;
-  doctorId?: string; // Optional if uploaded manually
-  doctorName?: string; // Display name for the issuing doctor
-  issuedAt: string; // ISO 8601
+  id: string | number;
+  /** ISO 8601 timestamp — maps to backend's createdAt. */
+  issuedAt: string;
+  diagnosisSummary?: string;
+  status?: 'active' | 'expired' | 'cancelled';
+  /** Issuing doctor (from backend UserResource). */
+  doctor?: { id: number; name: string; avatarUrl: string | null };
+  /** Patient this prescription belongs to (from backend UserResource). */
+  patient?: { id: number; name: string; avatarUrl: string | null };
   medicines: PrescriptionMedicine[];
+  appointmentId?: number | null;
+  // ── Legacy mock-only fields (kept for backward compat) ──
+  patientId?: string;
+  doctorId?: string;
+  doctorName?: string;
   notes?: string;
-  imageUrl?: string; // URL to the original prescription image/document
-  source?: 'DOCTOR' | 'UPLOADED'; // Discriminates between doctor-issued and user-uploaded
+  imageUrl?: string;
+  source?: 'DOCTOR' | 'UPLOADED';
 }
 
 export interface PrescriptionMedicine {
-  id: string;
+  id: string | number;
   name: string;
   dosage: string;
   durationDays: number;
-  timesPerDay?: number; // e.g. 2 for "twice a day"
-  times?: string[]; // Scheduled clock times, e.g. ['08:00', '20:00']
-  dosageSchedule?: { morning?: string; noon?: string; night?: string }; // Specific times for morning, noon, night
-  dosagePattern?: string; // e.g. "1+1+0"
-  frequency: string; // Human-readable, e.g. "Twice daily"
-  instructions?: string;
-  explanation?: string; // Plain-language explanation of what the medicine does and when/why to take it
-  aiDemystifierSummary?: string; // Legacy: kept for backward compatibility
+  /** Free-form schedule object from backend, e.g. { morning: "08:00" }. */
+  dosageSchedule?: Record<string, string> | { morning?: string; noon?: string; night?: string };
+  /** Human-readable schedule format from backend, e.g. "1+0+1". */
+  scheduleFormat?: string | null;
+  instructions?: string | null;
+  // ── Legacy mock-only fields ──
+  timesPerDay?: number;
+  times?: string[];
+  dosagePattern?: string;
+  frequency?: string;
+  explanation?: string;
+  aiDemystifierSummary?: string;
 }
 
 export type AdherenceStatus = 'TAKEN' | 'PENDING' | 'MISSED';
@@ -126,6 +144,53 @@ export interface QuestionAnswer {
   doctorId: string;
   content: string;
   createdAt: string; // ISO 8601
+}
+
+// ─── Conversation types (matching ConversationController / ConversationResource) ─
+
+/**
+ * A direct doctor↔patient conversation thread.
+ * Replaces the old department-routed Question/Answer model in the backend.
+ */
+export interface Conversation {
+  id: number;
+  subject: string | null;
+  status: string;
+  patient: { id: number; name: string; avatarUrl: string | null };
+  doctor: { id: number; name: string; avatarUrl: string | null };
+  latestMessage: ConversationMessage | null;
+  createdAt: string;
+}
+
+export interface ConversationMessage {
+  id: number;
+  /** Message text — backend field key is "body", NOT "content". */
+  body: string;
+  sender: { id: number; name: string; avatarUrl: string | null };
+  readAt: string | null;
+  createdAt: string;
+}
+
+// ─── Vital type (matching VitalResource from VitalController) ─────────────────
+
+export interface ApiVital {
+  id: string;
+  bloodPressure: string | null; // "SYS/DIA" format, e.g. "120/80"
+  pulseRate: number | null;
+  glucoseLevel: number | null;
+  oxygenSaturation: number | null;
+  loggedAt: string;             // ISO 8601
+  createdAt: string;
+}
+
+// ─── AI Triage type (matching AiTriageResource) ───────────────────────────────
+
+export interface AiTriageResult {
+  id: string;
+  symptomsSummary: string;
+  urgencyLevel: 'low' | 'medium' | 'high' | 'emergency';
+  recommendedAction: string;
+  createdAt: string;
 }
 
 export interface EmergencyContact {

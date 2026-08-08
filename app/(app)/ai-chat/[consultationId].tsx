@@ -68,30 +68,24 @@ export default function ConsultationChatScreen() {
     setActiveStreamingId(aiMessageId);
 
     try {
-      const stream = chatService.streamResponse(consultationId, text.trim());
-      let currentResponse = '';
+      // Backend returns a single JSON response (not SSE streaming)
+      const response = await chatService.sendMessage(text.trim());
+      const fullContent = response.message.content;
 
-      // eslint-disable-next-line @typescript-eslint/await-thenable
-      for await (const chunk of stream) {
-        currentResponse += chunk;
-        updateMessage(consultationId, aiMessageId, currentResponse);
-        // Scroll to bottom during streaming occasionally or on every chunk if it's smooth
+      // Client-side character-reveal animation to simulate streaming
+      let revealed = '';
+      for (let i = 0; i < fullContent.length; i++) {
+        revealed += fullContent[i];
+        updateMessage(consultationId, aiMessageId, revealed);
+        // Small delay between characters for typing effect
+        if (i % 5 === 0) await new Promise((r) => setTimeout(r, 10));
       }
     } catch (error) {
-      if (error instanceof Error && error.message === 'NETWORK_ERROR') {
-        // Fallback offline message for Tier 3 DoD
-        updateMessage(
-          consultationId,
-          aiMessageId,
-          'You appear to be offline. I cannot assist without a network connection. In an emergency, please use the offline protocols on the dashboard.',
-        );
-      } else {
-        updateMessage(
-          consultationId,
-          aiMessageId,
-          'Sorry, I encountered an error processing your request.',
-        );
-      }
+      updateMessage(
+        consultationId,
+        aiMessageId,
+        'Sorry, I encountered an error processing your request.',
+      );
     } finally {
       setActiveStreamingId(null);
     }

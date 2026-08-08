@@ -1,42 +1,102 @@
+// src/services/ai/chatService.ts
+// ─────────────────────────────────────────────────────────────────────────────
+// AI Chat Service — connected to POST /api/v1/ai/chat (single JSON response,
+// NOT SSE streaming). The backend AiChatController returns a plain 201 JSON.
+// ─────────────────────────────────────────────────────────────────────────────
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { axiosClient } from '../api/axiosClient';
+
+// ─── Types (matching AiChatController response shapes exactly) ───────────────
+
+export interface AiChatMessage {
+  id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  createdAt: string;
+}
+
+export interface AiChatSession {
+  id: number;
+  title: string;
+  latestMessage: AiChatMessage | null;
+  createdAt: string;
+}
+
+export interface SendMessageResponse {
+  sessionId: number;
+  message: AiChatMessage;
+}
+
+// ─── Service ──────────────────────────────────────────────────────────────────
+
 class ChatService {
   /**
-   * Mocks an AI streaming response.
-   * Yields text chunks to simulate a real token-by-token stream.
-   * Grounded in a mock transcript for the given consultationId.
+   * Goal: Send a user message to the AI and receive a single full response.
+   * How: POST /api/v1/ai/chat with { message, session_id? }.
+   * To continue an existing session pass sessionId; omit to start a new one.
+   * The backend returns { sessionId, message: { id, role, content, createdAt } }.
    */
-  async *streamResponse(consultationId: string, query: string): AsyncGenerator<string> {
-    const lowerQuery = query.toLowerCase();
+  async sendMessage(message: string, sessionId?: number): Promise<SendMessageResponse> {
+    const res = (await axiosClient.post('/ai/chat', {
+      message,
+      session_id: sessionId ?? null,
+    })) as any;
+    return res;
+  }
 
-    // Fulfill Tier 3 DoD for offline message testing
-    if (lowerQuery.includes('offline test')) {
-      throw new Error('NETWORK_ERROR');
-    }
+  /**
+   * Goal: List all AI chat sessions for the authenticated user.
+   * How: GET /api/v1/ai/sessions — returns paginated results; we extract the array.
+   */
+  async getSessions(): Promise<AiChatSession[]> {
+    const res = (await axiosClient.get('/ai/sessions')) as any;
+    // axiosClient unwraps Laravel's top-level .data; Laravel pagination wraps items
+    // in a second .data. Handle both shapes gracefully.
+    return Array.isArray(res) ? res : res?.data ?? [];
+  }
 
-    // Mock transcript knowledge base per consultationId
-    const mockTranscripts: Record<string, string> = {
-      'cons-1':
-        'During consultation cons-1, Dr. Sarah Khan diagnosed you with acute pharyngitis (sore throat). She prescribed Azithromycin 500mg for 3 days and advised warm salt water gargles.',
-      'cons-2':
-        'During consultation cons-2, Dr. Ahmed Rahman noted your blood pressure was slightly elevated. He recommended a low-sodium diet and daily 30-minute walks, and scheduled a follow-up in one month.',
-    };
-
-    const transcriptContext =
-      mockTranscripts[consultationId] ||
-      'You recently had a consultation regarding some mild symptoms. Your doctor prescribed a short course of medication and advised rest and plenty of fluids.';
-
-    const fullResponse = `Based on your consultation records:\n\n${transcriptContext}\n\nTo answer your question directly: The doctor specifically noted that you should complete the full course of your prescribed medication even if you start feeling better. If you experience any severe side effects like a rash, dizziness, or shortness of breath, you should stop the medication and visit the emergency room immediately.\n\nIs there anything specific from the prescription or the doctor's advice you'd like me to clarify further?`;
-
-    const chunks = fullResponse.split(' ');
-
-    // Initial artificial delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    for (let i = 0; i < chunks.length; i++) {
-      // Simulate network latency per chunk
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      yield chunks[i] + (i < chunks.length - 1 ? ' ' : '');
-    }
+  /**
+   * Goal: Fetch all messages in a specific AI chat session.
+   * How: GET /api/v1/ai/sessions/{id}/messages — oldest-first, page 1 = 50 results.
+   */
+  async getMessages(sessionId: number): Promise<AiChatMessage[]> {
+    const res = (await axiosClient.get(`/ai/sessions/${sessionId}/messages`)) as any;
+    return Array.isArray(res) ? res : res?.data ?? [];
   }
 }
 
 export const chatService = new ChatService();
+
+// ─── TanStack Query v5 Hooks ──────────────────────────────────────────────────
+
+/** Fetch and cache the list of AI chat sessions for the current user. */
+export const useAiSessions = () =>
+  useQuery({
+    queryKey: ['ai-sessions'],
+    queryFn: () => chatService.getSessions(),
+  });
+
+/** Fetch and cache all messages for a specific AI chat session. */
+export const useAiMessages = (sessionId: number) =>
+  useQuery({
+    queryKey: ['ai-messages', sessionId],
+    queryFn: () => chatService.getMessages(sessionId),
+    enabled: !!sessionId,
+  });
+
+/**
+ * Send a message to the AI.
+ * On success, invalidates both the sessions list and the specific session's messages
+ * so both the history screen and the active chat screen refresh automatically.
+ */
+export const useSendAiMessage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ message, sessionId }: { message: string; sessionId?: number }) =>
+      chatService.sendMessage(message, sessionId),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['ai-sessions'] });
+      qc.invalidateQueries({ queryKey: ['ai-messages', data.sessionId] });
+    },
+  });
+};

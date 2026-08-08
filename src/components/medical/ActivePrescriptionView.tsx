@@ -5,9 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CustomTimePickerModal } from './CustomTimePickerModal';
 import { Prescription, PrescriptionMedicine } from '../../types/medical.types';
 import { Colors, Spacing, BorderRadius, FontFamily, FontSize } from '../../theme';
-import { prescriptionsService } from '../../services/api/prescriptionsService';
-import { getMealTiming } from '../../utils/prescriptionFormatters';
 import { useAlarmStore } from '../../store/alarmStore';
+import { getMealTiming } from '../../utils/prescriptionFormatters';
 
 export interface ActivePrescriptionViewProps {
   prescription: Prescription;
@@ -172,17 +171,17 @@ export const ActivePrescriptionView = ({
     ];
 
     prescription.medicines.forEach((med) => {
-      const schedule = med.dosageSchedule || {};
-      if (schedule.morning) {
-        periods[0].time = periods[0].time || schedule.morning;
+      const schedule = (med.dosageSchedule as Record<string, string>) || {};
+      if (schedule['morning']) {
+        periods[0].time = periods[0].time || schedule['morning'];
         periods[0].medicines.push(med);
       }
-      if (schedule.noon) {
-        periods[1].time = periods[1].time || schedule.noon;
+      if (schedule['noon']) {
+        periods[1].time = periods[1].time || schedule['noon'];
         periods[1].medicines.push(med);
       }
-      if (schedule.night) {
-        periods[2].time = periods[2].time || schedule.night;
+      if (schedule['night']) {
+        periods[2].time = periods[2].time || schedule['night'];
         periods[2].medicines.push(med);
       }
     });
@@ -222,21 +221,17 @@ export const ActivePrescriptionView = ({
   };
 
   const handleEditSave = async (morning: string, noon: string, night: string) => {
-    await Promise.all(
-      prescription.medicines.map((med) => {
-        const dosageSchedule = { ...med.dosageSchedule };
-        if (dosageSchedule.morning !== undefined && morning) dosageSchedule.morning = morning;
-        if (dosageSchedule.noon !== undefined && noon) dosageSchedule.noon = noon;
-        if (dosageSchedule.night !== undefined && night) dosageSchedule.night = night;
-
-        return prescriptionsService.updateMedicineSchedule(prescription.id, med.id, {
-          dosageSchedule,
-        });
-      }),
-    );
-
-    const updated = await prescriptionsService.getPrescriptionDetails(prescription.id);
-    setPrescription(updated);
+    // Update schedule locally. The backend has no PATCH /prescriptions/{id}/medicines/{id}/schedule
+    // endpoint yet, so we apply the time overrides in-memory and update local state.
+    const updatedMedicines = prescription.medicines.map((med) => {
+      const ds = (med.dosageSchedule as Record<string, string>) ?? {};
+      const newSchedule: Record<string, string> = { ...ds };
+      if (ds.morning !== undefined && morning) newSchedule.morning = morning;
+      if (ds.noon !== undefined && noon) newSchedule.noon = noon;
+      if (ds.night !== undefined && night) newSchedule.night = night;
+      return { ...med, dosageSchedule: newSchedule };
+    });
+    setPrescription((prev) => ({ ...prev, medicines: updatedMedicines }));
   };
 
   const periodGroups = getPeriods();

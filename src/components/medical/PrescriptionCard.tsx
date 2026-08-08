@@ -1,114 +1,111 @@
 // 1. IMPORTS
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Prescription } from '../../types/medical.types';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../theme';
-import { Avatar } from '../ui/Avatar';
-import { doctorPlaceholders } from '../../constants/images';
 
 // 2. TYPES
 
 export interface PrescriptionCardProps {
   prescription: Prescription;
+  /** kept for backward-compat; no longer rendered on card face */
   isScheduled?: boolean;
   isScheduling?: boolean;
   onPress: () => void;
-  onToggleSchedule: () => void;
+  /** kept for backward-compat; no longer called from card face */
+  onToggleSchedule?: () => void;
 }
 
-// 3. COMPONENT
+// 3. STATUS BADGE
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  active:    { label: 'Active',    color: Colors.success,  bg: '#e6f9f0' },
+  expired:   { label: 'Expired',   color: Colors.textTertiary, bg: Colors.tertiary },
+  cancelled: { label: 'Cancelled', color: Colors.danger,   bg: '#fde8e8' },
+};
+
+// 4. COMPONENT
 
 export function PrescriptionCard({
   prescription,
-  isScheduled = false,
-  isScheduling = false,
   onPress,
-  onToggleSchedule,
 }: PrescriptionCardProps): React.JSX.Element {
   const isDoctor = prescription.source === 'DOCTOR';
 
   const issueDate = new Date(prescription.issuedAt);
-  const formattedDateTime =
-    issueDate.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    }) +
-    ' • ' +
-    issueDate.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+  const formattedDate = issueDate.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+  const statusKey = prescription.status ?? 'active';
+  const statusCfg = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.active;
+
+  const doctorName = prescription.doctorName ?? prescription.doctor?.name ?? 'Doctor';
+  const diagnosis  = prescription.diagnosisSummary ?? 'Prescription';
+  const medCount   = prescription.medicines?.length ?? 0;
 
   return (
     <TouchableOpacity
       style={styles.card}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={0.75}
       accessibilityRole="button"
-      accessibilityLabel={
-        isDoctor
-          ? `Prescription from ${prescription.doctorName ?? 'Doctor'}, issued ${formattedDateTime}${isScheduled ? ', currently scheduled' : ''}`
-          : `Uploaded prescription ID ${prescription.id.slice(-4).toUpperCase()}, uploaded ${formattedDateTime}${isScheduled ? ', currently scheduled' : ''}`
-      }
-      accessibilityState={{ selected: isScheduled }}
+      accessibilityLabel={`Prescription for ${diagnosis} from ${doctorName}`}
     >
-      <View style={styles.contentRow}>
-        {/* Left Section: Avatar or ID */}
-        <View style={styles.leftSection}>
-          {isDoctor ? (
-            <Avatar
-              name={prescription.doctorName ?? 'Doctor'}
-              source={
-                doctorPlaceholders[(prescription.doctorId?.length ?? prescription.id.length) % 5]
-              }
-              size={48}
-            />
-          ) : null}
-          <View style={styles.titleBlock}>
-            {isDoctor ? (
-              <Text style={styles.title} numberOfLines={1}>
-                {prescription.doctorName ?? 'Doctor'}
-              </Text>
-            ) : (
-              <Text style={styles.title} numberOfLines={1}>
-                Prescription #{prescription.id.slice(-4).toUpperCase()}
-              </Text>
-            )}
-            <Text style={styles.subtitle} numberOfLines={1}>
-              {formattedDateTime}
+      {/* ── Top Row: doctor avatar chip + status badge ── */}
+      <View style={styles.topRow}>
+        <View style={styles.doctorChip}>
+          <View style={styles.docAvatarCircle}>
+            <MaterialCommunityIcons name="stethoscope" size={14} color={Colors.primary} />
+          </View>
+          <Text style={styles.doctorChipText} numberOfLines={1}>
+            {isDoctor ? `Dr. ${doctorName.replace(/^Dr\.?\s*/i, '')}` : 'Uploaded'}
+          </Text>
+        </View>
+        <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
+          <Text style={[styles.statusText, { color: statusCfg.color }]}>{statusCfg.label}</Text>
+        </View>
+      </View>
+
+      {/* ── Diagnosis / Title ── */}
+      <Text style={styles.diagnosis} numberOfLines={2}>
+        {diagnosis}
+      </Text>
+
+      {/* ── Bottom Row: medicine count + date + view details ── */}
+      <View style={styles.bottomRow}>
+        <View style={styles.metaChips}>
+          <View style={styles.chip}>
+            <MaterialCommunityIcons name="pill" size={12} color={Colors.primary} />
+            <Text style={styles.chipText}>
+              {medCount} {medCount === 1 ? 'Medicine' : 'Medicines'}
             </Text>
+          </View>
+          <View style={styles.chip}>
+            <MaterialCommunityIcons name="calendar-outline" size={12} color={Colors.textTertiary} />
+            <Text style={[styles.chipText, { color: Colors.textTertiary }]}>{formattedDate}</Text>
           </View>
         </View>
 
-        {/* Right Section: Schedule Button */}
-        <View style={styles.rightSection}>
-          <TouchableOpacity
-            style={[styles.scheduleBtn, isScheduled && styles.scheduleBtnActive]}
-            onPress={onToggleSchedule}
-            disabled={isScheduling}
-            accessibilityRole="button"
-            accessibilityLabel={isScheduled ? 'Unschedule' : 'Schedule'}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            {isScheduling ? (
-              <ActivityIndicator
-                size="small"
-                color={isScheduled ? Colors.danger : Colors.primary}
-              />
-            ) : (
-              <Text style={[styles.scheduleBtnText, isScheduled && styles.scheduleBtnTextActive]}>
-                {isScheduled ? 'Unschedule' : 'Schedule'}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={styles.viewBtn}
+          onPress={onPress}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="View prescription details"
+        >
+          <Text style={styles.viewBtnText}>View Details</Text>
+          <MaterialCommunityIcons name="arrow-right" size={13} color={Colors.primary} />
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
 }
 
-// 4. STYLES
+// 5. STYLES
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
@@ -116,61 +113,82 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderWidth: 1,
     borderColor: Colors.tertiary,
+    gap: Spacing.sm,
   },
-  contentRow: {
+  topRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
   },
-  leftSection: {
+  doctorChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 6,
     flex: 1,
-    gap: Spacing.md,
-    minHeight: 48,
+    paddingRight: Spacing.sm,
   },
-  titleBlock: {
-    flex: 1,
+  docAvatarCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#e8f0fe',
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  title: {
-    fontFamily: FontFamily.bold,
-    fontWeight: '900',
-    fontSize: FontSize.base,
-    color: Colors.textPrimary,
-    marginBottom: 2,
-  },
-  subtitle: {
-    fontFamily: FontFamily.regular,
+  doctorChipText: {
+    fontFamily: FontFamily.medium,
     fontSize: FontSize.xs,
     color: Colors.textSecondary,
+    flex: 1,
   },
-  rightSection: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    paddingLeft: Spacing.sm,
-  },
-  scheduleBtn: {
+  statusBadge: {
     paddingHorizontal: Spacing.sm,
-    paddingVertical: 7,
+    paddingVertical: 3,
     borderRadius: BorderRadius.sm,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    backgroundColor: 'transparent',
-    minWidth: 75,
+  },
+  statusText: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.xs,
+  },
+  diagnosis: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.lg,
+    color: Colors.textPrimary,
+    lineHeight: FontSize.lg * 1.3,
+  },
+  bottomRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    marginTop: 2,
   },
-  scheduleBtnActive: {
-    borderColor: Colors.danger,
+  metaChips: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    flex: 1,
+    flexWrap: 'wrap',
   },
-  scheduleBtnText: {
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  chipText: {
     fontFamily: FontFamily.medium,
     fontSize: FontSize.xs,
     color: Colors.primary,
-    lineHeight: FontSize.xs * 1.5,
   },
-  scheduleBtnTextActive: {
-    color: Colors.danger,
+  viewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingVertical: 4,
+    paddingLeft: Spacing.sm,
+  },
+  viewBtnText: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.xs,
+    color: Colors.primary,
   },
 });

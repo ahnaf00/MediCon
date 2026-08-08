@@ -92,13 +92,11 @@ export const PatientDashboard = (): React.JSX.Element => {
             label={t('dashboard.hospitals') || 'Hospitals'}
             onPress={() => router.push('/(app)/(tabs)/hospitals')}
           />
-          {/* 
           <QuickAction
-            icon="pill"
-            label={t('dashboard.meds') || 'Medicines'}
-            onPress={() => router.push('/(app)/medicine')}
+            icon="chart-line"
+            label={t('dashboard.vitals') || 'Vitals'}
+            onPress={() => router.push('/(app)/vitals')}
           />
-          */}
           <QuickAction
             icon="chat-processing-outline"
             label={t('dashboard.aiChat') || 'AI Chat'}

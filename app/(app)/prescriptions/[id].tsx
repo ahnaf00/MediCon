@@ -27,10 +27,7 @@ import { reminderService } from '../../../src/services/notifications/reminderSer
 import { Prescription, PrescriptionMedicine } from '../../../src/types/medical.types';
 import { getMedicineDescription } from '../../../src/utils/prescriptionFormatters';
 
-// Enable LayoutAnimation on Android
-if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
-  UIManager.setLayoutAnimationEnabledExperimental(true);
-}
+// LayoutAnimation is enabled by default in the New Architecture
 
 // 2. TYPES
 
@@ -61,7 +58,7 @@ const MedicineDetailCard = ({
 
   const formattedDescription = getMedicineDescription(
     med.dosagePattern || '1+1+1',
-    med.instructions,
+    med.instructions ?? undefined,
   );
 
   const startDate = new Date(issuedAt);
@@ -161,19 +158,21 @@ export default function PrescriptionDetailsScreen() {
     let isMounted = true;
     (async () => {
       try {
-        const data = await prescriptionsService.getPrescriptionDetails(id as string);
+        const data = await prescriptionsService.getPrescriptionById(Number(id));
         if (isMounted) {
           setPrescription(data);
           const defaults: Record<string, Date> = {};
           data.medicines.forEach((med) => {
             const d = new Date();
-            if (med.times && med.times.length > 0) {
-              const [h, m] = med.times[0].split(':').map(Number);
+            const schedule = (med.dosageSchedule as any) ?? {};
+            const firstTime = schedule.morning ?? schedule.noon ?? schedule.night;
+            if (firstTime) {
+              const [h, m] = (firstTime as string).split(':').map(Number);
               d.setHours(h, m, 0, 0);
             } else {
               d.setHours(8, 0, 0, 0);
             }
-            defaults[med.id] = d;
+            defaults[String(med.id)] = d;
           });
           setReminderTimes(defaults);
         }
@@ -199,13 +198,13 @@ export default function PrescriptionDetailsScreen() {
         return;
       }
       await reminderService.scheduleDailyReminder(
-        med.id,
+        String(med.id),
         'Medicine Reminder',
         `Time to take ${med.name} (${med.dosage})`,
         date.getHours(),
         date.getMinutes(),
       );
-      setReminderTimes((prev) => ({ ...prev, [med.id]: date }));
+      setReminderTimes((prev) => ({ ...prev, [String(med.id)]: date }));
       Alert.alert(
         'Reminder Set',
         `Daily reminder set for ${med.name} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
@@ -231,7 +230,7 @@ export default function PrescriptionDetailsScreen() {
 
   // ── Loading / Error states ──────────────────────────────────────────────────
 
-  if (loading || !prescription) {
+  if (loading) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -254,6 +253,10 @@ export default function PrescriptionDetailsScreen() {
     );
   }
 
+  if (!prescription) {
+    return null;
+  }
+
   // ── Derived display values ──────────────────────────────────────────────────
 
   const isDoctor = prescription.source === 'DOCTOR';
@@ -274,7 +277,7 @@ export default function PrescriptionDetailsScreen() {
       minute: '2-digit',
     });
 
-  const hasOriginal = Boolean(prescription.imageUrl);
+  const hasOriginal = isDoctor || Boolean(prescription.imageUrl);
 
   return (
     <View style={styles.container}>
@@ -347,10 +350,12 @@ export default function PrescriptionDetailsScreen() {
             onPress={() => setShowOriginalVisible(true)}
             activeOpacity={0.8}
             accessibilityRole="button"
-            accessibilityLabel="Show prescription document"
+            accessibilityLabel={isDoctor ? 'View prescription document' : 'Show original prescription'}
           >
-            <MaterialCommunityIcons name="file-eye-outline" size={18} color={Colors.surface} />
-            <Text style={styles.showOriginalFullBtnText}>Show Original Prescription</Text>
+            <MaterialCommunityIcons name="file-document-outline" size={18} color={Colors.surface} />
+            <Text style={styles.showOriginalFullBtnText}>
+              {isDoctor ? 'View Prescription Document' : 'Show Original Document'}
+            </Text>
           </TouchableOpacity>
         </View>
       )}
@@ -392,7 +397,99 @@ export default function PrescriptionDetailsScreen() {
             <View style={{ width: 40 }} />
           </View>
 
-          {prescription.imageUrl ? (
+          {isDoctor ? (
+            <ScrollView
+              style={{ flex: 1, backgroundColor: '#f0f2f5' }}
+              contentContainerStyle={{ padding: Spacing.md, paddingBottom: 60 }}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={styles.padContainer}>
+                {/* Header: Doctor Info */}
+                <View style={styles.padHeader}>
+                  <View style={styles.padHeaderLeft}>
+                    <Text style={styles.padDocName}>{prescription.doctorName ?? 'Doctor'}</Text>
+                    <Text style={styles.padDocSpec}>
+                      {(prescription.doctor as any)?.doctorProfile?.specialty ?? 'Medical Practitioner'}
+                    </Text>
+                    <Text style={styles.padDocQual}>
+                      {(prescription.doctor as any)?.doctorProfile?.qualification ?? ''}
+                    </Text>
+                  </View>
+                  <View style={styles.padHeaderRight}>
+                    <MaterialCommunityIcons name="hospital-building" size={32} color={Colors.primary} />
+                    <Text style={styles.padHospital}>MediCon Health</Text>
+                  </View>
+                </View>
+
+                <View style={styles.padDivider} />
+
+                {/* Sub-header: Patient Info */}
+                <View style={styles.padPatientInfo}>
+                  <View style={styles.padPatCol}>
+                    <Text style={styles.padLabel}>Patient Name</Text>
+                    <Text style={styles.padValue}>{prescription.patient?.name ?? 'Unknown'}</Text>
+                  </View>
+                  <View style={styles.padPatCol}>
+                    <Text style={styles.padLabel}>Age / Gender</Text>
+                    <Text style={styles.padValue}>
+                      {(prescription.patient as any)?.patientProfile?.dateOfBirth 
+                        ? `${new Date().getFullYear() - new Date((prescription.patient as any).patientProfile.dateOfBirth).getFullYear()} Yrs` 
+                        : '--'} 
+                      { (prescription.patient as any)?.patientProfile?.gender ? ` / ${(prescription.patient as any).patientProfile.gender}` : '' }
+                    </Text>
+                  </View>
+                  <View style={styles.padPatCol}>
+                    <Text style={styles.padLabel}>Date</Text>
+                    <Text style={styles.padValue}>
+                      {new Date(prescription.issuedAt).toLocaleDateString()}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Rx Symbol */}
+                <View style={styles.padRxRow}>
+                  <Text style={styles.padRx}>Rx</Text>
+                </View>
+
+                {/* Medicines List */}
+                <View style={styles.padMedicinesList}>
+                  {prescription.medicines.map((med, index) => (
+                    <View key={med.id} style={styles.padMedItem}>
+                      <Text style={styles.padMedIndex}>{index + 1}.</Text>
+                      <View style={styles.padMedDetails}>
+                        <Text style={styles.padMedName}>{med.name} {med.dosage ? `(${med.dosage})` : ''}</Text>
+                        <Text style={styles.padMedSchedule}>
+                          {med.scheduleFormat ? med.scheduleFormat : 'As directed'} 
+                          {med.durationDays ? ` — Continue for ${med.durationDays} days` : ''}
+                        </Text>
+                        {med.instructions ? (
+                          <Text style={styles.padMedInst}>{med.instructions}</Text>
+                        ) : null}
+                      </View>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Diagnosis / Notes (if any) */}
+                {prescription.diagnosisSummary ? (
+                  <View style={styles.padDiagnosis}>
+                    <Text style={styles.padLabel}>Diagnosis</Text>
+                    <Text style={styles.padValue}>{prescription.diagnosisSummary}</Text>
+                  </View>
+                ) : null}
+
+                {/* Footer Signature */}
+                <View style={styles.padFooter}>
+                  <View style={styles.padSignatureBox}>
+                    <MaterialCommunityIcons name="draw" size={32} color={Colors.primary} style={{ opacity: 0.5 }} />
+                    <View style={styles.padSignatureLine} />
+                    <Text style={styles.padDocNameSmall}>{prescription.doctorName ?? 'Doctor'}</Text>
+                    <Text style={styles.padDocSpecSmall}>Signature</Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          ) : prescription.imageUrl ? (
             <ScrollView
               contentContainerStyle={styles.originalImageContainer}
               maximumZoomScale={3}
@@ -692,8 +789,157 @@ const styles = StyleSheet.create({
   },
   originalImage: {
     width: '100%',
-    aspectRatio: 0.8, // Portrait prescription proportions
-    borderRadius: BorderRadius.md,
+    height: '100%',
+  },
+
+  // ── Digital Prescription Pad Styles ──
+  padContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+    minHeight: 500,
+  },
+  padHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  padHeaderLeft: {
+    flex: 1,
+  },
+  padHeaderRight: {
+    alignItems: 'flex-end',
+    opacity: 0.8,
+  },
+  padDocName: {
+    fontFamily: FontFamily.bold,
+    fontSize: 22,
+    color: Colors.primary,
+    marginBottom: 4,
+  },
+  padDocSpec: {
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.md,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  padDocQual: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.sm,
+    color: Colors.textTertiary,
+  },
+  padHospital: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.sm,
+    color: Colors.primary,
+    marginTop: 4,
+  },
+  padDivider: {
+    height: 1,
+    backgroundColor: Colors.tertiary,
+    marginBottom: 16,
+  },
+  padPatientInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 24,
+    backgroundColor: '#f8fafc',
+    padding: 12,
+    borderRadius: 8,
+  },
+  padPatCol: {
+    flex: 1,
+  },
+  padLabel: {
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  padValue: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+    textTransform: 'capitalize',
+  },
+  padRxRow: {
+    marginBottom: 16,
+  },
+  padRx: {
+    fontFamily: FontFamily.bold,
+    fontSize: 48,
+    color: Colors.textPrimary,
+    lineHeight: 56,
+  },
+  padMedicinesList: {
+    marginBottom: 32,
+  },
+  padMedItem: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  padMedIndex: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.lg,
+    color: Colors.textPrimary,
+    width: 24,
+  },
+  padMedDetails: {
+    flex: 1,
+  },
+  padMedName: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.lg,
+    color: Colors.textPrimary,
+    marginBottom: 4,
+  },
+  padMedSchedule: {
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.md,
+    color: Colors.textSecondary,
+    marginBottom: 2,
+  },
+  padMedInst: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.sm,
+    color: Colors.textTertiary,
+    fontStyle: 'italic',
+  },
+  padDiagnosis: {
+    marginBottom: 40,
+  },
+  padFooter: {
+    marginTop: 'auto',
+    alignItems: 'flex-end',
+    paddingTop: 32,
+  },
+  padSignatureBox: {
+    alignItems: 'center',
+    width: 140,
+  },
+  padSignatureLine: {
+    width: '100%',
+    height: 1,
+    backgroundColor: Colors.textPrimary,
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  padDocNameSmall: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.sm,
+    color: Colors.textPrimary,
+  },
+  padDocSpecSmall: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
   },
   noOriginalText: {
     fontFamily: FontFamily.medium,

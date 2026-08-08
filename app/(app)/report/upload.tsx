@@ -106,16 +106,17 @@ export default function UploadReportScreen() {
     setIsProcessing(true);
     try {
       // Mock upload and AI interpretation delay
-      const parsedReport = await reportsService.uploadReport(
-        selectedFile.uri,
-        selectedFile.type,
-        selectedFile.name,
-      );
+      const parsedReport = await reportsService.uploadRecord({
+        fileUri: selectedFile.uri,
+        mimeType: selectedFile.type === 'pdf' ? 'application/pdf' : 'image/jpeg',
+        fileName: selectedFile.name ?? 'upload',
+      });
 
       // Navigate to the newly created report detail screen
       router.replace(`/(app)/report/${parsedReport.id}`);
-    } catch {
-      Alert.alert('Upload Failed', 'There was an error processing your report. Please try again.');
+    } catch (error: any) {
+      const errorMessage = error?.message || (typeof error === 'string' ? error : JSON.stringify(error));
+      Alert.alert('Upload Failed', `There was an error processing your report. Details: ${errorMessage}`);
       setIsProcessing(false);
     }
   };

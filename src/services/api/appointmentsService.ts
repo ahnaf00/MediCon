@@ -43,12 +43,13 @@ class AppointmentsService {
     const response = (await axiosClient.get(`/doctors/${doctorId}/slots`, {
       params: { date }
     })) as any;
+    const slotsArray = response.slots || [];
     
-    // The backend might return an array of strings or objects. We map them.
-    return response.map((slot: any) => ({
+    // The backend returns an array of slot objects inside the `slots` key.
+    return slotsArray.map((slot: any) => ({
       id: typeof slot === 'string' ? slot : slot.id || slot.time,
       time: typeof slot === 'string' ? slot : slot.time,
-      isAvailable: typeof slot === 'string' ? true : (slot.isAvailable ?? true),
+      isAvailable: typeof slot === 'string' ? true : (slot.available ?? slot.isAvailable ?? true),
     }));
   }
 
@@ -83,11 +84,13 @@ class AppointmentsService {
    */
   async bookAppointment(details: BookingDetails): Promise<BookingResult> {
     // Laravel API: POST /appointments
+    // Combine date and time to create the datetime string required by the backend
+    const appointmentDatetime = `${details.date} ${details.timeSlotId}:00`;
+    
     const response = (await axiosClient.post('/appointments', {
-      doctor_id: details.doctorId,
-      appointment_date: details.date,
-      appointment_time: details.timeSlotId,
-      type: details.type,
+      doctor_user_id: details.doctorId,
+      appointment_datetime: appointmentDatetime,
+      format: details.type === 'video' ? 'video' : 'in_person',
       notes: details.symptoms || '',
     })) as any;
 
@@ -95,6 +98,12 @@ class AppointmentsService {
       success: true,
       appointmentId: response.id?.toString(),
     };
+  }
+  /**
+   * Cancel an appointment
+   */
+  async cancelAppointment(appointmentId: string): Promise<void> {
+    await axiosClient.patch(`/appointments/${appointmentId}/cancel`);
   }
 }
 

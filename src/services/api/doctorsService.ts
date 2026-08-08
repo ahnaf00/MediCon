@@ -71,10 +71,26 @@ export const doctorsService = {
       if (cat) params.department = cat.name;
     }
     const doctors = (await axiosClient.get('/doctors', { params })) as any;
-    // Add placeholder images if missing
+    // Map backend UserResource with nested doctorProfile to frontend Doctor interface
     return doctors.map((doc: any, index: number) => ({
-      ...doc,
-      image: doc.avatar_url ? { uri: doc.avatar_url } : doctorPlaceholders[index % doctorPlaceholders.length],
+      id: doc.id.toString(),
+      fullName: doc.name,
+      department: doc.doctorProfile?.specialty || 'General',
+      degree: doc.doctorProfile?.qualification || 'MBBS',
+      degrees: [doc.doctorProfile?.qualification || 'MBBS'],
+      rating: doc.doctorProfile?.rating || 0,
+      reviews: 0,
+      consultationFee: doc.doctorProfile?.consultationFee || 500,
+      experience: doc.doctorProfile?.experience ? `${doc.doctorProfile.experience} Years` : 'N/A',
+      bmdcNumber: 'N/A',
+      followUpFee: 0,
+      followUpDays: 0,
+      workingHospital: 'MediCon Hospital',
+      totalPatients: 0,
+      avgConsultationMinutes: 15,
+      services: [],
+      experienceList: [],
+      image: doc.avatarUrl ? { uri: doc.avatarUrl } : doctorPlaceholders[index % doctorPlaceholders.length],
     }));
   },
 
@@ -86,8 +102,27 @@ export const doctorsService = {
     const doc = (await axiosClient.get(`/doctors/${id}`)) as any;
     if (!doc) return null;
     return {
-      ...doc,
-      image: doc.avatar_url ? { uri: doc.avatar_url } : doctorPlaceholders[Number(id) % doctorPlaceholders.length || 0],
+      id: doc.id.toString(),
+      userId: doc.id.toString(),
+      fullName: doc.name,
+      department: doc.doctorProfile?.specialty || 'General',
+      degrees: [doc.doctorProfile?.qualification || 'MBBS'],
+      rating: doc.doctorProfile?.rating || 0,
+      reviewCount: 0,
+      consultationFee: doc.doctorProfile?.consultationFee || 500,
+      experience: doc.doctorProfile?.experience ? `${doc.doctorProfile.experience} Years` : 'N/A',
+      bmdcNumber: 'N/A',
+      followUpFee: 0,
+      followUpDays: 0,
+      workingHospital: 'MediCon Hospital',
+      totalPatients: 0,
+      avgConsultationMinutes: 15,
+      services: [],
+      experienceList: [],
+      licenseNumber: 'N/A',
+      isOnline: false,
+      about: doc.doctorProfile?.bio || '',
+      image: doc.avatarUrl ? { uri: doc.avatarUrl } : doctorPlaceholders[Number(id) % doctorPlaceholders.length || 0],
     };
   },
 
@@ -99,12 +134,12 @@ export const doctorsService = {
     const appointments = (await axiosClient.get('/appointments')) as any;
     return appointments.map((appt: any) => ({
       id: appt.id.toString(),
-      doctorId: appt.doctor_id.toString(),
-      doctorName: appt.doctor?.user?.name || 'Doctor',
-      specialty: appt.doctor?.specialty || 'Specialist',
-      date: appt.appointment_date,
+      doctorId: appt.doctor?.id?.toString() || '',
+      doctorName: appt.doctor?.name || 'Doctor',
+      specialty: appt.doctor?.doctorProfile?.specialty || 'Specialist',
+      date: appt.datetime ? new Date(appt.datetime).toISOString().split('T')[0] : 'N/A',
       status: appt.status,
-      image: appt.doctor?.user?.avatar_url ? { uri: appt.doctor.user.avatar_url } : undefined,
+      image: appt.doctor?.avatarUrl ? { uri: appt.doctor.avatarUrl } : undefined,
     }));
   },
 };

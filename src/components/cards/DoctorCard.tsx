@@ -13,6 +13,7 @@ export interface DoctorCardProps {
   doctor: DashboardDoctor | Doctor | ConsultationHistoryItem | null;
   onPress?: () => void;
   onBookPress?: () => void;
+  onCancelPress?: () => void;
   hideSectionLabel?: boolean;
   variant?: 'default' | 'history' | 'online';
   fullWidth?: boolean;
@@ -23,6 +24,7 @@ export const DoctorCard = ({
   doctor,
   onPress,
   onBookPress,
+  onCancelPress,
   hideSectionLabel = false,
   variant = 'default',
   fullWidth = false,
@@ -99,10 +101,17 @@ export const DoctorCard = ({
             {renderBadge()}
             <Text style={styles.historyDate}>Last consulted: {historyDate}</Text>
           </View>
-          <TouchableOpacity style={styles.primaryButton} onPress={onBookPress || onPress}>
-            <MaterialCommunityIcons name="video-outline" size={18} color={Colors.surface} />
-            <Text style={styles.primaryButtonText}>See Doctor Now</Text>
-          </TouchableOpacity>
+          <View style={styles.historyActionButtons}>
+            {isHistory && (doctor as ConsultationHistoryItem).status === 'upcoming' && onCancelPress && (
+              <TouchableOpacity style={styles.cancelButton} onPress={onCancelPress}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={styles.primaryButton} onPress={onBookPress || onPress}>
+              <MaterialCommunityIcons name="video-outline" size={18} color={Colors.surface} />
+              <Text style={styles.primaryButtonText}>See Doctor Now</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </TouchableOpacity>
     );
@@ -321,9 +330,29 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
   },
   primaryButtonText: {
-    fontFamily: FontFamily.medium,
+    fontFamily: FontFamily.bold,
     fontSize: FontSize.sm,
     color: Colors.surface,
+  },
+  historyActionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  cancelButton: {
+    paddingVertical: 8,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.danger + '15',
+    borderWidth: 1,
+    borderColor: Colors.danger + '30',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.sm,
+    color: Colors.danger,
   },
 
   // --- History variant ---
