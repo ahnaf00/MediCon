@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+// 1. IMPORTS
+import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -6,104 +7,111 @@ import {
   ActivityIndicator,
   Text,
   TouchableOpacity,
-  Image,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../../src/theme';
-import { Modal } from '../../../src/components/ui/Modal';
-import {
-  doctorsService,
-  ConsultationHistoryItem,
-  Doctor,
-} from '../../../src/services/api/doctorsService';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { chatService, AiChatSession } from '../../../src/services/ai/chatService';
+import { ErrorState } from '../../../src/components/ui/ErrorState';
 
-type EnrichedConsultation = ConsultationHistoryItem & { doctorInfo?: Doctor | null };
+// 2. COMPONENT
 
-export default function AiChatHistoryScreen() {
+export default function AiChatSessionsScreen() {
   const { t } = useTranslation();
-  const [history, setHistory] = useState<EnrichedConsultation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [infoModalVisible, setInfoModalVisible] = useState(false);
   const insets = useSafeAreaInsets();
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchHistory = async () => {
-      try {
-        setLoading(true);
-        const consultations = await doctorsService.getConsultationHistory();
-        const enriched = await Promise.all(
-          consultations.map(async (cons) => {
-            const doctorInfo = await doctorsService.getDoctorDetails(cons.doctorId);
-            return { ...cons, doctorInfo };
-          }),
-        );
-        if (isMounted) setHistory(enriched);
-      } catch {
-        // Handle error implicitly or log
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-    void fetchHistory();
-    return () => {
-      isMounted = false;
-    };
+  const [sessions, setSessions] = useState<AiChatSession[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadSessions = useCallback(async () => {
+    try {
+      setError(null);
+      const data = await chatService.getSessions();
+      setSessions(data);
+    } catch {
+      setError('Unable to load chat history.');
+    }
   }, []);
 
-  const handleConsultationPress = (consultationId: string, doctorName: string) => {
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      await loadSessions();
+      setLoading(false);
+    })();
+  }, [loadSessions]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadSessions();
+    setRefreshing(false);
+  };
+
+  const handleNewChat = () => {
+    // Navigate to the chat screen with sessionId = "new" to start a fresh session
     router.push({
-      pathname: `/(app)/ai-chat/${consultationId}`,
-      params: { doctorName },
+      pathname: '/(app)/ai-chat/[sessionId]',
+      params: { sessionId: 'new' },
     });
   };
 
-  const renderCard = ({ item }: { item: EnrichedConsultation }) => {
-    const doctor = item.doctorInfo;
-    const fallbackName = item.doctorName || 'Doctor';
-    const fallbackSpecialty = item.specialty || 'Specialist';
+  const handleSessionPress = (session: AiChatSession) => {
+    router.push({
+      pathname: '/(app)/ai-chat/[sessionId]',
+      params: { sessionId: String(session.id), title: session.title },
+    });
+  };
 
-    const displayName = doctor ? doctor.fullName : fallbackName;
-    const displaySpecialty = doctor ? doctor.department : fallbackSpecialty;
-    const imageSource =
-      doctor?.image ||
-      item.image ||
-      require('../../../src/assets/images/doctors/doctorPlaceholder1.png');
+  // ─── Session card renderer ──────────────────────────────────────────────────
 
-    const historyDate = item.date
-      ? new Date(item.date).toLocaleDateString('en-US', {
-          month: 'short',
-          day: 'numeric',
-          year: 'numeric',
-        })
-      : '';
+  const renderSessionCard = ({ item }: { item: AiChatSession }) => {
+    const date = new Date(item.createdAt);
+    const dateStr = date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const preview = item.latestMessage?.content ?? 'No messages yet';
 
     return (
       <TouchableOpacity
-        style={styles.card}
-        onPress={() => handleConsultationPress(item.id, displayName)}
-        activeOpacity={0.8}
-        accessibilityLabel={`Consultation with ${displayName}`}
+        style={styles.sessionCard}
+        onPress={() => handleSessionPress(item)}
+        activeOpacity={0.75}
+        accessibilityLabel={`Chat session: ${item.title}`}
       >
-        <Image source={imageSource as any} style={styles.cardImage} />
-        <View style={styles.cardContent}>
-          <Text style={styles.cardName} numberOfLines={2}>
-            {displayName}
-          </Text>
-          <View style={styles.badgeContainer}>
-            <Text style={styles.badgeText}>{displaySpecialty}</Text>
-          </View>
-          <Text style={styles.cardDate}>Consulted on {historyDate}</Text>
+        <View style={styles.sessionIconCircle}>
+          <MaterialCommunityIcons name="chat-processing-outline" size={22} color={Colors.primary} />
         </View>
+        <View style={styles.sessionContent}>
+          <Text style={styles.sessionTitle} numberOfLines={1}>
+            {item.title}
+          </Text>
+          <Text style={styles.sessionPreview} numberOfLines={2}>
+            {preview}
+          </Text>
+          <Text style={styles.sessionDate}>{dateStr} · {timeStr}</Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={20} color={Colors.textTertiary} />
       </TouchableOpacity>
     );
   };
 
+  // ─── Render ──────────────────────────────────────────────────────────────────
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
@@ -113,77 +121,98 @@ export default function AiChatHistoryScreen() {
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('dashboard.aiChat') || 'AI Chat'}</Text>
+        <Text style={styles.headerTitle}>{t('dashboard.aiChat') || 'AI Health Assistant'}</Text>
+        <View style={{ width: 44 }} />
+      </View>
+
+      {/* Hero / New Chat CTA */}
+      <View style={styles.heroBanner}>
+        <View style={styles.heroIconWrap}>
+          <MaterialCommunityIcons name="robot-outline" size={32} color={Colors.primary} />
+        </View>
+        <View style={styles.heroTextWrap}>
+          <Text style={styles.heroTitle}>Ask me anything about your health</Text>
+          <Text style={styles.heroSubtitle}>
+            Powered by AI · Not a substitute for a real doctor
+          </Text>
+        </View>
         <TouchableOpacity
-          style={styles.helpButton}
-          onPress={() => setInfoModalVisible(true)}
+          style={styles.newChatBtn}
+          onPress={handleNewChat}
           accessibilityRole="button"
-          accessibilityLabel="About AI Chat"
+          accessibilityLabel="Start a new AI chat"
         >
-          <MaterialCommunityIcons name="help-circle-outline" size={24} color={Colors.textPrimary} />
+          <MaterialCommunityIcons name="plus" size={18} color={Colors.surface} />
+          <Text style={styles.newChatBtnText}>New Chat</Text>
         </TouchableOpacity>
       </View>
 
+      {/* Content */}
       {loading ? (
-        <View style={styles.centerContainer}>
+        <View style={styles.centered}>
           <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : error ? (
+        <View style={styles.centered}>
+          <ErrorState
+            message={error}
+            onRetry={() => {
+              setLoading(true);
+              loadSessions().finally(() => setLoading(false));
+            }}
+          />
         </View>
       ) : (
         <FlatList
-          style={{ flex: 1, backgroundColor: Colors.background }}
-          data={history}
-          keyExtractor={(item) => item.id}
+          data={sessions}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={renderSessionCard}
           contentContainerStyle={[
             styles.listContent,
+            sessions.length === 0 && styles.listContentEmpty,
             { paddingBottom: insets.bottom + Spacing.xl },
           ]}
-          renderItem={renderCard}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+          }
+          ListHeaderComponent={
+            sessions.length > 0 ? (
+              <Text style={styles.sectionLabel}>Recent Conversations</Text>
+            ) : null
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No past consultations found.</Text>
+              <MaterialCommunityIcons name="chat-outline" size={48} color={Colors.textTertiary} />
+              <Text style={styles.emptyTitle}>No conversations yet</Text>
+              <Text style={styles.emptySubtitle}>
+                Tap "New Chat" above to start your first conversation with MediCon AI
+              </Text>
             </View>
           }
+          showsVerticalScrollIndicator={false}
         />
       )}
-
-      <Modal
-        visible={infoModalVisible}
-        onClose={() => setInfoModalVisible(false)}
-        title="About AI Chat"
-      >
-        <Text style={styles.modalContentText}>
-          Select one of your previously consulted doctors below to enter a chat. You can ask the AI
-          to explain, summarize, clarify, or answer questions about that doctor's consultation,
-          advice, recommendations, prescribed medicines, instructions, or anything the doctor
-          discussed during the consultation. Note: AI answers are based strictly on your
-          consultation records and are not a substitute for professional medical advice.
-        </Text>
-      </Modal>
     </SafeAreaView>
   );
 }
 
+// 3. STYLES
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Colors.surface,
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingRight: 5,
-    paddingLeft: 5,
+    paddingHorizontal: 5,
     paddingVertical: Spacing.sm,
     backgroundColor: Colors.surface,
-    gap: Spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.tertiary,
   },
   backButton: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  helpButton: {
     width: 44,
     height: 44,
     alignItems: 'center',
@@ -194,93 +223,138 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
     fontSize: FontSize.lg,
     color: Colors.textPrimary,
+    textAlign: 'center',
   },
-  descContainer: {
-    marginBottom: Spacing.xl,
+
+  // Hero
+  heroBanner: {
+    backgroundColor: Colors.surface,
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.tertiary,
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
-  descText: {
-    fontFamily: FontFamily.regular,
+  heroIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.xs,
+  },
+  heroTextWrap: {
+    alignItems: 'center',
+    gap: 2,
+  },
+  heroTitle: {
     fontSize: FontSize.md,
-    color: Colors.textSecondary,
-    lineHeight: FontSize.md * 1.5,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  heroSubtitle: {
+    fontSize: FontSize.sm,
+    color: Colors.textTertiary,
+    textAlign: 'center',
+  },
+  newChatBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.sm + 2,
+    borderRadius: BorderRadius.full,
+    gap: Spacing.xs,
+    marginTop: Spacing.sm,
+  },
+  newChatBtnText: {
+    fontSize: FontSize.base,
+    fontWeight: '700',
+    color: Colors.surface,
+  },
+
+  // List
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listContent: {
-    paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
-    gap: Spacing.md,
-    backgroundColor: Colors.background,
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.sm,
   },
-  card: {
+  listContentEmpty: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  sectionLabel: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.textTertiary,
+    marginBottom: Spacing.sm,
+    marginTop: Spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  // Session card
+  sessionCard: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
+    padding: Spacing.base,
+    marginBottom: Spacing.sm,
     borderWidth: 1,
     borderColor: Colors.tertiary,
-    elevation: 0,
-    shadowOpacity: 0,
-    alignItems: 'center',
+    gap: Spacing.md,
   },
-  cardImage: {
-    width: 80,
-    height: 80,
-    borderRadius: BorderRadius.md,
+  sessionIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: Colors.tertiary,
-    resizeMode: 'cover',
-  },
-  cardContent: {
-    flex: 1,
-    marginLeft: Spacing.md,
+    alignItems: 'center',
     justifyContent: 'center',
   },
-  cardName: {
-    fontFamily: FontFamily.bold,
+  sessionContent: {
+    flex: 1,
+    gap: 2,
+  },
+  sessionTitle: {
+    fontSize: FontSize.base,
     fontWeight: '600',
-    fontSize: FontSize.md,
     color: Colors.textPrimary,
-    marginBottom: 4,
   },
-  badgeContainer: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#d7f8f9',
-    borderRadius: BorderRadius.sm,
-    paddingHorizontal: Spacing.xs + 2,
-    paddingVertical: Spacing.xs - 1,
-    marginBottom: Spacing.xs + 1,
-  },
-  badgeText: {
-    fontFamily: FontFamily.medium,
-    fontWeight: '600',
-    fontSize: FontSize.xs,
-    color: Colors.primary,
-  },
-  cardDate: {
-    fontFamily: FontFamily.regular,
-    fontSize: FontSize.xs,
+  sessionPreview: {
+    fontSize: FontSize.sm,
     color: Colors.textSecondary,
+    lineHeight: FontSize.sm * 1.5,
   },
-  centerContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.background,
+  sessionDate: {
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+    marginTop: 2,
   },
+
+  // Empty
   emptyContainer: {
-    padding: Spacing.xl,
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
   },
-  emptyText: {
-    fontFamily: FontFamily.medium,
+  emptyTitle: {
     fontSize: FontSize.md,
+    fontWeight: '600',
     color: Colors.textSecondary,
+  },
+  emptySubtitle: {
+    fontSize: FontSize.sm,
+    color: Colors.textTertiary,
     textAlign: 'center',
-    lineHeight: FontSize.md * 1.5,
-  },
-  modalContentText: {
-    fontFamily: FontFamily.regular,
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-    lineHeight: FontSize.md * 1.5,
+    lineHeight: FontSize.sm * 1.6,
   },
 });

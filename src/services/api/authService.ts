@@ -1,6 +1,26 @@
 import { UserRole } from '../../store/authStore';
 import { axiosClient } from './axiosClient';
 
+export interface PatientProfileData {
+  id?: number;
+  dateOfBirth?: string;
+  gender?: 'male' | 'female' | 'other';
+  bloodGroup?: string;
+  emergencyContact?: string;
+  address?: string;
+}
+
+export interface DoctorProfileData {
+  id?: number;
+  specialty?: string;
+  qualification?: string;
+  experienceYears?: number;
+  consultationFee?: number;
+  rating?: number;
+  bio?: string;
+  verificationStatus?: string;
+}
+
 export interface User {
   id: string;
   name: string;
@@ -9,6 +29,9 @@ export interface User {
   role: UserRole;
   status: 'active' | 'pending' | 'suspended';
   avatar_url?: string;
+  avatarUrl?: string;
+  patientProfile?: PatientProfileData;
+  doctorProfile?: DoctorProfileData;
 }
 
 export const authService = {
@@ -44,7 +67,6 @@ export const authService = {
         user: response.user,
       };
     } catch (error: any) {
-      // The backend returns 400 for invalid OTP, 429 for max attempts
       if (error?.status === 401 || error?.status === 422 || error?.status === 400 || error?.status === 429) {
          throw error;
       }
@@ -60,7 +82,6 @@ export const authService = {
     role: UserRole,
     profileData: any,
   ): Promise<{ token: string; user: User }> {
-    // Construct payload dynamically based on role
     const payload: any = {
       phone,
       role,
@@ -79,7 +100,6 @@ export const authService = {
       payload.chronic_conditions = profileData.chronicConditions;
     }
 
-    // Laravel API: POST /auth/register
     const response = (await axiosClient.post('/auth/register', payload)) as any;
 
     return {
@@ -93,5 +113,37 @@ export const authService = {
    */
   async me(): Promise<User> {
     return (await axiosClient.get('/user/me')) as any;
+  },
+
+  /**
+   * Updates user profile data
+   */
+  async updateProfile(data: Record<string, any>): Promise<User> {
+    const response = (await axiosClient.put('/user/me', data)) as any;
+    return response.user || response;
+  },
+
+  /**
+   * Uploads user avatar image
+   */
+  async uploadAvatar(fileUri: string): Promise<string> {
+    const formData = new FormData();
+    const filename = fileUri.split('/').pop() || 'avatar.jpg';
+    const match = /\.(\w+)$/.exec(filename);
+    const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+    formData.append('avatar', {
+      uri: fileUri,
+      name: filename,
+      type,
+    } as any);
+
+    const response = (await axiosClient.post('/user/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    })) as any;
+
+    return response.avatarUrl;
   }
 };
