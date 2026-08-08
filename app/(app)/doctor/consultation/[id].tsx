@@ -23,243 +23,84 @@ import {
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { prescriptionsService } from '../../../../src/services/api/prescriptionsService';
 import { Prescription } from '../../../../src/types/medical.types';
+import { patientsService, ApiPatient } from '../../../../src/services/api/patientsService';
 
-// ─── TYPES ───────────────────────────────────────────────────────────────────
-interface ConsultationDetail {
-  id: string;
-  patientName: string;
-  patientAge: number;
-  patientGender: string;
-  bloodGroup: string;
-  allergies: string[];
-  reason: string;
-  scheduledTime: string;
-  format: 'video' | 'in-person';
-  status: 'pending' | 'in-progress' | 'completed';
-  activeConditions: string[];
-  activeMedicines: string[];
-  notes: string;
-  attachments?: { id: string; url: string; type: 'image' | 'video' }[];
-}
-
-const MOCK_CONSULTATIONS: Record<string, ConsultationDetail> = {
-  'appt-101': {
-    id: 'appt-101',
-    patientName: 'Rahim Uddin',
-    patientAge: 45,
-    patientGender: 'Male',
-    bloodGroup: 'B+',
-    allergies: ['Penicillin'],
-    reason: 'Follow-up for hypertension',
-    scheduledTime: '9:00 AM',
-    format: 'in-person',
-    status: 'completed',
-    activeConditions: ['Hypertension', 'Type 2 Diabetes'],
-    activeMedicines: ['Amlodipine 5mg', 'Metformin 500mg'],
-    notes: 'Patient reports good BP control this week. Review blood sugar readings.',
-    attachments: [
-      { id: 'att-1', url: 'https://placehold.co/400x400/E2E8F0/475569?text=BP+Log', type: 'image' },
-    ],
-  },
-  p1: {
-    id: 'p1',
-    patientName: 'Rahim Uddin',
-    patientAge: 45,
-    patientGender: 'Male',
-    bloodGroup: 'B+',
-    allergies: ['Penicillin'],
-    reason: 'Follow-up for hypertension',
-    scheduledTime: 'Today, 9:00 AM',
-    format: 'in-person',
-    status: 'completed',
-    activeConditions: ['Hypertension', 'Type 2 Diabetes'],
-    activeMedicines: ['Amlodipine 5mg', 'Metformin 500mg'],
-    notes: 'Patient reports good BP control this week.',
-    attachments: [],
-  },
-  'appt-102': {
-    id: 'appt-102',
-    patientName: 'Ayesha Rahman',
-    patientAge: 32,
-    patientGender: 'Female',
-    bloodGroup: 'O+',
-    allergies: [],
-    reason: 'Migraine consultation',
-    scheduledTime: '11:00 AM',
-    format: 'video',
-    status: 'in-progress',
-    activeConditions: ['Migraine'],
-    activeMedicines: ['Sumatriptan 50mg'],
-    notes: 'Patient has had 3 episodes this week. Evaluate preventive therapy.',
-  },
-  p2: {
-    id: 'p2',
-    patientName: 'Ayesha Rahman',
-    patientAge: 32,
-    patientGender: 'Female',
-    bloodGroup: 'O+',
-    allergies: [],
-    reason: 'Migraine consultation',
-    scheduledTime: 'Today, 11:00 AM',
-    format: 'video',
-    status: 'in-progress',
-    activeConditions: ['Migraine'],
-    activeMedicines: ['Sumatriptan 50mg'],
-    notes: 'Patient has had 3 episodes this week.',
-  },
-  'appt-103': {
-    id: 'appt-103',
-    patientName: 'Kamal Hasan',
-    patientAge: 58,
-    patientGender: 'Male',
-    bloodGroup: 'A+',
-    allergies: ['Sulfa drugs', 'Aspirin'],
-    reason: 'Routine checkup, blood test review',
-    scheduledTime: '2:00 PM',
-    format: 'in-person',
-    status: 'pending',
-    activeConditions: ['Hypertension', 'High Cholesterol'],
-    activeMedicines: ['Atorvastatin 20mg', 'Losartan 50mg'],
-    notes: 'Annual checkup. Review lipid panel results.',
-  },
-  p3: {
-    id: 'p3',
-    patientName: 'Kamal Hasan',
-    patientAge: 58,
-    patientGender: 'Male',
-    bloodGroup: 'A+',
-    allergies: ['Sulfa drugs', 'Aspirin'],
-    reason: 'Routine checkup, blood test review',
-    scheduledTime: '2 days ago',
-    format: 'video',
-    status: 'completed',
-    activeConditions: ['Hypertension', 'High Cholesterol'],
-    activeMedicines: ['Atorvastatin 20mg', 'Losartan 50mg'],
-    notes: 'Annual checkup.',
-  },
-  'appt-104': {
-    id: 'appt-104',
-    patientName: 'Nusrat Jahan',
-    patientAge: 27,
-    patientGender: 'Female',
-    bloodGroup: 'AB-',
-    allergies: [],
-    reason: 'Fever and throat pain for 3 days',
-    scheduledTime: '4:00 PM',
-    format: 'video',
-    status: 'pending',
-    activeConditions: [],
-    activeMedicines: ['Paracetamol 500mg'],
-    notes: 'New patient. Evaluate for viral/bacterial pharyngitis.',
-  },
-  p4: {
-    id: 'p4',
-    patientName: 'Nusrat Jahan',
-    patientAge: 27,
-    patientGender: 'Female',
-    bloodGroup: 'AB-',
-    allergies: [],
-    reason: 'Fever and throat pain for 3 days',
-    scheduledTime: '1 week ago',
-    format: 'video',
-    status: 'completed',
-    activeConditions: [],
-    activeMedicines: ['Paracetamol 500mg'],
-    notes: 'New patient.',
-  },
-  p5: {
-    id: 'p5',
-    patientName: 'Jamal Bhuyan',
-    patientAge: 39,
-    patientGender: 'Male',
-    bloodGroup: 'O-',
-    allergies: ['NSAIDs'],
-    reason: 'Anxiety Disorder',
-    scheduledTime: '2 weeks ago',
-    format: 'video',
-    status: 'completed',
-    activeConditions: ['Anxiety'],
-    activeMedicines: [],
-    notes: 'Follow-up for anxiety management.',
-  },
-  p6: {
-    id: 'p6',
-    patientName: 'Farida Khanam',
-    patientAge: 51,
-    patientGender: 'Female',
-    bloodGroup: 'B+',
-    allergies: [],
-    reason: 'Osteoarthritis',
-    scheduledTime: '3 days ago',
-    format: 'in-person',
-    status: 'completed',
-    activeConditions: ['Osteoarthritis'],
-    activeMedicines: ['Paracetamol'],
-    notes: 'Joint pain in both knees.',
-  },
-  p7: {
-    id: 'p7',
-    patientName: 'Tanvir Ahmed',
-    patientAge: 34,
-    patientGender: 'Male',
-    bloodGroup: 'O+',
-    allergies: [],
-    reason: 'Migraine',
-    scheduledTime: '5 days ago',
-    format: 'video',
-    status: 'completed',
-    activeConditions: ['Migraine'],
-    activeMedicines: [],
-    notes: '',
-  },
-  p8: {
-    id: 'p8',
-    patientName: 'Sabina Yasmin',
-    patientAge: 62,
-    patientGender: 'Female',
-    bloodGroup: 'A-',
-    allergies: [],
-    reason: 'Coronary Artery Disease',
-    scheduledTime: 'Today',
-    format: 'in-person',
-    status: 'completed',
-    activeConditions: ['CAD', 'Hypertension'],
-    activeMedicines: ['Aspirin', 'Metoprolol'],
-    notes: '',
-  },
+// Calculate age from date of birth
+const calculateAge = (dob: string | null | undefined): string => {
+  if (!dob) return 'N/A';
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age.toString();
 };
 
-// ─── COMPONENT ───────────────────────────────────────────────────────────────
-export default function ConsultationDetailScreen(): React.JSX.Element {
+export default function DoctorConsultationScreen(): React.JSX.Element {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
-
+  const router = useRouter();
+  const [patient, setPatient] = useState<ApiPatient | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activePrescription, setActivePrescription] = useState<Prescription | null>(null);
   const [loadingPrescription, setLoadingPrescription] = useState(true);
 
-  const consultation = MOCK_CONSULTATIONS[id ?? ''];
+  useEffect(() => {
+    let isMounted = true;
+    const fetchPatient = async () => {
+      try {
+        setLoading(true);
+        if (id) {
+          const data = await patientsService.getPatientById(id);
+          if (isMounted) setPatient(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch patient details', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    fetchPatient();
+    return () => { isMounted = false; };
+  }, [id]);
 
   useEffect(() => {
     let isMounted = true;
-    const fetchPrescription = async () => {
+    const fetchPrescriptions = async () => {
       try {
-        const prescriptions = await prescriptionsService.getPrescriptions();
-        const rx = prescriptions.find((p) => p.status === 'active') ?? prescriptions[0] ?? null;
-        if (isMounted) setActivePrescription(rx as any);
+        setLoadingPrescription(true);
+        const data = await prescriptionsService.getPrescriptions();
+        // Since we don't have a specific endpoint for patient's active meds,
+        // we'll try to find the latest prescription for this patient (optional feature)
+        if (isMounted) {
+          const patientPrescriptions = data.filter(p => p.patient.id.toString() === id);
+          if (patientPrescriptions.length > 0) {
+            setActivePrescription(patientPrescriptions[0]);
+          }
+        }
       } catch (err) {
-        // handle error silently for mock
+        // ignore
       } finally {
         if (isMounted) setLoadingPrescription(false);
       }
     };
-    fetchPrescription();
+    fetchPrescriptions();
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [id]);
 
-  if (!consultation) {
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!patient) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
@@ -271,15 +112,23 @@ export default function ConsultationDetailScreen(): React.JSX.Element {
           >
             <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Consultation</Text>
+          <Text style={styles.headerTitle}>Patient Detail</Text>
         </View>
         <View style={styles.errorContainer}>
-          <MaterialCommunityIcons name="calendar-question" size={48} color={Colors.textTertiary} />
-          <Text style={styles.errorText}>Consultation not found.</Text>
+          <MaterialCommunityIcons name="account-question" size={48} color={Colors.textTertiary} />
+          <Text style={styles.errorText}>Patient profile not found.</Text>
         </View>
       </SafeAreaView>
     );
   }
+
+  const patientName = patient.name || 'Unknown Patient';
+  const patientAge = calculateAge(patient.patientProfile?.dateOfBirth);
+  const patientGender = patient.patientProfile?.gender || 'N/A';
+  const bloodGroup = patient.patientProfile?.bloodGroup || 'N/A';
+  // Mock fields that don't exist in UserResource yet
+  const allergies: string[] = [];
+  const reason = "General Consultation";
 
   const bottomMargin = Math.max(insets.bottom, Spacing.base);
 
@@ -297,7 +146,7 @@ export default function ConsultationDetailScreen(): React.JSX.Element {
         >
           <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Consultation</Text>
+        <Text style={styles.headerTitle}>Patient Detail</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -305,25 +154,25 @@ export default function ConsultationDetailScreen(): React.JSX.Element {
         <View style={styles.patientBanner}>
           <View style={styles.bannerRow}>
             <View style={styles.bannerAvatar}>
-              <Text style={styles.bannerAvatarText}>{consultation.patientName.charAt(0)}</Text>
+              <Text style={styles.bannerAvatarText}>{patientName.charAt(0)}</Text>
             </View>
             <View style={styles.bannerInfo}>
-              <Text style={styles.bannerName}>{consultation.patientName}</Text>
+              <Text style={styles.bannerName}>{patientName}</Text>
             </View>
           </View>
           
           <View style={styles.bannerStatsRow}>
             <View style={styles.bannerStatCol}>
               <Text style={styles.bannerStatLabel}>Age</Text>
-              <Text style={styles.bannerStatValue}>{consultation.patientAge}</Text>
+              <Text style={styles.bannerStatValue}>{patientAge}</Text>
             </View>
             <View style={styles.bannerStatCol}>
               <Text style={styles.bannerStatLabel}>Gender</Text>
-              <Text style={styles.bannerStatValue}>{consultation.patientGender}</Text>
+              <Text style={styles.bannerStatValue}>{patientGender}</Text>
             </View>
             <View style={styles.bannerStatCol}>
               <Text style={styles.bannerStatLabel}>Blood Group</Text>
-              <Text style={styles.bannerStatValue}>{consultation.bloodGroup || 'N/A'}</Text>
+              <Text style={styles.bannerStatValue}>{bloodGroup}</Text>
             </View>
           </View>
         </View>
@@ -332,7 +181,7 @@ export default function ConsultationDetailScreen(): React.JSX.Element {
         <View style={styles.section}>
           <View style={styles.infoCard}>
             <Text style={styles.cardInnerTitle}>Problem</Text>
-            <Text style={styles.infoText}>{consultation.reason}</Text>
+            <Text style={styles.infoText}>{reason}</Text>
           </View>
         </View>
 
@@ -340,8 +189,8 @@ export default function ConsultationDetailScreen(): React.JSX.Element {
         <View style={styles.section}>
           <View style={styles.infoCard}>
             <Text style={styles.cardInnerTitle}>Allergies</Text>
-            {consultation.allergies && consultation.allergies.length > 0 ? (
-              <Text style={styles.infoText}>{consultation.allergies.join(', ')}</Text>
+            {allergies && allergies.length > 0 ? (
+              <Text style={styles.infoText}>{allergies.join(', ')}</Text>
             ) : (
               <Text style={styles.infoText}>No allergies recorded</Text>
             )}
@@ -379,49 +228,12 @@ export default function ConsultationDetailScreen(): React.JSX.Element {
                   </View>
                 ))}
               </View>
-            ) : consultation.activeMedicines && consultation.activeMedicines.length > 0 ? (
-              <View>
-                {consultation.activeMedicines.map((med: string, index: number) => (
-                  <View
-                    key={med}
-                    style={[
-                      styles.medRow,
-                      index < consultation.activeMedicines.length - 1 && styles.medRowBorder,
-                    ]}
-                  >
-                    <MaterialCommunityIcons name="pill" size={18} color={Colors.primary} />
-                    <Text style={styles.medName}>{med}</Text>
-                  </View>
-                ))}
-              </View>
             ) : (
               <Text style={styles.infoText}>No active medications</Text>
             )}
           </View>
         </View>
 
-        {/* ── ATTACHMENTS ── */}
-        {consultation.attachments && consultation.attachments.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Attachments</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.attachmentsList}
-            >
-              {consultation.attachments.map((att) => (
-                <TouchableOpacity key={att.id} style={styles.attachmentWrapper} activeOpacity={0.8}>
-                  <Image source={{ uri: att.url }} style={styles.attachmentImage} />
-                  {att.type === 'video' && (
-                    <View style={styles.playIconOverlay}>
-                      <MaterialCommunityIcons name="play-circle" size={32} color={Colors.surface} />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-        )}
       </ScrollView>
 
       {/* ── FIXED BOTTOM ACTION BAR ── */}
@@ -432,7 +244,7 @@ export default function ConsultationDetailScreen(): React.JSX.Element {
           style={styles.circleBtn}
           onPress={() =>
             router.push(
-              `/(app)/doctor/prescription/write?patientId=${id}&patientName=${encodeURIComponent(consultation.patientName)}`,
+              `/(app)/doctor/prescription/write?patientId=${id}&patientName=${encodeURIComponent(patientName)}`,
             )
           }
           accessibilityLabel="Write Prescription"
@@ -444,7 +256,7 @@ export default function ConsultationDetailScreen(): React.JSX.Element {
           style={styles.circleBtn}
           onPress={() => router.push({
             pathname: `/(app)/doctor/consultation/chat/[id]`,
-            params: { id, patientName: consultation.patientName }
+            params: { id, patientName: patientName }
           })}
           accessibilityLabel="Chat with Patient"
           accessibilityRole="button"

@@ -101,7 +101,7 @@ const mapApiToPrescription = (api: ApiPrescription): Prescription => {
     status: api.status,
     doctor: api.doctor,
     patient: api.patient,
-    source: api.doctor ? 'DOCTOR' : 'UPLOADED',
+    source: 'DOCTOR', // Always DOCTOR since backend doesn't support uploaded prescriptions yet
     doctorName: api.doctor?.name,
     doctorId: api.doctor?.id?.toString(),
     appointmentId: api.appointmentId ?? undefined,

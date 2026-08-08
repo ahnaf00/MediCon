@@ -204,6 +204,37 @@ export const DoctorDashboard = (): React.JSX.Element => {
                 </View>
               </View>
             </View>
+
+            {/* QUICK ACTIONS */}
+            <View style={{ marginTop: Spacing.xl }}>
+              <View style={styles.detailCardHeader}>
+                <View style={styles.iconSquare}>
+                  <MaterialCommunityIcons name="lightning-bolt" size={24} color={Colors.primary} />
+                </View>
+                <Text style={styles.detailCardTitle}>Quick Actions</Text>
+              </View>
+              
+              <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md }}>
+                <TouchableOpacity 
+                  style={[styles.primaryButton, { flex: 1, paddingVertical: Spacing.md }]} 
+                  onPress={() => {
+                    // Navigate to patients tab and tell them to pick a patient
+                    router.push('/(app)/(tabs)/patients');
+                  }}
+                >
+                  <MaterialCommunityIcons name="prescription" size={20} color={Colors.surface} />
+                  <Text style={[styles.primaryButtonText, { marginTop: Spacing.xs }]}>Write Prescription</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity 
+                  style={[styles.outlineButton, { flex: 1, paddingVertical: Spacing.md }]} 
+                  onPress={() => router.push('/(app)/(tabs)/schedule')}
+                >
+                  <MaterialCommunityIcons name="calendar-clock" size={20} color={Colors.primary} />
+                  <Text style={[styles.outlineButtonText, { marginTop: Spacing.xs }]}>My Schedule</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
         )}
       </ScrollView>

@@ -1,5 +1,4 @@
-// 1. IMPORTS
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -7,27 +6,26 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Switch, 
-  Alert 
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { CustomTimePickerModal } from '../../../src/components/medical/CustomTimePickerModal';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Colors, Spacing, FontFamily, FontSize, Layout, BorderRadius } from '@theme';
+import { Colors, Spacing, FontFamily, FontSize, Layout, BorderRadius, Shadows } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useScheduleStore } from '../../../src/store/scheduleStore';
+import { availabilityService, ApiSchedule, ExceptionsResponse } from '../../../src/services/api/availabilityService';
 
-// 2. TYPES
 interface DateItem {
   day: string;
   date: number;
   month: number;
   year: number;
-  index: number; // day of week 0-6
-  fullDateStr: string; // YYYY-MM-DD
+  index: number;
+  fullDateStr: string;
 }
 
-// Helper to convert time like "09:00 AM" to minutes from midnight
 const getMinutesFromTime = (timeStr: string) => {
   const parts = timeStr.split(' ');
   if (parts.length < 2) {
@@ -45,21 +43,18 @@ const getMinutesFromTime = (timeStr: string) => {
   return hours * 60 + minutes;
 };
 
-// 3. COMPONENT
 export default function ScheduleScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
 
-  const store = useScheduleStore();
-  const regularSchedule = store.regularSchedule;
-  const scheduleExceptions = store.scheduleExceptions;
-  const bookings = store.bookings;
+  const [loading, setLoading] = useState(true);
+  const [schedule, setSchedule] = useState<ApiSchedule[]>([]);
+  const [exceptions, setExceptions] = useState<ExceptionsResponse>({});
 
   const capacity = 4;
   const today = new Date();
   const currentMinutes = today.getHours() * 60 + today.getMinutes();
 
-  // Display current day + next 4 days (Total 5)
   const weekDates: DateItem[] = Array.from({ length: 5 }).map((_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
@@ -80,8 +75,51 @@ export default function ScheduleScreen(): React.JSX.Element {
 
   const selectedDateItem = weekDates[selectedIndex];
 
-  const baseSlotsForDay = regularSchedule[selectedDateItem.index] || [];
-  const rawExtraSlots = store.customSlots[selectedDateItem.fullDateStr] || [];
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [schedData, excData] = await Promise.all([
+        availabilityService.getSchedule(),
+        availabilityService.getExceptions(weekDates[0].fullDateStr, weekDates[4].fullDateStr)
+      ]);
+      setSchedule(schedData);
+      setExceptions(excData);
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Failed to load schedule');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  // Compute available slots
+  const generateBaseSlots = () => {
+    const dayConfig = schedule.find(s => s.index === selectedDateItem.index || s.day.startsWith(selectedDateItem.day));
+    if (!dayConfig || !dayConfig.isWorkingDay) return [];
+    
+    const slots = [];
+    let currentMins = getMinutesFromTime(dayConfig.startTime);
+    const endMins = getMinutesFromTime(dayConfig.endTime);
+
+    while (currentMins < endMins) {
+      let h = Math.floor(currentMins / 60);
+      let m = currentMins % 60;
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      slots.push(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')} ${ampm}`);
+      currentMins += 30;
+    }
+    return slots;
+  };
+
+  const baseSlotsForDay = generateBaseSlots();
+  const dayExceptions = exceptions[selectedDateItem.fullDateStr] || { disabled: [], added: [] };
+  
+  const rawExtraSlots = dayExceptions.added || [];
   const extraSlots = rawExtraSlots.map(timeStr => {
     if (!timeStr.includes(' ')) {
       const [hStr, mStr] = timeStr.split(':');
@@ -96,16 +134,55 @@ export default function ScheduleScreen(): React.JSX.Element {
   const slotsForDay = Array.from(new Set([...baseSlotsForDay, ...extraSlots]))
     .sort((a, b) => getMinutesFromTime(a) - getMinutesFromTime(b));
 
-  const exceptionsForDate = scheduleExceptions[selectedDateItem.fullDateStr] || {};
-  const bookingsForDate = bookings[selectedDateItem.fullDateStr] || {};
+  const handleToggleSlot = async (time: string, isCurrentlyEnabled: boolean) => {
+    try {
+      // Optimistic update
+      const newExceptions = { ...exceptions };
+      if (!newExceptions[selectedDateItem.fullDateStr]) {
+        newExceptions[selectedDateItem.fullDateStr] = { disabled: [], added: [] };
+      }
+      
+      const type = 'disabled';
+      const action = isCurrentlyEnabled ? 'add' : 'remove';
+      
+      if (action === 'add') {
+        newExceptions[selectedDateItem.fullDateStr].disabled.push(time);
+      } else {
+        newExceptions[selectedDateItem.fullDateStr].disabled = newExceptions[selectedDateItem.fullDateStr].disabled.filter(t => t !== time);
+      }
+      setExceptions(newExceptions);
 
-  const handleToggleSlot = (time: string) => {
-    store.toggleException(selectedDateItem.fullDateStr, time);
+      await availabilityService.toggleException(selectedDateItem.fullDateStr, time, type, action);
+    } catch (err) {
+      Alert.alert('Error', 'Failed to update slot');
+      loadData(); // revert
+    }
   };
 
-  const handleAddSlot = () => {
-    setAddSlotModalVisible(true);
+  const handleAddCustomSlot = async (time: string) => {
+    try {
+      // Optimistic
+      const newExceptions = { ...exceptions };
+      if (!newExceptions[selectedDateItem.fullDateStr]) {
+        newExceptions[selectedDateItem.fullDateStr] = { disabled: [], added: [] };
+      }
+      newExceptions[selectedDateItem.fullDateStr].added.push(time);
+      setExceptions(newExceptions);
+      
+      await availabilityService.toggleException(selectedDateItem.fullDateStr, time, 'added', 'add');
+    } catch (err) {
+      Alert.alert('Error', 'Failed to add custom slot');
+      loadData();
+    }
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -124,20 +201,13 @@ export default function ScheduleScreen(): React.JSX.Element {
               activeOpacity={0.8}
               onPress={() => setIsOnline(!isOnline)}
               style={styles.toggleContainer}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: isOnline }}
-              accessibilityLabel="Online Status Toggle"
             >
               <View style={[styles.toggleCircle, isOnline ? styles.toggleOn : styles.toggleOff]} />
             </TouchableOpacity>
           </View>
-
           <TouchableOpacity
             onPress={() => router.push('/(app)/settings/')}
-            hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
             style={styles.profileIcon}
-            accessibilityLabel="Settings"
-            accessibilityRole="button"
           >
             <MaterialCommunityIcons name="account-outline" size={27.6} color={Colors.textSecondary} />
           </TouchableOpacity>
@@ -162,23 +232,11 @@ export default function ScheduleScreen(): React.JSX.Element {
                 ]}
                 onPress={() => setSelectedIndex(index)}
                 activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isSelected }}
               >
-                <Text
-                  style={[
-                    styles.dateDayText,
-                    isSelected ? styles.dateTextActive : styles.dateTextDefault,
-                  ]}
-                >
+                <Text style={[styles.dateDayText, isSelected ? styles.dateTextActive : styles.dateTextDefault]}>
                   {item.day}
                 </Text>
-                <Text
-                  style={[
-                    styles.dateNumberText,
-                    isSelected ? styles.dateTextActive : styles.dateTextDefault,
-                  ]}
-                >
+                <Text style={[styles.dateNumberText, isSelected ? styles.dateTextActive : styles.dateTextDefault]}>
                   {item.date}
                 </Text>
               </TouchableOpacity>
@@ -191,10 +249,8 @@ export default function ScheduleScreen(): React.JSX.Element {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
               Slots for {selectedDateItem.day}, {selectedDateItem.date}
-              {selectedIndex === 0 && ' (Today)'}
-              {selectedIndex === 1 && ' (Tomorrow)'}
             </Text>
-            <TouchableOpacity style={styles.addSlotBtn} onPress={handleAddSlot}>
+            <TouchableOpacity style={styles.addSlotBtn} onPress={() => setAddSlotModalVisible(true)}>
               <MaterialCommunityIcons name="plus" size={18} color={Colors.primary} />
               <Text style={styles.addSlotBtnText}>Add Slot</Text>
             </TouchableOpacity>
@@ -207,99 +263,52 @@ export default function ScheduleScreen(): React.JSX.Element {
                 size={28}
                 color={Colors.textTertiary}
               />
-              <Text style={styles.emptyText}>
-                You have no slots scheduled for this day.
-              </Text>
+              <Text style={styles.emptyText}>You have no slots scheduled for this day.</Text>
             </View>
           ) : (
             <View style={styles.queueContainer}>
               {slotsForDay.map((timeStr, index) => {
-                const isExceptionDisabled = exceptionsForDate[timeStr] === false;
-                const currentBookings = bookingsForDate[timeStr] || 0;
-                const isFull = currentBookings >= capacity;
+                const isExceptionDisabled = dayExceptions.disabled?.includes(timeStr);
+                const isToggleOn = !isExceptionDisabled;
                 
                 let isPastSlot = false;
                 if (selectedIndex === 0) {
-                  // Rule 1: Capacity Limit
-                  if (isFull) {
-                    isPastSlot = true;
-                  } else {
-                    const avgConsultationMinutes = 18; // Mock doctor average
-                    let bufferTime = 0;
-                    if (avgConsultationMinutes >= 10 && avgConsultationMinutes <= 14) bufferTime = 5;
-                    else if (avgConsultationMinutes >= 15 && avgConsultationMinutes <= 20) bufferTime = 10;
-                    else if (avgConsultationMinutes > 20) bufferTime = 14;
-
-                    const nextSlotStr = slotsForDay[index + 1];
-                    const nextSlotMinutes = nextSlotStr 
-                      ? getMinutesFromTime(nextSlotStr) 
-                      : getMinutesFromTime(timeStr) + 60; // Default 1 hour if last slot
-
-                    // Rule 2 & 3: Next Slot Transition and Dynamic Buffer Time
-                    if (currentMinutes >= nextSlotMinutes) {
-                      isPastSlot = true;
-                    } else if (currentMinutes >= nextSlotMinutes - bufferTime) {
-                      isPastSlot = true;
-                    }
-                  }
+                   const slotMins = getMinutesFromTime(timeStr);
+                   if (currentMinutes >= slotMins) isPastSlot = true;
                 }
                 
-                // Active visually if not an exception AND not passed. 
-                const isToggleOn = !isExceptionDisabled;
-                
                 return (
-                  <View
-                    key={timeStr}
-                    style={[
-                      styles.slotCard, 
-                      isExceptionDisabled && !isPastSlot && styles.slotCardException,
-                      isPastSlot && styles.slotCardPast
-                    ]}
-                  >
-                    <View style={styles.slotInfo}>
-                      <View style={[
-                        styles.iconCircle, 
-                        isPastSlot && styles.iconCirclePast,
-                        isExceptionDisabled && !isPastSlot && styles.iconCircleException
-                      ]}>
-                        <MaterialCommunityIcons
-                          name="clock-outline"
-                          size={18}
-                          color={
-                            isPastSlot ? Colors.textTertiary : 
-                            isExceptionDisabled ? Colors.textSecondary : 
-                            Colors.primary
-                          }
-                        />
-                      </View>
-                      <Text
-                        style={[
-                          styles.slotTimeText,
-                          isPastSlot && styles.slotTextPast,
-                          isExceptionDisabled && !isPastSlot && styles.slotTextException,
-                        ]}
-                      >
+                  <View key={index} style={[styles.queueCard, isPastSlot && styles.queueCardDisabled]}>
+                    <View style={styles.queueTimeBox}>
+                      <MaterialCommunityIcons 
+                        name="clock-outline" 
+                        size={16} 
+                        color={isPastSlot ? Colors.textTertiary : Colors.primary} 
+                      />
+                      <Text style={[styles.queueTimeText, isPastSlot && styles.textDisabled]}>
                         {timeStr}
                       </Text>
                     </View>
-
-                    <View style={styles.slotControls}>
-                      <View style={styles.bookingStatus}>
-                        <View style={[styles.bookingBadge, isPastSlot && styles.bookingBadgePast]}>
-                          <Text style={[styles.bookingCountText, isPastSlot && styles.bookingCountTextPast]}>
-                            {currentBookings}/{capacity} booked
-                          </Text>
+                    
+                    <View style={styles.queueCenter}>
+                      {isPastSlot ? (
+                        <View style={styles.statusBadge}>
+                          <Text style={styles.statusBadgeText}>Passed</Text>
                         </View>
-                        {isFull && <Text style={styles.fullBadge}>FULL</Text>}
-                      </View>
+                      ) : (
+                        <View style={styles.statusBadgeActive}>
+                          <Text style={styles.statusBadgeTextActive}>Available</Text>
+                        </View>
+                      )}
+                    </View>
 
+                    <View style={styles.queueRight}>
                       <Switch
                         value={isToggleOn}
-                        onValueChange={() => handleToggleSlot(timeStr)}
+                        onValueChange={() => handleToggleSlot(timeStr, isToggleOn)}
                         disabled={isPastSlot}
-                        trackColor={{ false: Colors.tertiary, true: Colors.primary }}
+                        trackColor={{ false: Colors.border, true: Colors.primary }}
                         thumbColor={Colors.surface}
-                        ios_backgroundColor={Colors.tertiary}
                       />
                     </View>
                   </View>
@@ -310,279 +319,100 @@ export default function ScheduleScreen(): React.JSX.Element {
         </View>
       </ScrollView>
 
-      {/* ADD SLOT MODAL */}
       <CustomTimePickerModal
         visible={isAddSlotModalVisible}
-        initialTimeStr="09:00"
-        title="Add Another Slot"
-        subtitle={`For ${selectedDateItem.day}, ${selectedDateItem.date}`}
-        onSave={(newTimeStr) => {
-          const [hStr, mStr] = newTimeStr.split(':');
-          let h = parseInt(hStr, 10);
-          const ampm = h >= 12 ? 'PM' : 'AM';
-          h = h % 12 || 12;
-          const formattedTime = `${h.toString().padStart(2, '0')}:${mStr} ${ampm}`;
-          
-          if (slotsForDay.includes(formattedTime)) {
-            Alert.alert(
-              'Duplicate Slot',
-              'This time slot has already been added. Please choose a different time slot.'
-            );
-            return;
-          }
-          
-          store.addCustomSlot(selectedDateItem.fullDateStr, formattedTime);
+        title="Add Custom Slot"
+        initialTimeStr="09:00 AM"
+        onCancel={() => setAddSlotModalVisible(false)}
+        onSave={(time) => {
+          handleAddCustomSlot(time);
           setAddSlotModalVisible(false);
         }}
-        onCancel={() => setAddSlotModalVisible(false)}
       />
     </SafeAreaView>
   );
 }
 
-// 4. STYLES
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.sm,
-  },
-  title: {
-    fontSize: FontSize.xxl,
-    color: Colors.primary,
-  },
-  titleBold: {
-    fontFamily: FontFamily.extraBold,
-    fontWeight: '900',
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  toggleWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.sm,
     backgroundColor: Colors.surface,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.full,
-    borderWidth: 1,
-    borderColor: Colors.tertiary,
-    gap: Spacing.sm,
   },
-  onlineLabel: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-  },
-  toggleContainer: {
-    width: 36,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.background,
-    justifyContent: 'center',
-    padding: 2,
-    borderWidth: 1,
-    borderColor: Colors.tertiary,
-  },
-  toggleCircle: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  toggleOn: {
-    backgroundColor: Colors.success,
-    alignSelf: 'flex-end',
-  },
-  toggleOff: {
-    backgroundColor: Colors.textTertiary,
-    alignSelf: 'flex-start',
-  },
+  headerLeft: { flex: 1 },
+  title: { fontSize: FontSize.xxl, fontFamily: FontFamily.semiBold, color: Colors.textPrimary },
+  titleBold: { color: Colors.primary },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
   profileIcon: {
-    marginLeft: Spacing.xs,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.surface,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  scrollContent: {
-    paddingHorizontal: Spacing.base,
-    paddingBottom: Layout.tabBarHeight + Spacing.base,
+  toggleWrapper: { alignItems: 'center' },
+  onlineLabel: { fontSize: FontSize.xs, fontFamily: FontFamily.medium, color: Colors.textSecondary, marginBottom: 4 },
+  toggleContainer: {
+    width: 46,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: Colors.border,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
   },
-  dateStripContent: {
-    flexGrow: 1,
-    justifyContent: 'space-between',
-    paddingVertical: Spacing.sm,
-    marginBottom: Spacing.md,
-  },
+  toggleCircle: { width: 20, height: 20, borderRadius: 10, backgroundColor: Colors.surface },
+  toggleOn: { transform: [{ translateX: 22 }], backgroundColor: Colors.primary },
+  toggleOff: { transform: [{ translateX: 0 }] },
+  scrollContent: { paddingBottom: 100 },
+  dateStripContent: { paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md, gap: Spacing.sm },
   dateCard: {
-    width: 65,
+    width: 62,
     height: 80,
     borderRadius: BorderRadius.lg,
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: Spacing.xs,
-  },
-  dateCardSelected: {
-    backgroundColor: Colors.primary,
-  },
-  dateCardUnselected: {
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.tertiary,
-  },
-  dateDayText: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.xs,
-  },
-  dateNumberText: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.lg,
-  },
-  dateTextActive: {
-    color: Colors.surface,
-  },
-  dateTextDefault: {
-    color: Colors.textSecondary,
-  },
-  section: {
-    marginTop: Spacing.md,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginRight: Spacing.xs,
   },
-  sectionTitle: {
-    fontFamily: FontFamily.bold,
-    fontWeight: 'bold',
-    fontSize: FontSize.lg,
-    color: Colors.textPrimary,
-  },
-  addSlotBtn: {
+  dateCardSelected: { backgroundColor: Colors.primary, ...Shadows.sm },
+  dateCardUnselected: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
+  dateDayText: { fontSize: FontSize.sm, fontFamily: FontFamily.medium, marginBottom: Spacing.xs },
+  dateNumberText: { fontSize: FontSize.lg, fontFamily: FontFamily.bold },
+  dateTextActive: { color: Colors.surface },
+  dateTextDefault: { color: Colors.textSecondary },
+  section: { paddingHorizontal: Spacing.lg, marginTop: Spacing.sm },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
+  sectionTitle: { fontSize: FontSize.lg, fontFamily: FontFamily.semiBold, color: Colors.textPrimary },
+  addSlotBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 4 },
+  addSlotBtnText: { color: Colors.primary, fontSize: FontSize.sm, fontFamily: FontFamily.medium },
+  emptySection: { alignItems: 'center', justifyContent: 'center', padding: Spacing.xl, backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' },
+  emptyText: { marginTop: Spacing.sm, fontSize: FontSize.md, color: Colors.textSecondary, fontFamily: FontFamily.medium },
+  queueContainer: { gap: Spacing.sm },
+  queueCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: Colors.primary + '10',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 6,
-    borderRadius: BorderRadius.md,
-  },
-  addSlotBtnText: {
-    fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.sm,
-    color: Colors.primary,
-  },
-  queueContainer: {
-    gap: Spacing.sm,
-  },
-  slotCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: Colors.surface,
     padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    borderColor: Colors.tertiary,
-  },
-  slotCardException: {
-    backgroundColor: '#FAFAFA',
-  },
-  slotCardPast: {
-    backgroundColor: '#F5F5F5',
-    opacity: 0.6,
-  },
-  slotInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  iconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.primary + '15',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconCircleException: {
-    backgroundColor: Colors.textSecondary + '20',
-  },
-  iconCirclePast: {
-    backgroundColor: Colors.textTertiary + '20',
-  },
-  slotTimeText: {
-    fontFamily: FontFamily.regular,
-    fontWeight: 'normal',
-    fontSize: FontSize.md,
-    color: Colors.textPrimary,
-  },
-  slotTextException: {
-    color: Colors.textSecondary,
-  },
-  slotTextPast: {
-    color: Colors.textTertiary,
-  },
-  slotControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-  },
-  bookingStatus: {
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  bookingBadge: {
-    backgroundColor: Colors.primary + '10',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.md,
-  },
-  bookingBadgePast: {
-    backgroundColor: Colors.textTertiary + '15',
-  },
-  bookingCountText: {
-    fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.xs,
-    color: Colors.primary,
-  },
-  bookingCountTextPast: {
-    color: Colors.textSecondary,
-  },
-  fullBadge: {
-    fontFamily: FontFamily.bold,
-    fontSize: 10,
-    color: Colors.surface,
-    backgroundColor: Colors.danger,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
-    overflow: 'hidden',
-  },
-  emptySection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-    paddingVertical: Spacing.xl,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.surface,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.tertiary,
+    borderColor: Colors.border,
+    justifyContent: 'space-between',
   },
-  emptyText: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.sm,
-    color: Colors.textSecondary,
-    lineHeight: FontSize.sm * 1.5,
-    flex: 1,
-  },
+  queueCardDisabled: { backgroundColor: Colors.background, opacity: 0.7 },
+  queueTimeBox: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 90 },
+  queueTimeText: { fontSize: FontSize.md, fontFamily: FontFamily.semiBold, color: Colors.textPrimary },
+  textDisabled: { color: Colors.textTertiary },
+  queueCenter: { flex: 1, alignItems: 'center' },
+  statusBadge: { backgroundColor: Colors.border, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  statusBadgeActive: { backgroundColor: '#E8F5E9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  statusBadgeText: { fontSize: FontSize.xs, color: Colors.textSecondary, fontFamily: FontFamily.medium },
+  statusBadgeTextActive: { fontSize: FontSize.xs, color: '#2E7D32', fontFamily: FontFamily.medium },
+  queueRight: { minWidth: 50, alignItems: 'flex-end' }
 });

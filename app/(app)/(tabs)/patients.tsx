@@ -1,121 +1,55 @@
-// 1. IMPORTS
-import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors, Spacing, FontFamily, FontSize, Layout, BorderRadius } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { patientsService, ApiPatient } from '../../../src/services/api/patientsService';
 
-// 2. TYPES
-interface PatientMockData {
-  id: string;
-  name: string;
-  age: number;
-  gender: 'M' | 'F' | 'O';
-  condition: string;
-  lastVisit: string;
-  status: 'active' | 'inactive';
-  visitType: 'new' | 'follow-up';
-}
+// Calculate age from date of birth
+const calculateAge = (dob: string | null | undefined): string => {
+  if (!dob) return 'N/A';
+  const birthDate = new Date(dob);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age.toString();
+};
 
-const MOCK_PATIENTS: PatientMockData[] = [
-  {
-    id: 'p1',
-    name: 'Rahim Uddin',
-    age: 45,
-    gender: 'M',
-    condition: 'Hypertension',
-    lastVisit: 'Today',
-    status: 'active',
-    visitType: 'new',
-  },
-  {
-    id: 'p2',
-    name: 'Ayesha Rahman',
-    age: 32,
-    gender: 'F',
-    condition: 'Type 2 Diabetes',
-    lastVisit: 'Today',
-    status: 'active',
-    visitType: 'follow-up',
-  },
-  {
-    id: 'p3',
-    name: 'Kamal Hasan',
-    age: 58,
-    gender: 'M',
-    condition: 'Chronic Back Pain',
-    lastVisit: '2 days ago', // Note: Will be filtered out since it's not today
-    status: 'active',
-    visitType: 'follow-up',
-  },
-  {
-    id: 'p4',
-    name: 'Nusrat Jahan',
-    age: 27,
-    gender: 'F',
-    condition: 'Asthma',
-    lastVisit: 'Today',
-    status: 'active',
-    visitType: 'new',
-  },
-  {
-    id: 'p5',
-    name: 'Jamal Bhuyan',
-    age: 39,
-    gender: 'M',
-    condition: 'Anxiety Disorder',
-    lastVisit: 'Today',
-    status: 'inactive', // Note: Will be filtered out since consultation is completed
-    visitType: 'follow-up',
-  },
-  {
-    id: 'p6',
-    name: 'Farida Khanam',
-    age: 51,
-    gender: 'F',
-    condition: 'Osteoarthritis',
-    lastVisit: 'Today',
-    status: 'active',
-    visitType: 'new',
-  },
-  {
-    id: 'p7',
-    name: 'Tanvir Ahmed',
-    age: 34,
-    gender: 'M',
-    condition: 'Migraine',
-    lastVisit: 'Today',
-    status: 'inactive', // Note: Will be filtered out
-    visitType: 'follow-up',
-  },
-  {
-    id: 'p8',
-    name: 'Sabina Yasmin',
-    age: 62,
-    gender: 'F',
-    condition: 'Coronary Artery Disease',
-    lastVisit: 'Today',
-    status: 'active',
-    visitType: 'follow-up',
-  },
-];
-
-// 3. COMPONENT
 export default function PatientsScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
   const [isOnline, setIsOnline] = useState(false);
+  const [patients, setPatients] = useState<ApiPatient[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Logic Update: Filter for active patients only, and only those scheduled for "Today"
-  // When a consultation is completed, the backend status becomes 'inactive', removing them from this list.
-  const activePatients = useMemo(() => {
-    return MOCK_PATIENTS.filter((p) => p.status === 'active' && p.lastVisit === 'Today');
+  useEffect(() => {
+    let isMounted = true;
+    const loadPatients = async () => {
+      try {
+        setLoading(true);
+        const data = await patientsService.getPatients();
+        if (isMounted) setPatients(data);
+      } catch (err) {
+        console.error('Failed to load patients', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+    loadPatients();
+    return () => { isMounted = false; };
   }, []);
 
-  const totalNew = activePatients.filter((p) => p.visitType === 'new').length;
-  const totalFollowUp = activePatients.filter((p) => p.visitType === 'follow-up').length;
+  // For this list, we'll just display all patients returned by the API
+  const activePatients = patients;
+  
+  // Since the backend doesn't return visitType, we'll just say 0 for now or hide the count.
+  const totalNew = 0; 
+  const totalFollowUp = activePatients.length;
 
   const currentDate = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -172,35 +106,22 @@ export default function PatientsScreen(): React.JSX.Element {
               <Text style={styles.overviewDate}>{currentDate}</Text>
             </View>
             <View style={styles.todayBadge}>
-              <Text style={styles.todayBadgeText}>Today</Text>
+              <Text style={styles.todayBadgeText}>All Time</Text>
             </View>
           </View>
 
           {/* Row 2 */}
           <View style={styles.overviewRow2}>
-            {/* Column 1: New Patients */}
+            {/* Column 1: Total Patients */}
             <View style={styles.overviewColumn}>
               <View style={styles.iconSquare}>
-                <MaterialCommunityIcons name="account-plus" size={22} color={Colors.primary} />
+                <MaterialCommunityIcons name="account-group" size={22} color={Colors.primary} />
               </View>
               <View style={styles.overviewColText}>
                 <Text style={styles.overviewLabel}>
-                  {t('patients.new_patients', 'New Patients')}
+                  Total Patients
                 </Text>
-                <Text style={styles.overviewValue}>{totalNew}</Text>
-              </View>
-            </View>
-
-            {/* Column 2: Follow-up */}
-            <View style={styles.overviewColumn}>
-              <View style={styles.iconSquare}>
-                <MaterialCommunityIcons name="account-arrow-right" size={22} color={Colors.primary} />
-              </View>
-              <View style={styles.overviewColText}>
-                <Text style={styles.overviewLabel}>
-                  {t('patients.follow_up', 'Follow-up')}
-                </Text>
-                <Text style={styles.overviewValue}>{totalFollowUp}</Text>
+                <Text style={styles.overviewValue}>{activePatients.length}</Text>
               </View>
             </View>
           </View>
@@ -213,7 +134,11 @@ export default function PatientsScreen(): React.JSX.Element {
         </View>
 
         {/* Patient List */}
-        {activePatients.length === 0 ? (
+        {loading ? (
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+          </View>
+        ) : activePatients.length === 0 ? (
           <View style={styles.emptyContainer}>
             <MaterialCommunityIcons
               name="account-search-outline"
@@ -221,7 +146,7 @@ export default function PatientsScreen(): React.JSX.Element {
               color={Colors.textTertiary}
             />
             <Text style={styles.emptyText}>
-              {t('patients.no_patients_found', 'No active patients for today.')}
+              {t('patients.no_patients_found', 'No patients found.')}
             </Text>
           </View>
         ) : (
@@ -232,43 +157,32 @@ export default function PatientsScreen(): React.JSX.Element {
                 style={styles.patientCard}
                 activeOpacity={0.7}
                 onPress={() => router.push('/(app)/doctor/consultation/' + item.id)}
-                accessibilityLabel={`Patient ${item.name}, ${item.age} years old, ${item.condition}`}
               >
-                {/* Top Section: Info (Col 1) and Badge (Col 2) */}
+                {/* Top Section */}
                 <View style={styles.cardTopRow}>
                   <View style={styles.cardPatientInfo}>
                     <Text style={styles.cardPatientName} numberOfLines={1}>
                       {item.name}
                     </Text>
                     <Text style={styles.cardPatientDetails}>
-                      {item.age} yrs • {item.gender === 'M' ? 'Male' : item.gender === 'F' ? 'Female' : 'Other'}
+                      {calculateAge(item.patientProfile?.dateOfBirth)} yrs • {item.patientProfile?.gender || 'Unknown'}
                     </Text>
                   </View>
                   
-                  <View
-                    style={[
-                      styles.visitBadge,
-                      item.visitType === 'new' ? styles.newBadge : styles.followUpBadge,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.visitBadgeText,
-                        item.visitType === 'new' ? styles.newBadgeText : styles.followUpBadgeText,
-                      ]}
-                    >
-                      {item.visitType === 'new' ? 'New' : 'Follow-up'}
+                  <View style={[styles.visitBadge, styles.followUpBadge]}>
+                    <Text style={[styles.visitBadgeText, styles.followUpBadgeText]}>
+                      Patient
                     </Text>
                   </View>
                 </View>
 
-                {/* Footer: Condition/Reason */}
+                {/* Footer: Phone */}
                 <View style={styles.cardFooter}>
                   <Text style={styles.cardReasonLabel}>
-                    {t('patients.condition_label', 'Condition:')}
+                    Phone:
                   </Text>
                   <Text style={styles.cardReasonText} numberOfLines={1}>
-                    {item.condition}
+                    {item.phone || 'N/A'}
                   </Text>
                 </View>
               </TouchableOpacity>

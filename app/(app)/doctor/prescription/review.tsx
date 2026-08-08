@@ -12,6 +12,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { axiosClient } from '../../../../src/services/api/axiosClient';
 
 export default function ReviewPrescriptionScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
@@ -40,13 +41,33 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    // Simulate API call for submission
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    setSubmitting(false);
+    try {
+      const payload = {
+        patient_user_id: parseInt(params.patientId || '0', 10),
+        diagnosis_summary: params.notes || 'See prescribed medicines.',
+        medicines: parsedMedicines.map((m: any) => ({
+          medicine_name: m.name,
+          dosage: m.dosage,
+          duration_days: parseInt(m.duration, 10) || 1,
+          instructions: m.instructions || undefined,
+          dosage_schedule: {
+            ...(m.freqMorning ? { morning: '08:00' } : {}),
+            ...(m.freqAfternoon ? { afternoon: '14:00' } : {}),
+            ...(m.freqNight ? { night: '20:00' } : {}),
+          },
+        })),
+      };
 
-    Alert.alert('Prescription Sent', 'The prescription has been successfully saved and sent to the patient.', [
-      { text: 'Done', onPress: () => router.dismissAll() },
-    ]);
+      await axiosClient.post('/prescriptions', payload);
+
+      Alert.alert('Prescription Sent', 'The prescription has been successfully saved and sent to the patient.', [
+        { text: 'Done', onPress: () => router.dismissAll() },
+      ]);
+    } catch (err: any) {
+      Alert.alert('Error', err?.message || 'Failed to issue prescription.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getInstructionIcon = (inst: string) => {
