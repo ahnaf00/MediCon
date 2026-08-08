@@ -478,7 +478,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
       >
         <KeyboardAvoidingView
           style={styles.modalWrapper}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <TouchableWithoutFeedback onPress={closeReplySheet}>
             <View style={styles.scrim} />

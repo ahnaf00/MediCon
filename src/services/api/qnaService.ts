@@ -75,11 +75,10 @@ class QnaService {
     doctorId: string,
     content: string,
   ): Promise<QuestionAnswer> {
-    const response = await axiosClient.post(`/conversations/${questionId}/messages`, {
+    const message: any = await axiosClient.post(`/conversations/${questionId}/messages`, {
       body: content,
     });
     
-    const message = response.data.data;
     return {
       id: String(message.id),
       doctorId: String(message.sender?.id || ''),
