@@ -10,6 +10,7 @@ import {
   ScrollView,
   Image,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useRouter, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,7 +20,7 @@ import { Colors, Spacing, FontFamily, FontSize, BorderRadius, Shadows } from '@t
 import { useAuthStore } from '../../../../src/store/authStore';
 import { qnaService } from '../../../../src/services/api/qnaService';
 import { QuestionCard } from '../../../../src/components/medical/QuestionCard';
-import { Question, QuestionAnswer } from '../../../../src/types/medical.types';
+import { Question } from '../../../../src/types/medical.types';
 import { createAppError, AppError } from '../../../../src/utils/errors';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { DraggableBottomSheet } from '../../../../src/components/ui/DraggableBottomSheet';
@@ -50,6 +51,24 @@ export default function QnaIndexScreen() {
   const [sheetVisible, setSheetVisible] = useState(false);
   const [isQuestionExpanded, setIsQuestionExpanded] = useState(false);
   const [showReadMore, setShowReadMore] = useState(false);
+  const [threadLoading, setThreadLoading] = useState(false);
+
+  // The listing carries only the latest reply; load the whole thread when a question opens.
+  const openQuestion = useCallback(async (question: Question) => {
+    setSelectedQuestion(question);
+    setSheetVisible(true);
+    setThreadLoading(true);
+    try {
+      const answers = await qnaService.getThread(question.id);
+      setSelectedQuestion((current) =>
+        current?.id === question.id ? { ...current, answers, answerCount: answers.length } : current,
+      );
+    } catch {
+      // Keep the latest reply from the listing if the thread can't be fetched.
+    } finally {
+      setThreadLoading(false);
+    }
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -69,13 +88,12 @@ export default function QnaIndexScreen() {
     if (openQuestionId && questions.length > 0) {
       const targetQ = questions.find((q) => q.id === openQuestionId);
       if (targetQ) {
-        setSelectedQuestion(targetQ);
-        setSheetVisible(true);
+        openQuestion(targetQ);
         // Clear the param so it doesn't re-trigger on subsequent tab visits
         router.setParams({ openQuestionId: '' });
       }
     }
-  }, [openQuestionId, questions, router]);
+  }, [openQuestionId, questions, router, openQuestion]);
 
   useFocusEffect(
     useCallback(() => {
@@ -87,7 +105,7 @@ export default function QnaIndexScreen() {
     setSelectedQuestion(question);
     setIsQuestionExpanded(false); // Reset expansion state for new questions
     setShowReadMore(false); // Reset read more visibility
-    setSheetVisible(true);
+    openQuestion(question);
   };
 
   const handleEdit = (question: Question) => {
@@ -98,8 +116,11 @@ export default function QnaIndexScreen() {
     try {
       await qnaService.deleteQuestion(question.id, userId);
       loadData();
-    } catch (err) {
-      console.error(err);
+    } catch {
+      Alert.alert(
+        t('common.error', 'Error'),
+        t('qna.delete_failed', 'This question could not be deleted. Questions a doctor has answered cannot be deleted.'),
+      );
     }
   };
 
@@ -198,7 +219,11 @@ export default function QnaIndexScreen() {
               </TouchableOpacity>
             )}
           </View>
-          {selectedQuestion.answers.length > 0 ? (
+          {threadLoading && selectedQuestion.answers.length === 0 ? (
+            <View style={[styles.emptySheetContainer, { paddingBottom: insets.bottom * 2 }]}>
+              <ActivityIndicator size="small" color={Colors.primary} />
+            </View>
+          ) : selectedQuestion.answers.length > 0 ? (
             <ScrollView style={styles.sheetScroll} showsVerticalScrollIndicator={false}>
               <View style={styles.responsesList}>
                 {selectedQuestion.answers.map((answer) => (
@@ -215,7 +240,7 @@ export default function QnaIndexScreen() {
                         style={styles.doctorImage}
                       />
                       <View style={styles.doctorInfo}>
-                        <Text style={styles.doctorName}>Dr. {answer.doctorId}</Text>
+                        <Text style={styles.doctorName}>{answer.doctorName ?? t('qna.doctor_fallback', 'Doctor')}</Text>
                         <View style={styles.doctorSubInfo}>
                           <View style={styles.doctorBadge}>
                             <Text style={styles.doctorBadgeText}>

@@ -40,7 +40,9 @@ export const QuestionCard = ({
   const { t } = useTranslation();
   const userId = useAuthStore((s) => s.userId) || 'patient-1';
   const isOwner = question.patientId === userId;
-  const answerCount = question.answers.length;
+  const answerCount = question.answerCount;
+  // The server refuses edits and deletion once a doctor has replied, so don't offer them.
+  const canModify = answerCount === 0;
   const timeAgo = getTimeAgo(question.createdAt);
 
   const [menuVisible, setMenuVisible] = useState(false);
@@ -82,17 +84,19 @@ export const QuestionCard = ({
               </View>
             )}
           </View>
-          <TouchableOpacity
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            onPress={handleMenuPress}
-          >
-            <MaterialCommunityIcons
-              name="dots-horizontal"
-              size={20}
-              color={Colors.textSecondary}
-              style={{ opacity: 0.5 }}
-            />
-          </TouchableOpacity>
+          {canModify && (
+            <TouchableOpacity
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              onPress={handleMenuPress}
+            >
+              <MaterialCommunityIcons
+                name="dots-horizontal"
+                size={20}
+                color={Colors.textSecondary}
+                style={{ opacity: 0.5 }}
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Row 2: Question Content */}

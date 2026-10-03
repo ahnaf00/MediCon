@@ -131,18 +131,24 @@ export interface Medicine {
 
 export interface Question {
   id: string;
+  /** Empty when the question is anonymous and the viewer is a doctor. */
   patientId: string;
+  /** Null when hidden by anonymity. */
+  patientName?: string | null;
   department: string;
   symptomId?: string;
   content: string;
   isAnonymous?: boolean;
   createdAt: string; // ISO 8601
+  /** Replies so far (from the listing); `answers` holds the loaded ones. */
+  answerCount: number;
   answers: QuestionAnswer[];
 }
 
 export interface QuestionAnswer {
   id: string;
   doctorId: string;
+  doctorName?: string;
   content: string;
   createdAt: string; // ISO 8601
 }

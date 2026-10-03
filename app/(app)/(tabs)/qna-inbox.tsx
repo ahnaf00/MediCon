@@ -31,17 +31,9 @@ import { useTranslation } from 'react-i18next';
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SHEET_MAX_HEIGHT = SCREEN_HEIGHT * 0.78;
 
-// Helper to mock patient names from IDs
-const getPatientName = (patientId: string) => {
-  const map: Record<string, string> = {
-    'patient-1': 'Ayesha Rahman',
-    'patient-2': 'Kamal Hasan',
-    'patient-3': 'Jamal Bhuiyan',
-    'patient-4': 'Nusrat Jahan',
-    'patient-5': 'Rahim Uddin',
-  };
-  return map[patientId] || 'Patient ' + patientId.replace('patient-', '');
-};
+// The server withholds the name of a patient who asked anonymously.
+const getPatientName = (question: Question) =>
+  question.isAnonymous || !question.patientName ? 'Anonymous' : question.patientName;
 
 const getTimeAgo = (dateString: string) => {
   const diff = Date.now() - new Date(dateString).getTime();
@@ -59,7 +51,6 @@ interface DoctorQuestionCardProps {
   isAnswered: boolean;
   onReply: () => void;
   onEdit: () => void;
-  onDelete: () => void;
 }
 
 const DoctorQuestionCard = ({
@@ -67,12 +58,11 @@ const DoctorQuestionCard = ({
   isAnswered,
   onReply,
   onEdit,
-  onDelete,
 }: DoctorQuestionCardProps) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuCoords, setMenuCoords] = useState({ x: 0, y: 0 });
 
-  const patientName = question.isAnonymous ? 'Anonymous' : getPatientName(question.patientId);
+  const patientName = getPatientName(question);
 
   const handleMenuPress = (event: any) => {
     const { pageX, pageY } = event.nativeEvent;
@@ -94,17 +84,19 @@ const DoctorQuestionCard = ({
             <Text style={styles.cardPatientName}>{patientName}</Text>
             <Text style={styles.cardTimestamp}>{getTimeAgo(question.createdAt)}</Text>
           </View>
-          <TouchableOpacity
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            onPress={handleMenuPress}
-          >
-            <MaterialCommunityIcons
-              name="dots-horizontal"
-              size={20}
-              color={Colors.textSecondary}
-              style={{ opacity: 0.5 }}
-            />
-          </TouchableOpacity>
+          {isAnswered && (
+            <TouchableOpacity
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              onPress={handleMenuPress}
+            >
+              <MaterialCommunityIcons
+                name="dots-horizontal"
+                size={20}
+                color={Colors.textSecondary}
+                style={{ opacity: 0.5 }}
+              />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Row 2: Question with vertical line and Answer */}
@@ -144,18 +136,10 @@ const DoctorQuestionCard = ({
         <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
           <View style={styles.menuOverlay}>
             <View style={[styles.menuContainer, { top: menuCoords.y, left: menuCoords.x }]}>
-              {isAnswered && (
-                <>
-                  <TouchableOpacity style={styles.menuItem} onPress={() => handleAction(onEdit)}>
-                    <MaterialCommunityIcons name="pencil-outline" size={20} color={Colors.textPrimary} />
-                    <Text style={styles.menuItemText}>Edit</Text>
-                  </TouchableOpacity>
-                  <View style={styles.menuDivider} />
-                </>
-              )}
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction(onDelete)}>
-                <MaterialCommunityIcons name="trash-can-outline" size={20} color={Colors.danger} />
-                <Text style={[styles.menuItemText, { color: Colors.danger }]}>Delete</Text>
+              {/* Doctors can revise their own answer; deleting a patient's question is not offered. */}
+              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction(onEdit)}>
+                <MaterialCommunityIcons name="pencil-outline" size={20} color={Colors.textPrimary} />
+                <Text style={styles.menuItemText}>Edit</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -240,15 +224,6 @@ export default function QnaInboxScreen(): React.JSX.Element {
   );
 
   // ── Handlers ────────────────────────────────────────────────────────────────
-  const handleDelete = async (question: Question) => {
-    try {
-      await qnaService.deleteQuestion(question.id, userId);
-      setQuestions((prev) => prev.filter((q) => q.id !== question.id));
-    } catch (err) {
-      alert('Failed to delete question');
-    }
-  };
-
   const openReplySheet = (question: Question) => {
     setIsEditing(false);
     setEditingAnswerId(null);
@@ -460,7 +435,6 @@ export default function QnaInboxScreen(): React.JSX.Element {
                   isAnswered={activeTab === 'answered'}
                   onReply={() => openReplySheet(item)}
                   onEdit={() => openEditSheet(item)}
-                  onDelete={() => handleDelete(item)}
                 />
               </View>
             ))
@@ -505,9 +479,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
             >
               {activeQuestion && (
                 <View style={styles.sheetQuestion}>
-                  <Text style={styles.sheetPatientNameTop}>
-                    {activeQuestion.isAnonymous ? 'Anonymous' : getPatientName(activeQuestion.patientId)}
-                  </Text>
+                  <Text style={styles.sheetPatientNameTop}>{getPatientName(activeQuestion)}</Text>
                   
                   <Text
                     style={styles.sheetQuestionText}

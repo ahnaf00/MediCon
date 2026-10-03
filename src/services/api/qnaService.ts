@@ -1,38 +1,55 @@
+// src/services/api/qnaService.ts
+// ─────────────────────────────────────────────────────────────────────────────
+// Ask-a-doctor Q&A, backed by conversations:
+//   GET    /conversations                          → patient: own questions; doctor: inbox
+//   POST   /conversations                          → ask (then POST the first message)
+//   PATCH  /conversations/{id}                     → patient edits, only while unanswered
+//   DELETE /conversations/{id}                     → patient deletes, only while unanswered
+//   GET    /conversations/{id}/messages            → the full thread
+//   POST   /conversations/{id}/messages            → reply
+//   PATCH  /conversations/{id}/messages/{msgId}    → sender edits their own message
+// ─────────────────────────────────────────────────────────────────────────────
 import { Question, QuestionAnswer } from '../../types/medical.types';
 import { axiosClient } from './axiosClient';
 
-// Helper function to map Laravel Conversation/Message to frontend Question/QuestionAnswer
+const mapMessageToAnswer = (msg: any): QuestionAnswer => ({
+  id: String(msg.id),
+  doctorId: String(msg.sender?.id ?? ''),
+  doctorName: msg.sender?.name ?? undefined,
+  content: msg.body,
+  createdAt: msg.createdAt,
+});
+
+// Map a Laravel Conversation to the frontend Question. The listing only carries the latest
+// message, so `answers` holds at most one reply here; getThread() loads them all.
 const mapConversationToQuestion = (conv: any): Question => {
+  const latestIsReply = conv.latestMessage && conv.latestMessage.fromPatient === false;
   return {
     id: String(conv.id),
-    patientId: String(conv.patient?.id || ''),
+    patientId: conv.patient?.id != null ? String(conv.patient.id) : '',
+    patientName: conv.patient?.name ?? null,
     department: conv.department || 'General Medicine',
     symptomId: '', // Symptom ID isn't persisted on backend yet
     content: conv.firstMessage?.body || conv.subject || 'No content',
-    isAnonymous: false,
+    isAnonymous: conv.isAnonymous === true,
     createdAt: conv.createdAt,
-    answers: conv.latestMessage && conv.latestMessage.sender?.id !== conv.patient?.id 
-      ? [{
-          id: String(conv.latestMessage.id),
-          doctorId: String(conv.latestMessage.sender?.id || ''),
-          content: conv.latestMessage.body,
-          createdAt: conv.latestMessage.createdAt,
-        }]
-      : [],
+    answerCount: typeof conv.replyCount === 'number' ? conv.replyCount : latestIsReply ? 1 : 0,
+    answers: latestIsReply ? [mapMessageToAnswer(conv.latestMessage)] : [],
   };
 };
 
 class QnaService {
   /**
-   * Fetch questions authored by a specific patient.
+   * Fetch the caller's own questions (the server scopes by the authenticated patient).
    */
-  async getPatientQuestions(patientId: string): Promise<Question[]> {
+  async getPatientQuestions(_patientId: string): Promise<Question[]> {
     const response = await axiosClient.get('/conversations');
     return (response as any).map(mapConversationToQuestion);
   }
 
   /**
-   * Fetch questions routed to a specific department for the doctor inbox.
+   * Fetch the doctor's inbox. The server scopes it to the doctor's own specialty
+   * and ignores `department`.
    */
   async getDoctorInbox(department: string): Promise<Question[]> {
     const response = await axiosClient.get('/conversations', { params: { department } });
@@ -40,21 +57,32 @@ class QnaService {
   }
 
   /**
+   * Every reply in a question's thread (excluding the patient's own messages), oldest first.
+   */
+  async getThread(questionId: string): Promise<QuestionAnswer[]> {
+    const messages = (await axiosClient.get(`/conversations/${questionId}/messages`)) as any;
+    return (Array.isArray(messages) ? messages : [])
+      .filter((m: any) => m.fromPatient === false)
+      .map(mapMessageToAnswer);
+  }
+
+  /**
    * Patient submits a new question.
    */
   async askQuestion(
-    patientId: string,
+    _patientId: string,
     department: string,
     content: string,
     isAnonymous?: boolean,
-    symptomId?: string,
+    _symptomId?: string,
   ): Promise<Question> {
     // 1. Create the conversation
     const response = await axiosClient.post('/conversations', {
       subject: content.substring(0, 255), // Use content as subject
       department: department,
+      is_anonymous: isAnonymous === true,
     });
-    
+
     const conversationId = (response as any).conversation.id;
 
     // 2. Post the first message with the full content
@@ -72,59 +100,55 @@ class QnaService {
    */
   async answerQuestion(
     questionId: string,
-    doctorId: string,
+    _doctorId: string,
     content: string,
   ): Promise<QuestionAnswer> {
     const message: any = await axiosClient.post(`/conversations/${questionId}/messages`, {
       body: content,
     });
-    
-    return {
-      id: String(message.id),
-      doctorId: String(message.sender?.id || ''),
-      content: message.body,
-      createdAt: message.createdAt,
-    };
+    return mapMessageToAnswer(message);
   }
 
   /**
-   * Doctor updates their own answer.
+   * Doctor edits their own answer in place. The server allows only the message's sender.
    */
   async updateAnswer(
     questionId: string,
     answerId: string,
-    doctorId: string,
+    _doctorId: string,
     content: string,
   ): Promise<QuestionAnswer> {
-    // The backend doesn't support updating messages yet, so we fallback to answering again
-    // or just return the edited data locally if not supported.
-    // For now we will create a new message since editing isn't in ConversationController.
-    return this.answerQuestion(questionId, doctorId, content);
+    const message: any = await axiosClient.patch(
+      `/conversations/${questionId}/messages/${answerId}`,
+      { body: content },
+    );
+    return mapMessageToAnswer(message);
   }
 
   /**
-   * Delete a question.
+   * Patient deletes their own question. The server refuses (403) once anyone has replied.
    */
-  async deleteQuestion(questionId: string, userId?: string): Promise<void> {
-    // Backend doesn't have a DELETE conversation route yet.
-    // We would add it or just ignore for now.
-    return Promise.resolve();
+  async deleteQuestion(questionId: string, _userId?: string): Promise<void> {
+    await axiosClient.delete(`/conversations/${questionId}`);
   }
 
   /**
-   * Patient updates their own question.
+   * Patient edits their own question. The server refuses (403) once anyone has replied.
    */
   async updateQuestion(
     questionId: string,
-    patientId: string,
+    _patientId: string,
     content: string,
     department: string,
     isAnonymous?: boolean,
-    symptomId?: string,
+    _symptomId?: string,
   ): Promise<Question> {
-    // The backend doesn't support updating conversations yet.
-    // We would need to implement it, or just ignore.
-    return mapConversationToQuestion({ id: questionId, department, subject: content, createdAt: new Date().toISOString() });
+    const response = await axiosClient.patch(`/conversations/${questionId}`, {
+      body: content,
+      department,
+      is_anonymous: isAnonymous === true,
+    });
+    return mapConversationToQuestion((response as any).conversation);
   }
 }
 
