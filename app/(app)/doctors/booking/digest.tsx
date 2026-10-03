@@ -227,10 +227,10 @@ export default function BookingDigestScreen() {
   const renderDoctorCard = () => {
     const imageSource =
       doctor?.image || require('../../../../src/assets/images/doctors/doctorPlaceholder1.png');
+    // Only the doctor's own qualifications — never invent degrees when they are missing.
     const degreesText =
-      doctor?.experience && doctor.experience.length > 10
-        ? doctor.experience
-        : `MBBS, Diploma (Gynae & Obs), FCPS (${doctor?.department})`;
+      doctor?.degrees?.filter((d) => d && d.trim()).join(', ') ||
+      t('doctorcard.specialist', 'Specialist');
 
     return (
       <View style={[styles.card, styles.doctorCardContainer]}>

@@ -38,7 +38,7 @@ const toDoctor = (doc: any, index: number): Doctor => {
     userId: id,
     fullName: doc.name,
     department: profile.specialty || 'General',
-    degrees: [profile.qualification || 'MBBS'],
+    degrees: profile.qualification ? [profile.qualification] : [],
     rating: Number(profile.rating) || 0,
     reviewCount: 0,
     consultationFee: profile.consultationFee || 500,
