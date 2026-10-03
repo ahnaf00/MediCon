@@ -105,11 +105,13 @@ export const DoctorCard = ({
             <Text style={styles.historyDate}>Last consulted: {historyDate}</Text>
           </View>
           <View style={styles.historyActionButtons}>
-            {isHistory && (doctor as ConsultationHistoryItem).status === 'upcoming' && onCancelPress && (
-              <TouchableOpacity style={styles.cancelButton} onPress={onCancelPress}>
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-            )}
+            {isHistory &&
+              (doctor as ConsultationHistoryItem).status === 'scheduled' &&
+              onCancelPress && (
+                <TouchableOpacity style={styles.cancelButton} onPress={onCancelPress}>
+                  <Text style={styles.cancelButtonText}>Cancel</Text>
+                </TouchableOpacity>
+              )}
             {isHistory &&
               (doctor as ConsultationHistoryItem).status === 'completed' &&
               (doctor as ConsultationHistoryItem).hasSummary &&

@@ -36,8 +36,8 @@ export interface ConsultationHistoryItem {
   doctorName: string;
   specialty: string;
   date: string;
-  /** Raw API status. ('upcoming' is never sent by the API — see task 5.5.) */
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'upcoming';
+  /** Raw API status. Only 'scheduled' visits can be cancelled. */
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
   /** True once the doctor has written a consultation summary (enables the AI chat). */
   hasSummary: boolean;
   image?: ReturnType<(typeof doctorPlaceholders)[number]>;
