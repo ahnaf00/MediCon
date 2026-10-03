@@ -14,6 +14,8 @@ export interface DoctorCardProps {
   onPress?: () => void;
   onBookPress?: () => void;
   onCancelPress?: () => void;
+  /** History variant: opens the consultation AI chat (shown for completed visits with a summary). */
+  onAskAiPress?: () => void;
   hideSectionLabel?: boolean;
   variant?: 'default' | 'history' | 'online';
   fullWidth?: boolean;
@@ -25,6 +27,7 @@ export const DoctorCard = ({
   onPress,
   onBookPress,
   onCancelPress,
+  onAskAiPress,
   hideSectionLabel = false,
   variant = 'default',
   fullWidth = false,
@@ -107,6 +110,25 @@ export const DoctorCard = ({
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
             )}
+            {isHistory &&
+              (doctor as ConsultationHistoryItem).status === 'completed' &&
+              (doctor as ConsultationHistoryItem).hasSummary &&
+              onAskAiPress && (
+                <TouchableOpacity
+                  style={styles.askAiButton}
+                  onPress={onAskAiPress}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(
+                    'consultation_chat.ask_ai',
+                    'Ask AI about this consultation',
+                  )}
+                >
+                  <MaterialCommunityIcons name="robot-outline" size={18} color={Colors.primary} />
+                  <Text style={styles.askAiButtonText}>
+                    {t('consultation_chat.ask_ai_short', 'Ask AI')}
+                  </Text>
+                </TouchableOpacity>
+              )}
             <TouchableOpacity style={styles.primaryButton} onPress={onBookPress || onPress}>
               <MaterialCommunityIcons name="video-outline" size={18} color={Colors.surface} />
               <Text style={styles.primaryButtonText}>See Doctor Now</Text>
@@ -335,6 +357,22 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
     fontSize: FontSize.sm,
     color: Colors.surface,
+  },
+  askAiButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.sm - 1,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    gap: Spacing.xs,
+  },
+  askAiButtonText: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.sm,
+    color: Colors.primary,
   },
   historyActionButtons: {
     flexDirection: 'row',

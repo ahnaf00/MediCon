@@ -68,6 +68,7 @@ export default function ConsultationHistoryScreen(): React.JSX.Element {
               router.push(`/(app)/doctors/booking/digest?doctorId=${item.doctorId}&type=video`)
             }
             onCancelPress={() => handleCancel(item.id)}
+            onAskAiPress={() => router.push(`/(app)/ai-chat/consultation/${item.id}`)}
           />
         </View>
       );

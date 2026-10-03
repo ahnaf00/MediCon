@@ -538,6 +538,7 @@
     "send": "Send",
     "disclaimer": "AI answers are based on your doctor’s notes and can make mistakes. Not a substitute for medical advice — in an emergency, call 999.",
     "ask_ai": "Ask AI about this consultation",
-    "recent_consultation": "Recent consultation"
+    "recent_consultation": "Recent consultation",
+    "ask_ai_short": "Ask AI"
   }
 }

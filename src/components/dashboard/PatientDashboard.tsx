@@ -10,6 +10,7 @@ import { usePatientDashboard } from '../../hooks/usePatientDashboard';
 import { AppointmentCard } from '../cards/AppointmentCard';
 import { MedicationCard } from '../cards/MedicationCard';
 import { SymptomSearchBar } from '../forms/SymptomSearchBar';
+import { ApiAppointment, useRecentConsultation } from '../../services/api/consultationsService';
 // 2. TYPES
 /* No external props — this is a self-contained dashboard. */
 
@@ -18,6 +19,7 @@ export const PatientDashboard = (): React.JSX.Element => {
   const router = useRouter();
   const { t } = useTranslation();
   const { nextAppointment, nextMedicine } = usePatientDashboard();
+  const { data: recentConsultation } = useRecentConsultation();
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -107,6 +109,12 @@ export const PatientDashboard = (): React.JSX.Element => {
         {/* Dashboard Cards */}
         <View style={styles.cardsContainer}>
           <AppointmentCard appointment={nextAppointment} />
+          {recentConsultation && (
+            <RecentConsultationLink
+              appointment={recentConsultation}
+              onPress={() => router.push(`/(app)/ai-chat/consultation/${recentConsultation.id}`)}
+            />
+          )}
           <MedicationCard medication={nextMedicine} />
         </View>
       </ScrollView>
@@ -136,6 +144,47 @@ const QuickAction = ({ icon, label, onPress }: QuickActionProps): React.JSX.Elem
     <Text style={styles.quickActionText}>{label}</Text>
   </TouchableOpacity>
 );
+
+/** Small link into the AI chat for the latest consultation that has a doctor's summary. */
+const RecentConsultationLink = ({
+  appointment,
+  onPress,
+}: {
+  appointment: ApiAppointment;
+  onPress: () => void;
+}): React.JSX.Element => {
+  const { t } = useTranslation();
+  const date = appointment.datetime
+    ? new Date(appointment.datetime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '';
+  const label = t('consultation_chat.ask_ai', 'Ask AI about this consultation');
+
+  return (
+    <TouchableOpacity
+      style={styles.recentConsultation}
+      onPress={onPress}
+      activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${appointment.doctor?.name ?? ''} ${date}`}
+    >
+      <View style={styles.recentConsultationIcon}>
+        <MaterialCommunityIcons name="robot-outline" size={22} color={Colors.primary} />
+      </View>
+      <View style={styles.recentConsultationText}>
+        <Text style={styles.recentConsultationLabel}>
+          {t('consultation_chat.recent_consultation', 'Recent consultation')}
+        </Text>
+        <Text style={styles.recentConsultationTitle} numberOfLines={1}>
+          {[appointment.doctor?.name, date].filter(Boolean).join(' · ')}
+        </Text>
+      </View>
+      <Text style={styles.recentConsultationAction}>
+        {t('consultation_chat.ask_ai_short', 'Ask AI')}
+      </Text>
+      <MaterialCommunityIcons name="chevron-right" size={22} color={Colors.primary} />
+    </TouchableOpacity>
+  );
+};
 
 // 4. STYLES
 const styles = StyleSheet.create({
@@ -246,5 +295,46 @@ const styles = StyleSheet.create({
   },
   cardsContainer: {
     gap: Spacing.base,
+  },
+  recentConsultation: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.tertiary,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.base,
+  },
+  recentConsultationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.tertiary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recentConsultationText: {
+    flex: 1,
+  },
+  recentConsultationLabel: {
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+  },
+  recentConsultationTitle: {
+    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontSize: FontSize.base,
+    color: Colors.textPrimary,
+    marginTop: 2,
+  },
+  recentConsultationAction: {
+    fontFamily: FontFamily.bold,
+    fontWeight: '700',
+    fontSize: FontSize.sm,
+    color: Colors.primary,
   },
 });

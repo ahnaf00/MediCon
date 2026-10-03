@@ -108,6 +108,17 @@ export const useAppointments = () =>
     queryFn: () => consultationsService.getAppointments(),
   });
 
+/** The caller's most recent completed consultation that has a doctor's summary, or null. */
+export const useRecentConsultation = () =>
+  useQuery({
+    queryKey: ['appointments'],
+    queryFn: () => consultationsService.getAppointments(),
+    select: (appointments): ApiAppointment | null =>
+      appointments
+        .filter((a) => a.status === 'completed' && a.hasSummary)
+        .sort((a, b) => (b.datetime ?? '').localeCompare(a.datetime ?? ''))[0] ?? null,
+  });
+
 export const useConsultation = (appointmentId: number | string | undefined, enabled = true) =>
   useQuery({
     queryKey: ['consultation-summary', String(appointmentId)],
