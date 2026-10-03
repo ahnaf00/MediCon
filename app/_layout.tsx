@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -6,14 +6,31 @@ import { queryClient } from '../src/services/queryClient';
 import { useOnboardingStore, useAuthStore } from '../src/store';
 import '../src/i18n';
 
+const storesHydrated = () =>
+  useAuthStore.persist.hasHydrated() && useOnboardingStore.persist.hasHydrated();
+
 export default function RootLayout() {
   const segments = useSegments();
   const router = useRouter();
   const hasSeenOnboarding = useOnboardingStore((s) => s.hasSeenOnboarding);
   const token = useAuthStore((s) => s.token);
+  const [hydrated, setHydrated] = useState(storesHydrated);
+
+  // Persisted stores hydrate asynchronously from SecureStore; routing on the
+  // pre-hydration defaults would send a logged-in user to login/onboarding.
+  useEffect(() => {
+    const check = () => setHydrated(storesHydrated());
+    const unsubAuth = useAuthStore.persist.onFinishHydration(check);
+    const unsubOnboarding = useOnboardingStore.persist.onFinishHydration(check);
+    check();
+    return () => {
+      unsubAuth();
+      unsubOnboarding();
+    };
+  }, []);
 
   useEffect(() => {
-    if (!segments.length) return;
+    if (!hydrated || !segments.length) return;
 
     const inAuth = segments[0] === '(auth)';
     const inApp = segments[0] === '(app)';
@@ -45,7 +62,7 @@ export default function RootLayout() {
     if (onOnboarding) {
       router.replace('/(auth)/login');
     }
-  }, [segments, hasSeenOnboarding, token, router]);
+  }, [hydrated, segments, hasSeenOnboarding, token, router]);
 
   return (
     <QueryClientProvider client={queryClient}>

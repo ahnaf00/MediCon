@@ -38,7 +38,8 @@ axiosClient.interceptors.response.use(
       // 401 Unauthorized: Token expired or revoked
       if (error.response.status === 401) {
         // Trigger global logout (clears state & secure storage, and _layout.tsx will redirect)
-        useAuthStore.getState().logout();
+        // The token is already rejected, so don't try to revoke it remotely.
+        useAuthStore.getState().logout({ remote: false });
       }
 
       // 422 Unprocessable Entity: Validation Errors

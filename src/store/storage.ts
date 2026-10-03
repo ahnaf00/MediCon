@@ -16,7 +16,10 @@ const safeSetItem = (key: string, value: string): void => {
   }
 };
 
-const safeGetItem = (key: string): string | null => {
+// Reads wait for the boot-time preload below; otherwise Zustand would hydrate
+// from an empty memory store and a returning user would appear logged out.
+const safeGetItem = async (key: string): Promise<string | null> => {
+  await preloadReady;
   return memoryStore.get(key) ?? null;
 };
 
@@ -33,7 +36,8 @@ const safeRemoveItem = (key: string): void => {
 const preloadKey = async (key: string) => {
   try {
     const val = await SecureStore.getItemAsync(key);
-    if (val !== null && val !== undefined) {
+    // Don't clobber a value written while the preload was in flight.
+    if (val !== null && val !== undefined && !memoryStore.has(key)) {
       memoryStore.set(key, val);
     }
   } catch {
@@ -42,10 +46,12 @@ const preloadKey = async (key: string) => {
 };
 
 // Pre-load common storage keys
-preloadKey('auth-storage');
-preloadKey('settings-storage');
-preloadKey('onboarding-state');
-preloadKey('medicon-chat-storage');
+const preloadReady = Promise.all([
+  preloadKey('auth-storage'),
+  preloadKey('settings-storage'),
+  preloadKey('onboarding-state'),
+  preloadKey('medicon-chat-storage'),
+]);
 
 // 1. Synchronous state storage adapter for Zustand
 export const mmkvStorage: StateStorage = {
