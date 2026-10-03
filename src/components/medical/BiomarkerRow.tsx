@@ -1,46 +1,68 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Biomarker } from '../../types/medical.types';
+import type { LabResult, LabResultStatus } from '../../services/api/reportsService';
 import { Colors, Spacing, FontFamily, FontSize } from '../../theme';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 
 interface BiomarkerRowProps {
-  biomarker: Biomarker;
+  result: LabResult;
   isLast?: boolean;
 }
 
-export function BiomarkerRow({ biomarker, isLast }: BiomarkerRowProps) {
+export const STATUS_COLORS: Record<LabResultStatus, string> = {
+  low: Colors.warning,
+  normal: Colors.success,
+  high: Colors.danger,
+  unknown: Colors.textTertiary,
+};
+
+export function BiomarkerRow({ result, isLast }: BiomarkerRowProps) {
   const { t } = useTranslation();
-  const valueColor = biomarker.isFlagged ? Colors.danger : Colors.textPrimary;
+  const isFlagged = result.status === 'low' || result.status === 'high';
+  const statusColor = STATUS_COLORS[result.status];
+  const statusLabel =
+    result.status === 'high'
+      ? t('report_analysis.status_high', 'High')
+      : result.status === 'low'
+        ? t('report_analysis.status_low', 'Low')
+        : null;
 
   return (
-    <View style={[styles.container, isLast && { borderBottomWidth: 0 }]}>
+    <View
+      style={[styles.container, isLast && { borderBottomWidth: 0 }]}
+      testID={`biomarker-${result.id}`}
+      accessible
+      accessibilityLabel={[result.name, result.value, result.unit, statusLabel]
+        .filter(Boolean)
+        .join(' ')}
+    >
       <View style={styles.topRow}>
         <View style={styles.nameContainer}>
-          {biomarker.isFlagged && (
-            <MaterialCommunityIcons
-              name="alert-circle"
-              size={16}
-              color={Colors.danger}
-              style={styles.icon}
-            />
-          )}
-          <Text style={[styles.name, biomarker.isFlagged && styles.nameFlagged]}>
-            {biomarker.name}
-          </Text>
+          <View
+            style={[styles.statusDot, { backgroundColor: statusColor }]}
+            testID={`status-dot-${result.status}`}
+          />
+          <Text style={[styles.name, isFlagged && styles.nameFlagged]}>{result.name}</Text>
         </View>
 
         <View style={styles.valueRow}>
-          <Text style={[styles.value, { color: valueColor }]}>{biomarker.value}</Text>
-          {biomarker.unit ? <Text style={styles.unit}>{biomarker.unit}</Text> : null}
+          <Text style={[styles.value, { color: isFlagged ? statusColor : Colors.textPrimary }]}>
+            {result.value}
+          </Text>
+          {result.unit ? <Text style={styles.unit}>{result.unit}</Text> : null}
+          {statusLabel ? (
+            <Text style={[styles.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
+          ) : null}
         </View>
       </View>
 
-      {biomarker.referenceRange ? (
+      {result.referenceText ? (
         <View style={styles.bottomRow}>
-          <Text style={styles.referenceLabel}>Reference Intervals:</Text>
-          <Text style={styles.referenceValue}>{biomarker.referenceRange}</Text>
+          <Text style={styles.referenceLabel}>
+            {t('report_analysis.reference_intervals', 'Reference Intervals:')}
+          </Text>
+          {/* Shown exactly as printed, including sex-specific ranges. */}
+          <Text style={styles.referenceValue}>{result.referenceText}</Text>
         </View>
       ) : null}
     </View>
@@ -71,16 +93,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingRight: Spacing.sm,
   },
-  icon: {
-    marginRight: Spacing.xs,
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: Spacing.sm,
   },
   name: {
+    flexShrink: 1,
     fontFamily: FontFamily.medium,
     fontSize: FontSize.base,
     color: Colors.textPrimary,
   },
   nameFlagged: {
-    color: Colors.danger,
     fontFamily: FontFamily.bold,
   },
   valueRow: {
@@ -97,6 +122,11 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.medium,
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
+  },
+  statusLabel: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.xs,
+    marginLeft: 2,
   },
   referenceLabel: {
     fontFamily: FontFamily.regular,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,16 +7,32 @@ import {
   TouchableOpacity,
   ScrollView,
   Linking,
-  Platform,
+  Image,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius, Layout } from '../../../src/theme';
-import { reportsService, MedicalRecord } from '../../../src/services/api/reportsService';
+import {
+  MedicalRecord,
+  useAnalyzeRecord,
+  useMedicalRecord,
+} from '../../../src/services/api/reportsService';
 import { BiomarkerRow } from '../../../src/components/medical/BiomarkerRow';
+import { AnalysisProgressModal } from '../../../src/components/medical/AnalysisProgressModal';
+import { groupLabResults } from '../../../src/utils/labResults';
+import { fromLocalDateString } from '../../../src/utils/localDate';
 import { useTranslation } from 'react-i18next';
+
+const DATE_FORMAT: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
+
+/** The printed report date when known, otherwise the upload date. */
+function displayDate(report: MedicalRecord): string {
+  const printed = report.reportDate ? fromLocalDateString(report.reportDate) : null;
+  return (printed ?? new Date(report.createdAt)).toLocaleDateString('en-US', DATE_FORMAT);
+}
 
 export default function ReportDetailScreen() {
   const { t } = useTranslation();
@@ -26,27 +42,39 @@ export default function ReportDetailScreen() {
 
   type ActiveTab = 'analysis' | 'results';
   const [activeTab, setActiveTab] = useState<ActiveTab>('analysis');
+  const [progressDismissed, setProgressDismissed] = useState(false);
 
-  const [report, setReport] = useState<MedicalRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const recordId = Number(id);
+  const { data: report, isLoading, isError, refetch } = useMedicalRecord(recordId);
+  const analyze = useAnalyzeRecord();
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        if (!id) throw new Error('No report ID provided');
-        const data = await reportsService.getRecordById(Number(id));
-        setReport(data);
-      } catch {
-        setError('Failed to load report details.');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [id]);
+  const startAnalysis = () => {
+    setProgressDismissed(false);
+    analyze.mutate(recordId, {
+      onError: (error: any) => {
+        Alert.alert(
+          t('report_analysis.analyze_failed_title', 'Could not start analysis'),
+          error?.message ||
+            t('report_analysis.analyze_failed_body', 'Please try again in a moment.'),
+        );
+      },
+    });
+  };
 
-  if (loading) {
+  /** Signed URLs expire after 15 minutes, so fetch fresh ones before opening. */
+  const openPage = async (index: number) => {
+    const { data } = await refetch();
+    const url = data?.pages?.[index]?.fileUrl ?? (index === 0 ? data?.fileUrl : undefined);
+    if (!url) {
+      Alert.alert(t('report_analysis.open_failed', 'The document could not be opened.'));
+      return;
+    }
+    Linking.openURL(url).catch(() => {
+      Alert.alert(t('report_analysis.open_failed', 'The document could not be opened.'));
+    });
+  };
+
+  if (isLoading) {
     return (
       <SafeAreaView style={styles.loadingContainer} edges={['top']}>
         <ActivityIndicator size="large" color={Colors.primary} />
@@ -54,11 +82,15 @@ export default function ReportDetailScreen() {
     );
   }
 
-  if (error || !report) {
+  if (isError || !report) {
     return (
       <SafeAreaView style={styles.loadingContainer} edges={['top']}>
         <MaterialCommunityIcons name="alert-circle-outline" size={48} color={Colors.danger} />
-        <Text style={styles.errorText}>{error || 'Report not found.'}</Text>
+        <Text style={styles.errorText}>
+          {isError
+            ? t('report_analysis.load_failed', 'Failed to load report details.')
+            : t('report_analysis.not_found', 'Report not found.')}
+        </Text>
         <TouchableOpacity style={styles.errorBackButton} onPress={() => router.back()}>
           <Text style={styles.errorBackButtonText}>{t('[id].go_back') || 'Go Back'}</Text>
         </TouchableOpacity>
@@ -66,11 +98,202 @@ export default function ReportDetailScreen() {
     );
   }
 
-  const formattedDate = new Date((report as any).createdAt ?? (report as any).date).toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  const status = report.analysisStatus;
+  const pages = report.pages ?? [];
+  const labResults = report.labResults ?? [];
+  const isStarting = analyze.isPending;
+
+  const renderPagesStrip = () =>
+    pages.length > 0 ? (
+      <View style={styles.section}>
+        <Text style={styles.pagesLabel}>
+          {t('report_analysis.original_pages', 'Original pages (tap to open)')}
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.pagesRow}
+        >
+          {pages.map((page, index) => (
+            <TouchableOpacity
+              key={page.id}
+              style={styles.pageThumb}
+              onPress={() => openPage(index)}
+              accessibilityRole="button"
+              accessibilityLabel={`Open page ${index + 1}`}
+            >
+              {page.isPdf ? (
+                <View style={styles.pagePdf}>
+                  <MaterialCommunityIcons name="file-pdf-box" size={28} color={Colors.danger} />
+                </View>
+              ) : (
+                <Image source={{ uri: page.fileUrl }} style={styles.pageImage} resizeMode="cover" />
+              )}
+              <View style={styles.pageNumber}>
+                <Text style={styles.pageNumberText}>{index + 1}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    ) : null;
+
+  const renderAnalyzeButton = (label: string) => (
+    <TouchableOpacity
+      style={[styles.inlineButton, isStarting && styles.inlineButtonDisabled]}
+      onPress={startAnalysis}
+      disabled={isStarting}
+      accessibilityRole="button"
+    >
+      {isStarting ? (
+        <ActivityIndicator size="small" color={Colors.surface} />
+      ) : (
+        <Text style={styles.inlineButtonText}>{label}</Text>
+      )}
+    </TouchableOpacity>
+  );
+
+  const renderAnalysisTab = () => {
+    if (status === 'completed') {
+      return (
+        <View style={styles.section}>
+          <View style={styles.aiSummaryContainer}>
+            <Text style={styles.aiSummaryText}>
+              {report.aiSummary ??
+                t('report_analysis.no_summary', 'No summary was generated for this report.')}
+            </Text>
+          </View>
+          <View style={styles.disclaimer} testID="ai-disclaimer">
+            <MaterialCommunityIcons name="robot-outline" size={18} color={Colors.primary} />
+            <Text style={styles.disclaimerText}>
+              {t(
+                'report_analysis.disclaimer',
+                'AI-generated interpretation, consult your doctor before making any decisions about your health.',
+              )}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    if (status === 'processing') {
+      return (
+        <View style={[styles.section, styles.stateCard]}>
+          <ActivityIndicator size="small" color={Colors.primary} />
+          <Text style={styles.stateBody}>
+            {t(
+              'report_analysis.in_progress_body',
+              'Analysis in progress. This page updates automatically when it is ready.',
+            )}
+          </Text>
+          <TouchableOpacity onPress={() => setProgressDismissed(false)} accessibilityRole="button">
+            <Text style={styles.linkText}>
+              {t('report_analysis.show_progress', 'Show progress')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    if (status === 'failed') {
+      return (
+        <View style={[styles.section, styles.stateCard]}>
+          <MaterialCommunityIcons name="alert-circle-outline" size={32} color={Colors.warning} />
+          <Text style={styles.stateTitle}>
+            {t('report_analysis.failed_title', 'Analysis unavailable')}
+          </Text>
+          {report.analysisError ? (
+            <Text style={styles.stateBody}>{report.analysisError}</Text>
+          ) : null}
+          <Text style={styles.stateBody}>
+            {t(
+              'report_analysis.failed_saved',
+              'Your original document is saved and can still be viewed.',
+            )}
+          </Text>
+          {renderAnalyzeButton(t('report_analysis.try_again', 'Try Again'))}
+        </View>
+      );
+    }
+
+    return (
+      <View style={[styles.section, styles.stateCard]}>
+        <MaterialCommunityIcons name="file-search-outline" size={32} color={Colors.primary} />
+        <Text style={styles.stateTitle}>
+          {t('report_analysis.not_analyzed_title', 'Not analyzed yet')}
+        </Text>
+        <Text style={styles.stateBody}>
+          {t(
+            'report_analysis.not_analyzed_body',
+            'Analyze this report to get a plain-language summary and the extracted test results.',
+          )}
+        </Text>
+        {renderAnalyzeButton(t('report_review.analyze_report', 'Analyze Report'))}
+      </View>
+    );
+  };
+
+  const renderResultsTab = () => {
+    if (labResults.length === 0) {
+      return (
+        <View style={styles.section}>
+          <View style={styles.emptyBiomarkers}>
+            <Text style={styles.emptyBiomarkersText}>
+              {status === 'completed'
+                ? t('[id].no_specific_biomarkers_were_ex') ||
+                  'No specific biomarkers were extracted from this report.'
+                : t(
+                    'report_analysis.results_pending',
+                    'Test results will appear here once the report has been analyzed.',
+                  )}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.disclaimer}>
+          <MaterialCommunityIcons name="robot-outline" size={18} color={Colors.primary} />
+          <Text style={styles.disclaimerText}>
+            {t(
+              'report_analysis.extracted_note',
+              'These values were read from your document by AI. Check them against the original pages, and consult your doctor about what they mean.',
+            )}
+          </Text>
+        </View>
+
+        {groupLabResults(labResults).map((panel, panelIdx) => (
+          <View key={`panel-${panelIdx}`} style={styles.categoryBlock}>
+            <Text style={styles.categoryTitle}>{panel.panel}</Text>
+
+            {panel.subGroups.map((sg, sgIdx) => (
+              <View
+                key={`sg-${sgIdx}`}
+                style={[
+                  styles.subGroupBlock,
+                  sgIdx === panel.subGroups.length - 1 && { marginBottom: 0 },
+                ]}
+              >
+                {sg.subGroup ? <Text style={styles.subGroupTitle}>{sg.subGroup}</Text> : null}
+
+                <View style={styles.biomarkerList}>
+                  {sg.results.map((result, idx) => (
+                    <BiomarkerRow
+                      key={result.id}
+                      result={result}
+                      isLast={idx === sg.results.length - 1}
+                    />
+                  ))}
+                </View>
+              </View>
+            ))}
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -97,19 +320,21 @@ export default function ReportDetailScreen() {
       <View style={{ paddingHorizontal: Spacing.base, paddingTop: Spacing.lg }}>
         {/* Meta card */}
         <View style={styles.metaCard}>
-          <Text style={styles.reportTitle}>{(report as any).title ?? `Record #${report.id}`}</Text>
+          <Text style={styles.reportTitle}>{report.title ?? `Record #${report.id}`}</Text>
           <View style={styles.divider} />
           <View style={styles.metaRow}>
             <View style={styles.metaLeft}>
               <MaterialCommunityIcons name="flask-outline" size={18} color={Colors.primary} />
               <View style={styles.metaText}>
-                <Text style={styles.metaLabel}>Laboratory</Text>
-                <Text style={styles.metaValue}>{(report as any).laboratory ?? 'Medical Record'}</Text>
+                <Text style={styles.metaLabel}>
+                  {t('report_analysis.laboratory', 'Laboratory')}
+                </Text>
+                <Text style={styles.metaValue}>{report.laboratoryName ?? '—'}</Text>
               </View>
             </View>
             <View style={styles.metaRight}>
-              <Text style={styles.metaLabel}>Date</Text>
-              <Text style={styles.metaValue}>{formattedDate}</Text>
+              <Text style={styles.metaLabel}>{t('report_analysis.date', 'Date')}</Text>
+              <Text style={styles.metaValue}>{displayDate(report)}</Text>
             </View>
           </View>
         </View>
@@ -122,7 +347,7 @@ export default function ReportDetailScreen() {
             accessibilityRole="tab"
           >
             <Text style={[styles.tabText, activeTab === 'analysis' && styles.tabTextActive]}>
-              Report Analysis
+              {t('report_analysis.tab_analysis', 'Report Analysis')}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -132,7 +357,7 @@ export default function ReportDetailScreen() {
             accessibilityRole="tab"
           >
             <Text style={[styles.tabText, activeTab === 'results' && styles.tabTextActive]}>
-              Test Results
+              {t('report_analysis.tab_results', 'Test Results')}
             </Text>
           </TouchableOpacity>
         </View>
@@ -143,117 +368,8 @@ export default function ReportDetailScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 100 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
-        {activeTab === 'results' && (
-          <View style={styles.section}>
-            {(report as any).biomarkers && (report as any).biomarkers.length > 0 ? (
-              (() => {
-                const groupedData: {
-                  category: string;
-                  testGroups: {
-                    testGroup: string;
-                    subGroups: {
-                      subGroup: string;
-                      biomarkers: any[];
-                    }[];
-                  }[];
-                }[] = [];
-
-                (report as any).biomarkers.forEach((b: any) => {
-                  const catName = b.category || 'General';
-                  const testName = b.testGroup || 'Tests';
-                  const subName = b.subGroup || 'All';
-
-                  let catObj = groupedData.find((c) => c.category === catName);
-                  if (!catObj) {
-                    catObj = { category: catName, testGroups: [] };
-                    groupedData.push(catObj);
-                  }
-
-                  let testObj = catObj.testGroups.find((t) => t.testGroup === testName);
-                  if (!testObj) {
-                    testObj = { testGroup: testName, subGroups: [] };
-                    catObj.testGroups.push(testObj);
-                  }
-
-                  let subObj = testObj.subGroups.find((s) => s.subGroup === subName);
-                  if (!subObj) {
-                    subObj = { subGroup: subName, biomarkers: [] };
-                    testObj.subGroups.push(subObj);
-                  }
-
-                  subObj.biomarkers.push(b);
-                });
-
-                return (
-                  <View>
-                    {groupedData.map((cat, catIdx) => (
-                      <View
-                        key={`cat-${catIdx}`}
-                        style={[styles.categoryBlock, catIdx === 0 && { marginTop: 0 }]}
-                      >
-                        {cat.category !== 'General' && (
-                          <Text style={styles.categoryTitle}>{cat.category}</Text>
-                        )}
-
-                        {cat.testGroups.map((tg, tgIdx) => (
-                          <View
-                            key={`tg-${tgIdx}`}
-                            style={[
-                              styles.testGroupBlock,
-                              tgIdx === cat.testGroups.length - 1 && { marginBottom: 0 },
-                            ]}
-                          >
-                            {tg.testGroup !== 'Tests' && (
-                              <Text style={styles.testGroupTitle}>{tg.testGroup}</Text>
-                            )}
-
-                            {tg.subGroups.map((sg, sgIdx) => (
-                              <View
-                                key={`sg-${sgIdx}`}
-                                style={[
-                                  styles.subGroupBlock,
-                                  sgIdx === tg.subGroups.length - 1 && { marginBottom: 0 },
-                                ]}
-                              >
-                                {sg.subGroup !== 'All' && (
-                                  <Text style={styles.subGroupTitle}>{sg.subGroup}</Text>
-                                )}
-
-                                <View style={styles.biomarkerList}>
-                                  {(report as any).biomarkers?.map((b: any, bIdx: number) => (
-                                    <BiomarkerRow
-                                      key={b.id}
-                                      biomarker={b}
-                                      isLast={bIdx === sg.biomarkers.length - 1}
-                                    />
-                                  ))}
-                                </View>
-                              </View>
-                            ))}
-                          </View>
-                        ))}
-                      </View>
-                    ))}
-                  </View>
-                );
-              })()
-            ) : (
-              <View style={styles.emptyBiomarkers}>
-                <Text style={styles.emptyBiomarkersText}>
-                  {t('[id].no_specific_biomarkers_were_ex') ||
-                    'No specific biomarkers were extracted from this report.'}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-        {activeTab === 'analysis' && (report as any).aiSummary && (
-          <View style={styles.section}>
-            <View style={styles.aiSummaryContainer}>
-              <Text style={styles.aiSummaryText}>{(report as any).aiSummary}</Text>
-            </View>
-          </View>
-        )}
+        {activeTab === 'results' && renderPagesStrip()}
+        {activeTab === 'analysis' ? renderAnalysisTab() : renderResultsTab()}
       </ScrollView>
 
       {/* Show Original fixed button at bottom */}
@@ -263,18 +379,7 @@ export default function ReportDetailScreen() {
           activeOpacity={0.8}
           accessibilityRole="button"
           accessibilityLabel="View original document"
-          onPress={() => {
-            if (report?.fileUrl) {
-              let urlToOpen = report.fileUrl;
-              // Patch for Android emulator testing against local Laravel server
-              if (Platform.OS === 'android') {
-                urlToOpen = urlToOpen.replace(/localhost|127\.0\.0\.1/, '10.0.2.2');
-              }
-              Linking.openURL(urlToOpen).catch((err) => {
-                console.error('Failed to open URL:', err);
-              });
-            }
-          }}
+          onPress={() => openPage(0)}
         >
           <MaterialCommunityIcons name="file-eye-outline" size={18} color={Colors.surface} />
           <Text style={styles.showOriginalFullBtnText}>
@@ -282,6 +387,12 @@ export default function ReportDetailScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      <AnalysisProgressModal
+        visible={status === 'processing' && !progressDismissed}
+        status={status}
+        onClose={() => setProgressDismissed(true)}
+      />
     </View>
   );
 }
@@ -427,12 +538,6 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: Spacing.xl,
   },
-  sectionTitle: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.lg,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.md,
-  },
   aiSummaryContainer: {
     backgroundColor: Colors.surface,
     paddingVertical: Spacing.lg,
@@ -440,12 +545,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
     borderColor: Colors.tertiary,
-  },
-  aiSummaryTitle: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.lg,
-    color: Colors.primary,
-    marginBottom: Spacing.md,
   },
   aiSummaryText: {
     fontFamily: FontFamily.regular,
@@ -471,6 +570,116 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     textAlign: 'center',
     marginBottom: Spacing.md,
+  },
+
+  // AI disclaimer
+  disclaimer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.sm,
+    backgroundColor: Colors.tertiaryLight,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  disclaimerText: {
+    flex: 1,
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    lineHeight: FontSize.xs * 1.5,
+  },
+
+  // Analysis states (pending / processing / failed)
+  stateCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.tertiary,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  stateTitle: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.md,
+    color: Colors.textPrimary,
+    textAlign: 'center',
+  },
+  stateBody: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    lineHeight: FontSize.sm * 1.5,
+  },
+  inlineButton: {
+    marginTop: Spacing.sm,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    minWidth: 160,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlineButtonDisabled: {
+    opacity: 0.6,
+  },
+  inlineButtonText: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.base,
+    color: Colors.surface,
+  },
+  linkText: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.sm,
+    color: Colors.primary,
+    paddingVertical: Spacing.xs,
+  },
+
+  // Original pages strip
+  pagesLabel: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
+  },
+  pagesRow: {
+    gap: Spacing.sm,
+  },
+  pageThumb: {
+    width: 64,
+    height: 84,
+    borderRadius: BorderRadius.sm,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: Colors.tertiary,
+    backgroundColor: Colors.surface,
+  },
+  pageImage: {
+    width: '100%',
+    height: '100%',
+  },
+  pagePdf: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF5F5',
+  },
+  pageNumber: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    borderRadius: BorderRadius.sm,
+    paddingHorizontal: 4,
+  },
+  pageNumberText: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.xs,
+    color: Colors.surface,
   },
 
   // ── Tab bar ──────────────────────────────────────────────────────────────────
@@ -509,16 +718,6 @@ const styles = StyleSheet.create({
     color: Colors.primary,
   },
 
-  testGroupBlock: {
-    marginBottom: Spacing.md,
-  },
-  testGroupTitle: {
-    fontFamily: FontFamily.bold,
-    fontWeight: 'bold',
-    fontSize: FontSize.base,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
   subGroupBlock: {
     marginBottom: Spacing.md,
   },
