@@ -138,6 +138,9 @@ const MedicineDetailCard = ({
           {expanded && (
             <View style={styles.explanationBox}>
               <Text style={styles.explanationText}>{explanationText}</Text>
+              <Text style={styles.explanationDisclaimer}>
+                AI-generated explanation. Always follow your doctor's instructions.
+              </Text>
             </View>
           )}
         </>
@@ -727,6 +730,12 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
     lineHeight: FontSize.sm * 1.5,
+  },
+  explanationDisclaimer: {
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+    marginTop: Spacing.sm,
   },
 
   // Fixed Bottom Button

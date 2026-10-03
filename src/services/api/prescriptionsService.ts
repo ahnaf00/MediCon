@@ -35,6 +35,8 @@ export interface ApiPrescriptionMedicine {
   scheduleFormat: string | null;
   instructions: string | null;
   durationDays: number;
+  /** AI-written "Why take this medicine?" text; null until generated or if generation failed. */
+  explanation: string | null;
 }
 
 /** GET /prescriptions/{id}/document — everything the letterhead needs (PrescriptionDocumentResource). */
@@ -154,6 +156,7 @@ const mapApiToPrescription = (api: ApiPrescription): Prescription => {
       scheduleFormat: m.scheduleFormat,
       instructions: m.instructions,
       dosagePattern: m.scheduleFormat || undefined,
+      explanation: m.explanation ?? undefined,
     })),
   };
 };
