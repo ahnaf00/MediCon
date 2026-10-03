@@ -67,6 +67,10 @@ export interface StorePrescriptionPayload {
     dosage_schedule?: Record<string, string>;
     instructions?: string;
   }>;
+  tests?: { name: string; instructions?: string }[];
+  /** Calendar date, YYYY-MM-DD (build with toLocalDateString, not toISOString). */
+  follow_up_date?: string;
+  advice?: string;
 }
 
 // ─── Adherence records (local state only — no backend endpoint yet) ────────────

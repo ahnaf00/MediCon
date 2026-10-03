@@ -25,6 +25,9 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
     medicines?: string;
     tests?: string;
     notes?: string;
+    advice?: string;
+    followUpDate?: string;
+    appointmentId?: string;
   }>();
 
   const [submitting, setSubmitting] = useState(false);
@@ -44,7 +47,14 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
     try {
       const payload = {
         patient_user_id: parseInt(params.patientId || '0', 10),
+        appointment_id: params.appointmentId ? parseInt(params.appointmentId, 10) : undefined,
         diagnosis_summary: params.notes || 'See prescribed medicines.',
+        follow_up_date: params.followUpDate || undefined,
+        advice: params.advice || undefined,
+        tests: parsedTests.map((t: any) => ({
+          name: t.name,
+          instructions: t.reason || undefined,
+        })),
         medicines: parsedMedicines.map((m: any) => ({
           medicine_name: m.name,
           dosage: m.dosage,
@@ -52,7 +62,7 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
           instructions: m.instructions || undefined,
           dosage_schedule: {
             ...(m.freqMorning ? { morning: '08:00' } : {}),
-            ...(m.freqAfternoon ? { afternoon: '14:00' } : {}),
+            ...(m.freqAfternoon ? { noon: '14:00' } : {}),
             ...(m.freqNight ? { night: '20:00' } : {}),
           },
         })),
@@ -182,6 +192,33 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
             </View>
             <View style={styles.notesCard}>
               <Text style={styles.notesText}>{params.notes}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {/* ── ADVICE ── */}
+        {params.advice ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="comment-text-outline" size={20} color={Colors.primary} />
+              <Text style={styles.sectionTitle}>Advice</Text>
+            </View>
+            <View style={styles.notesCard}>
+              <Text style={styles.notesText}>{params.advice}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {/* ── FOLLOW-UP ── */}
+        {params.followUpDate ? (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <MaterialCommunityIcons name="calendar-check" size={20} color={Colors.primary} />
+              <Text style={styles.sectionTitle}>Follow-up</Text>
+            </View>
+            <View style={styles.notesCard}>
+              {/* Plain YYYY-MM-DD from the writer; shown as-is to avoid a UTC shift. */}
+              <Text style={styles.notesText}>{params.followUpDate}</Text>
             </View>
           </View>
         ) : null}

@@ -18,6 +18,8 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius, Shadows } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { toLocalDateString } from '../../../../src/utils/localDate';
 
 // 2. TYPES
 interface MedicineEntry {
@@ -87,21 +89,26 @@ type ActiveTab = 'medicines' | 'tests';
 export default function WritePrescriptionScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { patientId, patientName } = useLocalSearchParams<{
+  const { patientId, patientName, appointmentId } = useLocalSearchParams<{
     patientId?: string;
     patientName?: string;
+    appointmentId?: string;
   }>();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('medicines');
   const [medicines, setMedicines] = useState<MedicineEntry[]>([makeEmptyMedicine(0)]);
   const [tests, setTests] = useState<TestEntry[]>([]);
   const [notes, setNotes] = useState('');
+  const [advice, setAdvice] = useState('');
+  const [followUpDate, setFollowUpDate] = useState<Date | null>(null);
+  const [showFollowUpPicker, setShowFollowUpPicker] = useState(false);
   const [validationError, setValidationError] = useState('');
 
   const [activeTestId, setActiveTestId] = useState<string | null>(null);
   const testNameRef = useRef<TextInput>(null);
 
-  const [isNotesModalVisible, setIsNotesModalVisible] = useState(false);
+  // Which free-text field (if any) is open in the text-entry modal.
+  const [textModal, setTextModal] = useState<'notes' | 'advice' | null>(null);
   const notesRef = useRef<TextInput>(null);
 
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -117,13 +124,13 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
     if (activeTestId) {
       const timer = setTimeout(() => testNameRef.current?.focus(), 80);
       return () => clearTimeout(timer);
-    } else if (isNotesModalVisible) {
+    } else if (textModal) {
       const timer = setTimeout(() => notesRef.current?.focus(), 80);
       return () => clearTimeout(timer);
     } else {
       Keyboard.dismiss();
     }
-  }, [activeTestId, isNotesModalVisible]);
+  }, [activeTestId, textModal]);
 
   const allergies = getMockAllergies(patientId);
   const patientAge = getMockAge(patientId);
@@ -220,6 +227,9 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
       ),
       tests: JSON.stringify(tests),
       notes,
+      advice,
+      followUpDate: followUpDate ? toLocalDateString(followUpDate) : '',
+      appointmentId: appointmentId ?? '',
     };
 
     router.push({
@@ -533,7 +543,7 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
             </View>
             <View style={[styles.textInput, styles.textInputMultiline, { padding: 0 }]}>
               <ScrollView nestedScrollEnabled contentContainerStyle={{ flexGrow: 1, padding: Spacing.md }}>
-                <TouchableOpacity onPress={() => setIsNotesModalVisible(true)} activeOpacity={0.8} style={{ flex: 1 }}>
+                <TouchableOpacity onPress={() => setTextModal('notes')} activeOpacity={0.8} style={{ flex: 1 }}>
                   <Text style={notes ? styles.inputText : styles.placeholderText}>
                     {notes || 'e.g. Monitor blood pressure daily. Return in 4 weeks.'}
                   </Text>
@@ -541,8 +551,70 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
               </ScrollView>
             </View>
           </View>
+
+          {/* Advice */}
+          <View style={styles.notesSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Advice</Text>
+            </View>
+            <View style={[styles.textInput, styles.textInputMultiline, { padding: 0 }]}>
+              <ScrollView nestedScrollEnabled contentContainerStyle={{ flexGrow: 1, padding: Spacing.md }}>
+                <TouchableOpacity onPress={() => setTextModal('advice')} activeOpacity={0.8} style={{ flex: 1 }}>
+                  <Text style={advice ? styles.inputText : styles.placeholderText}>
+                    {advice || 'e.g. Drink plenty of fluids and rest.'}
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+
+          {/* Follow-up date */}
+          <View style={styles.notesSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Follow-up</Text>
+              {followUpDate ? (
+                <TouchableOpacity
+                  onPress={() => setFollowUpDate(null)}
+                  accessibilityRole="button"
+                  accessibilityLabel="Clear follow-up date"
+                >
+                  <MaterialCommunityIcons name="close" size={18} color={Colors.danger} />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+            <TouchableOpacity
+              onPress={() => setShowFollowUpPicker(true)}
+              activeOpacity={0.8}
+              accessibilityRole="button"
+              accessibilityLabel="Choose follow-up date"
+            >
+              <View style={[styles.textInput, { justifyContent: 'center' }]}>
+                <Text style={followUpDate ? styles.inputText : styles.placeholderText}>
+                  {followUpDate
+                    ? followUpDate.toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })
+                    : 'No follow-up date'}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {showFollowUpPicker && (
+        <DateTimePicker
+          value={followUpDate ?? new Date()}
+          mode="date"
+          minimumDate={new Date()}
+          onChange={(_event, date) => {
+            setShowFollowUpPicker(false);
+            if (date) setFollowUpDate(date);
+          }}
+        />
+      )}
 
       {/* ── TEST MODAL ── */}
       <Modal
@@ -614,17 +686,17 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
 
       {/* ── ADDITIONAL NOTES MODAL ── */}
       <Modal
-        visible={isNotesModalVisible}
+        visible={textModal !== null}
         transparent
         animationType="fade"
         statusBarTranslucent
-        onRequestClose={() => setIsNotesModalVisible(false)}
+        onRequestClose={() => setTextModal(null)}
       >
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
           style={styles.modalRoot}
         >
-          <TouchableWithoutFeedback onPress={() => setIsNotesModalVisible(false)}>
+          <TouchableWithoutFeedback onPress={() => setTextModal(null)}>
             <View style={StyleSheet.absoluteFill} />
           </TouchableWithoutFeedback>
 
@@ -635,9 +707,11 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
             <View style={[styles.card, { marginBottom: 0 }]}>
               <View style={[styles.cardHeader, { marginBottom: Spacing.base }]}>
                 <View style={styles.cardTitleBadge}>
-                  <Text style={styles.cardTitle}>Additional Notes</Text>
+                  <Text style={styles.cardTitle}>
+                    {textModal === 'advice' ? 'Advice' : 'Additional Notes'}
+                  </Text>
                 </View>
-                <TouchableOpacity onPress={() => setIsNotesModalVisible(false)} style={styles.removeButton}>
+                <TouchableOpacity onPress={() => setTextModal(null)} style={styles.removeButton}>
                   <MaterialCommunityIcons name="check" size={18} color={Colors.primary} />
                 </TouchableOpacity>
               </View>
@@ -645,10 +719,14 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
               <TextInput
                 ref={notesRef}
                 style={[styles.textInput, styles.textInputMultiline]}
-                placeholder="e.g. Monitor blood pressure daily. Return in 4 weeks."
+                placeholder={
+                  textModal === 'advice'
+                    ? 'e.g. Drink plenty of fluids and rest.'
+                    : 'e.g. Monitor blood pressure daily. Return in 4 weeks.'
+                }
                 placeholderTextColor={Colors.textTertiary}
-                value={notes}
-                onChangeText={setNotes}
+                value={textModal === 'advice' ? advice : notes}
+                onChangeText={textModal === 'advice' ? setAdvice : setNotes}
                 multiline
                 numberOfLines={4}
                 scrollEnabled={true}
