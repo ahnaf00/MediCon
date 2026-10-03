@@ -64,6 +64,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-status-bar',
   ],
   extra: {
+    // Resolved per build profile from eas.json; read at runtime via src/constants/config.ts.
+    apiUrl: process.env.EXPO_PUBLIC_API_URL,
     eas: {
       projectId: 'fc59c36e-7707-4744-924a-aad648c925c8',
     },

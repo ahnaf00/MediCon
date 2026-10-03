@@ -1,12 +1,10 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '../../store/authStore';
-import { Platform } from 'react-native';
+import { Config } from '../../constants/config';
 
-// Use 10.0.2.2 for Android Emulator, localhost for iOS simulator, or IP for physical device
-const BASE_URL = Platform.OS === 'android' ? 'http://10.0.2.2:8000/api/v1' : 'http://localhost:8000/api/v1';
-
+// Base URL comes from EXPO_PUBLIC_API_URL (see src/constants/config.ts).
 export const axiosClient = axios.create({
-  baseURL: BASE_URL,
+  baseURL: Config.API.BASE_URL,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -23,7 +21,7 @@ axiosClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 );
 
 // Response Interceptor: Unwrap data & handle 401/422
@@ -51,5 +49,5 @@ axiosClient.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
