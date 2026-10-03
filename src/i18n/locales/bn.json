@@ -255,6 +255,21 @@
     "choose_different_report": "Choose Different Report",
     "continue": "Continue"
   },
+  "report_review": {
+    "one_page_selected": "১টি পৃষ্ঠা নির্বাচিত",
+    "pages_selected": "{{count}}টি পৃষ্ঠা নির্বাচিত",
+    "pages_tap_to_remove": "পৃষ্ঠাসমূহ (সরাতে ট্যাপ করুন)",
+    "add_page": "পৃষ্ঠা যোগ করুন",
+    "gallery_image": "গ্যালারির ছবি",
+    "upload_pdf": "PDF আপলোড করুন",
+    "cancel": "বাতিল",
+    "analyze_report": "রিপোর্ট বিশ্লেষণ করুন",
+    "uploading": "আপলোড হচ্ছে…",
+    "upload_failed": "আপলোড ব্যর্থ হয়েছে",
+    "upload_failed_body": "আপনার রিপোর্ট আপলোড করা যায়নি। {{message}}",
+    "page_limit_title": "পৃষ্ঠার সীমা পূর্ণ",
+    "page_limit_body": "একটি রিপোর্টে সর্বোচ্চ {{max}}টি পৃষ্ঠা থাকতে পারে।"
+  },
   "theme": {
     "theme": "থিম"
   },

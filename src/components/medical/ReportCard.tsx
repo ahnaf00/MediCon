@@ -38,7 +38,12 @@ export function ReportCard({
 }: ReportCardProps): React.JSX.Element {
   const thumbnail = getPrimaryThumbnail(report);
   const isMulti = report.fileType === 'multi_image';
-  const extraCount = isMulti && report.thumbnails ? Math.max(0, report.thumbnails.length - 1) : 0;
+  const extraCount =
+    report.pageCount !== undefined
+      ? Math.max(0, report.pageCount - 1)
+      : isMulti && report.thumbnails
+        ? Math.max(0, report.thumbnails.length - 1)
+        : 0;
 
   return (
     <TouchableOpacity
@@ -60,7 +65,7 @@ export function ReportCard({
         )}
 
         {/* Multi-image badge */}
-        {isMulti && extraCount > 0 && (
+        {extraCount > 0 && (
           <View style={styles.multiImageBadge}>
             <MaterialCommunityIcons name="image-multiple" size={12} color={Colors.surface} />
             <Text style={styles.multiImageBadgeText}>+{extraCount}</Text>

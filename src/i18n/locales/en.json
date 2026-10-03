@@ -271,6 +271,21 @@
     "choose_different_report": "Choose Different Report",
     "continue": "Continue"
   },
+  "report_review": {
+    "one_page_selected": "1 page selected",
+    "pages_selected": "{{count}} pages selected",
+    "pages_tap_to_remove": "PAGES (TAP TO REMOVE)",
+    "add_page": "Add page",
+    "gallery_image": "Gallery Image",
+    "upload_pdf": "Upload PDF",
+    "cancel": "Cancel",
+    "analyze_report": "Analyze Report",
+    "uploading": "Uploading…",
+    "upload_failed": "Upload Failed",
+    "upload_failed_body": "Your report could not be uploaded. {{message}}",
+    "page_limit_title": "Page limit reached",
+    "page_limit_body": "A report can have at most {{max}} pages."
+  },
   "theme": {
     "theme": "Theme"
   },

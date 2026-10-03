@@ -3,20 +3,59 @@
 // Medical Records Service — POST/GET /api/v1/medical-records
 // Vitals Service          — POST/GET /api/v1/vitals
 //
-// NOTE on Report type: The backend MedicalRecordResource does NOT return
-// biomarkers[], aiSummary, thumbnails[], or laboratory. Those fields were
-// frontend-only mock fields. The API-fetched type (MedicalRecord) matches
-// exactly what the backend returns. The legacy `Report` type in medical.types.ts
-// is preserved separately for any screens that still render local mock data.
+// NOTE on Report type: The API-fetched type (MedicalRecord) matches exactly what
+// MedicalRecordResource returns. The legacy `Report` type in medical.types.ts is
+// the card's display shape; the reports tab maps MedicalRecord onto it.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
 
 // ─── Types (matching MedicalRecordResource & VitalResource exactly) ───────────
 
+export type AnalysisStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type LabResultStatus = 'low' | 'normal' | 'high' | 'unknown';
+
+export interface MedicalRecordPage {
+  id: number;
+  order: number;
+  isPdf: boolean;
+  /** Short-lived signed URL (15 min). Refetch the record before opening a stale one. */
+  fileUrl: string;
+}
+
+export interface LabResult {
+  id: number;
+  panel: string;
+  subGroup: string | null;
+  name: string;
+  /** Exactly as printed on the report, e.g. "12.7" or "<5". */
+  value: string;
+  unit: string | null;
+  /** Exactly as printed, including sex-specific ranges ("F 11.5–15.5, M 13.8–18.0"). */
+  referenceText: string | null;
+  referenceLow: number | null;
+  referenceHigh: number | null;
+  status: LabResultStatus;
+}
+
 export interface MedicalRecord {
   id: number;
+  /** Signed URL of the first page. */
   fileUrl: string;
+  title: string | null;
+  laboratoryName: string | null;
+  /** Calendar date as printed on the report: "YYYY-MM-DD", no timezone. */
+  reportDate: string | null;
+  analysisStatus: AnalysisStatus;
+  /** User-facing reason when analysisStatus is "failed". */
+  analysisError: string | null;
+  aiSummary: string | null;
+  analyzedAt: string | null;
+  /** Present on list and detail responses. */
+  pageCount?: number;
+  pages?: MedicalRecordPage[];
+  /** Present on the detail response only. */
+  labResults?: LabResult[];
   /** bloodPressure/pulseRate/glucoseLevel/oxygenSaturation are legacy vitals
    * columns on the medical_records table. For file-only uploads they are null. */
   bloodPressure: string | null;
@@ -55,13 +94,18 @@ export interface StoreVitalPayload {
   logged_at?: string;
 }
 
-export interface UploadRecordPayload {
+export interface UploadRecordPage {
   /** Absolute file URI from expo-image-picker or expo-document-picker. */
   fileUri: string;
   /** Exact MIME type for the multipart boundary. */
   mimeType: 'image/jpeg' | 'image/png' | 'application/pdf';
   /** File name sent to the server (e.g. "report.pdf"). */
   fileName: string;
+}
+
+export interface UploadRecordPayload {
+  /** Pages in display order. 1–10 files. */
+  pages: UploadRecordPage[];
   /** Optional patient-added notes about the document. */
   notes?: string;
 }
@@ -90,20 +134,23 @@ export const reportsService = {
   },
 
   /**
-   * Goal: Upload a new medical document (PDF, JPEG, or PNG) for the patient.
+   * Goal: Upload a new multi-page medical document (PDF, JPEG, or PNG pages).
    * How: POST /api/v1/medical-records — multipart/form-data.
-   *      File field key MUST be "file". Accepted: pdf, jpg, jpeg, png. Max: 10 MB.
+   *      Each page goes under "files[]", in order. Accepted: pdf, jpg, jpeg, png.
+   *      Max 10 pages, 10 MB each.
    *      Content-Type header is overridden so Axios sets the correct multipart boundary.
-   * The controller returns { message, record: { id, fileUrl, ... } }.
+   * The controller returns { message, record: { id, fileUrl, pages, ... } }.
    */
-  uploadRecord: async ({ fileUri, mimeType, fileName, notes }: UploadRecordPayload): Promise<MedicalRecord> => {
+  uploadRecord: async ({ pages, notes }: UploadRecordPayload): Promise<MedicalRecord> => {
     const formData = new FormData();
-    // React Native requires this exact object shape for native file appending
-    formData.append('file', {
-      uri: fileUri,
-      type: mimeType,
-      name: fileName,
-    } as any);
+    for (const page of pages) {
+      // React Native requires this exact object shape for native file appending
+      formData.append('files[]', {
+        uri: page.fileUri,
+        type: page.mimeType,
+        name: page.fileName,
+      } as any);
+    }
     if (notes) {
       formData.append('notes', notes);
     }

@@ -114,6 +114,7 @@ export interface Report {
   fileType?: 'image' | 'multi_image' | 'pdf'; // Discriminates thumbnail rendering strategy
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   thumbnails?: any[]; // Local require() image sources for the card thumbnail grid
+  pageCount?: number; // Pages in an uploaded record; drives the "+N" badge
   biomarkers?: Biomarker[];
   aiSummary?: string;
 }

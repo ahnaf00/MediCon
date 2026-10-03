@@ -18,17 +18,38 @@ import {
 import { useRouter, Tabs, useFocusEffect } from 'expo-router';
 import { FlashList } from '@shopify/flash-list';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
-
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../../src/theme';
-import { MedicalRecord, reportsService } from '../../../src/services/api/reportsService';
+import {
+  MedicalRecord,
+  UploadRecordPage,
+  reportsService,
+} from '../../../src/services/api/reportsService';
+import { pickReportImages, pickReportPdfs } from '../../../src/services/files/reportPicker';
+import { MAX_REPORT_PAGES, useReportDraftStore } from '../../../src/store/reportDraftStore';
+import { Report } from '../../../src/types/medical.types';
 import { ReportCard } from '../../../src/components/medical/ReportCard';
 import { createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { useTranslation } from 'react-i18next';
+
+/** Maps an API record onto the card's display shape. */
+function toCardReport(record: MedicalRecord): Report {
+  const firstPage = record.pages?.[0];
+  const isPdf = firstPage?.isPdf ?? false;
+  return {
+    id: String(record.id),
+    patientId: '',
+    title: record.title ?? `Record #${record.id}`,
+    type: isPdf ? 'DOCUMENT' : 'IMAGE',
+    date: record.reportDate ?? record.createdAt,
+    laboratory: record.laboratoryName ?? undefined,
+    fileType: isPdf ? 'pdf' : 'image',
+    imageUrl: isPdf ? undefined : (firstPage?.fileUrl ?? record.fileUrl),
+    pageCount: record.pageCount,
+  };
+}
 
 export default function ReportsScreen() {
   const insets = useSafeAreaInsets();
@@ -55,70 +76,24 @@ export default function ReportsScreen() {
     }).start();
   };
 
-  const handlePickImage = async () => {
+  // Both upload paths stage pages in the draft and continue to Review Document.
+  const startDraft = async (pick: (limit: number) => Promise<UploadRecordPage[]>) => {
     toggleFab();
     try {
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permissionResult.granted) {
-        Alert.alert(
-          'Permission Denied',
-          'You need to allow access to your photos to upload a report.',
-        );
-        return;
-      }
+      const pages = await pick(MAX_REPORT_PAGES);
+      if (pages.length === 0) return;
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        quality: 0.8,
-      });
-
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        router.push({
-          pathname: '/(app)/report/upload',
-          params: {
-            uri: result.assets[0].uri,
-            type: 'image',
-            name: result.assets[0].fileName || `image-${Date.now()}.jpg`,
-          },
-        });
-      }
+      const draft = useReportDraftStore.getState();
+      draft.clear();
+      draft.addPages(pages);
+      router.push('/(app)/report/review');
     } catch (err) {
       Alert.alert('Error', String(err));
     }
   };
 
-  const handlePickDocument = async () => {
-    toggleFab();
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf'],
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled) return;
-
-      if (result.assets && result.assets.length > 0) {
-        const file = result.assets[0];
-
-        if (!file.mimeType?.includes('pdf')) {
-          Alert.alert('Unsupported File', 'Please upload a valid PDF document or Image.');
-          return;
-        }
-
-        router.push({
-          pathname: '/(app)/report/upload',
-          params: {
-            uri: file.uri,
-            type: 'pdf',
-            name: file.name,
-          },
-        });
-      }
-    } catch (err) {
-      Alert.alert('Error', String(err));
-    }
-  };
+  const handlePickImage = () => startDraft(pickReportImages);
+  const handlePickDocument = () => startDraft(pickReportPdfs);
 
   const [optionsVisible, setOptionsVisible] = useState(false);
   const [renameMode, setRenameMode] = useState(false);
@@ -254,7 +229,7 @@ export default function ReportsScreen() {
         </Text>
         <TouchableOpacity
           style={styles.uploadBtn}
-          onPress={toggleFab}
+          onPress={() => router.push('/(app)/report/upload')}
           accessibilityRole="button"
           accessibilityLabel="Upload a report"
         >
@@ -315,9 +290,9 @@ export default function ReportsScreen() {
                 ]}
               >
                 <ReportCard
-                  report={item as any}
+                  report={toCardReport(item)}
                   onPress={() => router.push(`/(app)/report/${item.id}`)}
-                  onOptionsPress={handleOptionsPress as any}
+                  onOptionsPress={() => handleOptionsPress(item)}
                 />
               </View>
             )}
