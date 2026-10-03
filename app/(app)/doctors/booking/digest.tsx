@@ -24,6 +24,7 @@ import {
 } from '../../../../src/services/api/appointmentsService';
 import { doctorsService, Doctor } from '../../../../src/services/api/doctorsService';
 import { useTranslation } from 'react-i18next';
+import { fromLocalDateString, toLocalDateString } from '../../../../src/utils/localDate';
 
 const MOBILE_BANKING = ['bKash', 'Rocket', 'Nagad', 'Upay'];
 const MOBILE_BANKING_LOGOS: Record<string, any> = {
@@ -72,7 +73,7 @@ export default function BookingDigestScreen() {
   const [panY] = useState(() => new Animated.Value(0));
 
   const [selectedDate, setSelectedDate] = useState<Date>(
-    initialDate ? new Date(initialDate) : new Date(),
+    (initialDate && fromLocalDateString(initialDate)) || new Date(),
   );
   const [selectedSlot, setSelectedSlot] = useState<string | null>(initialTimeSlotId || null);
 
@@ -108,10 +109,10 @@ export default function BookingDigestScreen() {
     const fetchSlots = async () => {
       try {
         setSlotsLoading(true);
-        const dateString = tempDate.toISOString().split('T')[0];
+        const dateString = toLocalDateString(tempDate);
         const availableSlots = await appointmentsService.getAvailableSlots(doctorId, dateString);
         setSlots(availableSlots);
-        if (tempDate.toISOString().split('T')[0] !== selectedDate.toISOString().split('T')[0]) {
+        if (dateString !== toLocalDateString(selectedDate)) {
           setTempSlot(null);
         }
       } finally {
@@ -159,7 +160,16 @@ export default function BookingDigestScreen() {
     }
 
     if (!doctorId) return;
-    if (mode === 'schedule' && (!selectedDate || !selectedSlot)) {
+    if (mode === 'instant') {
+      // There is no instant-consultation flow on the backend; booking needs a real slot.
+      Alert.alert(
+        'Instant consultation unavailable',
+        'Instant consultations are not available yet. Please schedule a time slot.',
+      );
+      return;
+    }
+
+    if (!selectedDate || !selectedSlot) {
       Alert.alert(
         'Selection Required',
         'Please select a date and time for the scheduled appointment.',
@@ -174,11 +184,9 @@ export default function BookingDigestScreen() {
 
     try {
       setBooking(true);
-      const dateString = selectedDate.toISOString().split('T')[0];
       const result = await appointmentsService.bookAppointment({
         doctorId,
-        date: mode === 'schedule' ? dateString : new Date().toISOString().split('T')[0],
-        timeSlotId: mode === 'schedule' ? selectedSlot! : 'instant',
+        slotDatetime: selectedSlot,
         type: 'video',
       });
 
@@ -624,7 +632,7 @@ export default function BookingDigestScreen() {
                     >
                       {datesList.map((d, index) => {
                         const isSelected =
-                          tempDate.toISOString().split('T')[0] === d.toISOString().split('T')[0];
+                          toLocalDateString(tempDate) === toLocalDateString(d);
                         const dayName =
                           index === 0
                             ? 'Today'

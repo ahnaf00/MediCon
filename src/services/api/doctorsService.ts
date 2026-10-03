@@ -1,6 +1,7 @@
 import { axiosClient } from './axiosClient';
 import { DoctorProfile } from '../../types/medical.types';
 import { doctorPlaceholders } from '../../constants/images';
+import { toLocalDateString } from '../../utils/localDate';
 
 export interface DoctorExperienceEntry {
   id: string;
@@ -35,7 +36,10 @@ export interface ConsultationHistoryItem {
   doctorName: string;
   specialty: string;
   date: string;
-  status: 'completed' | 'cancelled' | 'upcoming';
+  /** Raw API status. ('upcoming' is never sent by the API — see task 5.5.) */
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'upcoming';
+  /** True once the doctor has written a consultation summary (enables the AI chat). */
+  hasSummary: boolean;
   image?: ReturnType<(typeof doctorPlaceholders)[number]>;
 }
 
@@ -141,8 +145,9 @@ export const doctorsService = {
       doctorId: appt.doctor?.id?.toString() || '',
       doctorName: appt.doctor?.name || 'Doctor',
       specialty: appt.doctor?.doctorProfile?.specialty || 'Specialist',
-      date: appt.datetime ? new Date(appt.datetime).toISOString().split('T')[0] : 'N/A',
+      date: appt.datetime ? toLocalDateString(new Date(appt.datetime)) : 'N/A',
       status: appt.status,
+      hasSummary: appt.hasSummary === true,
       image: appt.doctor?.avatarUrl ? { uri: appt.doctor.avatarUrl } : undefined,
     }));
   },

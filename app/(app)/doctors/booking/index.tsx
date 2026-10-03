@@ -14,6 +14,7 @@ import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../../..
 import { appointmentsService, TimeSlot } from '../../../../src/services/api/appointmentsService';
 import { doctorsService, Doctor } from '../../../../src/services/api/doctorsService';
 import { useTranslation } from 'react-i18next';
+import { toLocalDateString } from '../../../../src/utils/localDate';
 
 export default function BookingScreen() {
   const { t } = useTranslation();
@@ -55,7 +56,7 @@ export default function BookingScreen() {
       if (!id) return;
       try {
         setSlotsLoading(true);
-        const dateString = selectedDate.toISOString().split('T')[0];
+        const dateString = toLocalDateString(selectedDate);
         const availableSlots = await appointmentsService.getAvailableSlots(id, dateString);
         setSlots(availableSlots);
         setSelectedSlot(null); // Reset selection on date change
@@ -68,7 +69,7 @@ export default function BookingScreen() {
 
   const handleContinue = () => {
     if (!id || !selectedSlot) return;
-    const dateString = selectedDate.toISOString().split('T')[0];
+    const dateString = toLocalDateString(selectedDate);
     router.push({
       pathname: '/(app)/doctors/booking/digest',
       params: {
@@ -153,8 +154,7 @@ export default function BookingScreen() {
           <Text style={styles.sectionTitle}>{t('booking.select_date') || 'Select Date'}</Text>
           <View style={styles.dateSelectorContent}>
             {dates.map((date, index) => {
-              const isSelected =
-                selectedDate.toISOString().split('T')[0] === date.toISOString().split('T')[0];
+              const isSelected = toLocalDateString(selectedDate) === toLocalDateString(date);
               const isToday = index === 0;
               const dayName = isToday
                 ? 'Today'

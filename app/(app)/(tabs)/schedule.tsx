@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { Colors, Spacing, FontFamily, FontSize, Layout, BorderRadius, Shadows } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { toLocalDateString } from '../../../src/utils/localDate';
 import { availabilityService, ApiSchedule, ExceptionsResponse } from '../../../src/services/api/availabilityService';
 
 interface DateItem {
@@ -58,7 +59,7 @@ export default function ScheduleScreen(): React.JSX.Element {
   const weekDates: DateItem[] = Array.from({ length: 5 }).map((_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
+    const dateStr = toLocalDateString(d);
     return {
       day: d.toLocaleDateString('en-US', { weekday: 'short' }),
       date: d.getDate(),

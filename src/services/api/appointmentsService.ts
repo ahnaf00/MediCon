@@ -4,7 +4,9 @@ import { doctorsService } from './doctorsService';
 export type ConsultationType = 'in-person' | 'video';
 
 export interface TimeSlot {
+  /** The slot's start instant (UTC ISO-8601 from the API); also what gets booked. */
   id: string;
+  /** Clinic-time (Asia/Dhaka) label, e.g. "09:00". */
   time: string;
   isAvailable: boolean;
 }
@@ -22,8 +24,8 @@ export interface DigestData {
 
 export interface BookingDetails {
   doctorId: string;
-  date: string;
-  timeSlotId: string;
+  /** The chosen slot's `id` — an ISO-8601 instant with offset, sent to the API as-is. */
+  slotDatetime: string;
   type: ConsultationType;
   symptoms?: string;
 }
@@ -47,7 +49,7 @@ class AppointmentsService {
     
     // The backend returns an array of slot objects inside the `slots` key.
     return slotsArray.map((slot: any) => ({
-      id: typeof slot === 'string' ? slot : slot.id || slot.time,
+      id: typeof slot === 'string' ? slot : slot.datetime || slot.id || slot.time,
       time: typeof slot === 'string' ? slot : slot.time,
       isAvailable: typeof slot === 'string' ? true : (slot.available ?? slot.isAvailable ?? true),
     }));
@@ -84,19 +86,17 @@ class AppointmentsService {
    */
   async bookAppointment(details: BookingDetails): Promise<BookingResult> {
     // Laravel API: POST /appointments
-    // Combine date and time to create the datetime string required by the backend
-    const appointmentDatetime = `${details.date} ${details.timeSlotId}:00`;
-    
+    // The slot's ISO instant carries its own offset, so no local-time conversion happens here.
     const response = (await axiosClient.post('/appointments', {
       doctor_user_id: details.doctorId,
-      appointment_datetime: appointmentDatetime,
+      appointment_datetime: details.slotDatetime,
       format: details.type === 'video' ? 'video' : 'in_person',
       notes: details.symptoms || '',
     })) as any;
 
     return {
       success: true,
-      appointmentId: response.id?.toString(),
+      appointmentId: response.appointment?.id?.toString(),
     };
   }
   /**
