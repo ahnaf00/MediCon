@@ -19,17 +19,18 @@ describe('NotificationCard', () => {
 
     expect(screen.getByText('Test Notification')).toBeTruthy();
     expect(screen.getByText('This is a test notification message.')).toBeTruthy();
-    expect(screen.getByLabelText('Mark as read')).toBeTruthy();
+    expect(screen.getByLabelText(/Unread$/)).toBeTruthy();
   });
 
   it('renders correctly with read notification', async () => {
     const readNotification = { ...mockNotification, isRead: true };
     await render(<NotificationCard notification={readNotification} />);
 
-    expect(screen.getByLabelText('Mark as unread')).toBeTruthy();
+    expect(screen.getByLabelText(/\. Read$/)).toBeTruthy();
+    expect(screen.queryByLabelText(/Unread$/)).toBeNull();
   });
 
-  it('calls onToggleRead when toggle button is pressed', async () => {
+  it('calls onPress when the card is pressed', async () => {
     const onPressMock = jest.fn();
     const { getByRole } = await render(
       <NotificationCard notification={mockNotification} onPress={onPressMock} />,
@@ -39,16 +40,12 @@ describe('NotificationCard', () => {
     expect(onPressMock).toHaveBeenCalledWith(mockNotification);
   });
 
-  it('navigates to actionUrl when pressed and notification is read', async () => {
+  it('calls onPress with the notification when a read card is pressed', async () => {
     const onPressMock = jest.fn();
-    const { getByRole } = await render(
-      <NotificationCard
-        notification={{ ...mockNotification, isRead: true }}
-        onPress={onPressMock}
-      />,
-    );
+    const readNotification = { ...mockNotification, isRead: true };
+    await render(<NotificationCard notification={readNotification} onPress={onPressMock} />);
 
     fireEvent.press(screen.getByText('Test Notification'));
-    expect(onPressMock).toHaveBeenCalledWith(mockNotification);
+    expect(onPressMock).toHaveBeenCalledWith(readNotification);
   });
 });

@@ -11,10 +11,11 @@ jest.mock('react-native-mmkv', () => ({
   })),
 }));
 
+// Resolve like the real module: the storage adapter chains .catch() on these.
 jest.mock('expo-secure-store', () => ({
-  setItemAsync: jest.fn(),
-  getItemAsync: jest.fn(),
-  deleteItemAsync: jest.fn(),
+  setItemAsync: jest.fn(() => Promise.resolve()),
+  getItemAsync: jest.fn(() => Promise.resolve(null)),
+  deleteItemAsync: jest.fn(() => Promise.resolve()),
 }));
 
 // Helper to provide QueryClient in tests
