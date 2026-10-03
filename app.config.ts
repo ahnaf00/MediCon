@@ -58,6 +58,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-document-picker',
+    [
+      'expo-media-library',
+      {
+        // Write-only: the app saves prescription images, it never reads the gallery.
+        // The read message stays the one expo-image-picker sets above.
+        photosPermission: false,
+        savePhotosPermission: 'Allow $(PRODUCT_NAME) to save prescription images to your photos.',
+        isAccessMediaLocationEnabled: false,
+        granularPermissions: ['photo'],
+      },
+    ],
+    'expo-sharing',
     '@react-native-community/datetimepicker',
     'expo-image',
     'expo-secure-store',

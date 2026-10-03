@@ -37,6 +37,42 @@ export interface ApiPrescriptionMedicine {
   durationDays: number;
 }
 
+/** GET /prescriptions/{id}/document — everything the letterhead needs (PrescriptionDocumentResource). */
+export interface PrescriptionDocumentData {
+  id: number;
+  issuedAt: string;
+  /** Already formatted in Asia/Dhaka by the server, e.g. "Sep 3, 2026". */
+  issuedDate: string;
+  diagnosisSummary: string;
+  doctor: {
+    name: string | null;
+    qualification: string | null;
+    specialty: string | null;
+    hospitalName: string | null;
+    bmdcRegistrationNo: string | null;
+  };
+  patient: {
+    name: string | null;
+    gender: string | null;
+    /** e.g. "35y 4m 12d", computed server-side. */
+    age: string | null;
+    weightKg: number | null;
+  };
+  tests: { name: string; instructions: string | null }[];
+  medicines: {
+    id: number;
+    name: string;
+    dosage: string;
+    /** e.g. "1+0+1"; null when no schedule was given. */
+    pattern: string | null;
+    durationDays: number;
+    instructions: string | null;
+  }[];
+  /** Calendar date, YYYY-MM-DD. */
+  followUpDate: string | null;
+  advice: string | null;
+}
+
 export interface ApiPrescription {
   id: number;
   appointmentId: number | null;
@@ -159,6 +195,14 @@ export const prescriptionsService = {
   },
 
   /**
+   * Goal: Letterhead data for the prescription document (view, PDF and image).
+   * How: GET /api/v1/prescriptions/{id}/document — patient or prescribing doctor only.
+   */
+  getDocument: async (id: number): Promise<PrescriptionDocumentData> => {
+    return (await axiosClient.get(`/prescriptions/${id}/document`)) as unknown as PrescriptionDocumentData;
+  },
+
+  /**
    * Goal: Retrieve today's adherence records (local state — no backend yet).
    * How: Filters in-memory MOCK_ADHERENCE by date string.
    */
@@ -196,6 +240,14 @@ export const usePrescription = (id: number) =>
     queryKey: ['prescriptions', id],
     queryFn: () => prescriptionsService.getPrescriptionById(id),
     enabled: !!id,
+  });
+
+/** Fetch the prescription document payload. Only runs when enabled (e.g. the document is open). */
+export const usePrescriptionDocument = (id: number, enabled = true) =>
+  useQuery({
+    queryKey: ['prescription-document', id],
+    queryFn: () => prescriptionsService.getDocument(id),
+    enabled: enabled && !!id,
   });
 
 /**

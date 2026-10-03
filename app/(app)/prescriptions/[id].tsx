@@ -1,5 +1,5 @@
 // 1. IMPORTS
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -20,7 +20,16 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { Colors, Spacing, FontFamily, FontSize, Layout, BorderRadius } from '../../../src/theme';
-import { prescriptionsService } from '../../../src/services/api/prescriptionsService';
+import {
+  prescriptionsService,
+  usePrescriptionDocument,
+} from '../../../src/services/api/prescriptionsService';
+import { downloadService, DownloadError } from '../../../src/services/files/downloadService';
+import { PrescriptionDocument } from '../../../src/components/medical/PrescriptionDocument';
+import {
+  DownloadOptionsSheet,
+  type DownloadFormat,
+} from '../../../src/components/medical/DownloadOptionsSheet';
 import { createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { reminderService } from '../../../src/services/notifications/reminderService';
@@ -154,6 +163,34 @@ export default function PrescriptionDetailsScreen() {
   // "Show Original" modal
   const [showOriginalVisible, setShowOriginalVisible] = useState(false);
 
+  // Prescription document + download
+  const documentQuery = usePrescriptionDocument(
+    Number(id),
+    showOriginalVisible && prescription?.source === 'DOCTOR',
+  );
+  const documentRef = useRef<View>(null);
+  const [downloadSheetVisible, setDownloadSheetVisible] = useState(false);
+  const [downloadingFormat, setDownloadingFormat] = useState<DownloadFormat | null>(null);
+
+  const handleDownload = async (format: DownloadFormat): Promise<void> => {
+    setDownloadingFormat(format);
+    try {
+      if (format === 'pdf') {
+        await downloadService.sharePrescriptionPdf(id);
+      } else {
+        await downloadService.savePrescriptionImage(documentRef);
+        Alert.alert('Saved', 'The prescription image was saved to your gallery.');
+      }
+      setDownloadSheetVisible(false);
+    } catch (err) {
+      const message =
+        err instanceof DownloadError ? err.message : 'Download failed. Please try again.';
+      Alert.alert('Download failed', message);
+    } finally {
+      setDownloadingFormat(null);
+    }
+  };
+
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -277,8 +314,6 @@ export default function PrescriptionDetailsScreen() {
       minute: '2-digit',
     });
 
-  const hasOriginal = isDoctor || Boolean(prescription.imageUrl);
-
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -343,22 +378,18 @@ export default function PrescriptionDetailsScreen() {
       </ScrollView>
 
       {/* Show Original fixed button at bottom */}
-      {hasOriginal && (
-        <View style={[styles.bottomFixedContainer, { bottom: Spacing.base + insets.bottom }]}>
-          <TouchableOpacity
-            style={styles.showOriginalFullBtn}
-            onPress={() => setShowOriginalVisible(true)}
-            activeOpacity={0.8}
-            accessibilityRole="button"
-            accessibilityLabel={isDoctor ? 'View prescription document' : 'Show original prescription'}
-          >
-            <MaterialCommunityIcons name="file-document-outline" size={18} color={Colors.surface} />
-            <Text style={styles.showOriginalFullBtnText}>
-              {isDoctor ? 'View Prescription Document' : 'Show Original Document'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <View style={[styles.bottomFixedContainer, { bottom: Spacing.base + insets.bottom }]}>
+        <TouchableOpacity
+          style={styles.showOriginalFullBtn}
+          onPress={() => setShowOriginalVisible(true)}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Show original prescription"
+        >
+          <MaterialCommunityIcons name="file-document-outline" size={18} color={Colors.surface} />
+          <Text style={styles.showOriginalFullBtnText}>Show Original Prescription</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Time picker */}
       {showPicker && (
@@ -394,7 +425,20 @@ export default function PrescriptionDetailsScreen() {
               <MaterialCommunityIcons name="close" size={24} color={Colors.textPrimary} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Prescription</Text>
-            <View style={{ width: 40 }} />
+            {isDoctor && documentQuery.data ? (
+              <TouchableOpacity
+                style={styles.downloadBtn}
+                onPress={() => setDownloadSheetVisible(true)}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Download prescription"
+              >
+                <MaterialCommunityIcons name="download" size={18} color={Colors.surface} />
+                <Text style={styles.downloadBtnText}>Download</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 40 }} />
+            )}
           </View>
 
           {isDoctor ? (
@@ -403,91 +447,22 @@ export default function PrescriptionDetailsScreen() {
               contentContainerStyle={{ padding: Spacing.md, paddingBottom: 60 }}
               showsVerticalScrollIndicator={false}
             >
-              <View style={styles.padContainer}>
-                {/* Header: Doctor Info */}
-                <View style={styles.padHeader}>
-                  <View style={styles.padHeaderLeft}>
-                    <Text style={styles.padDocName}>{prescription.doctorName ?? 'Doctor'}</Text>
-                    <Text style={styles.padDocSpec}>
-                      {(prescription.doctor as any)?.doctorProfile?.specialty ?? 'Medical Practitioner'}
-                    </Text>
-                    <Text style={styles.padDocQual}>
-                      {(prescription.doctor as any)?.doctorProfile?.qualification ?? ''}
-                    </Text>
-                  </View>
-                  <View style={styles.padHeaderRight}>
-                    <MaterialCommunityIcons name="hospital-building" size={32} color={Colors.primary} />
-                    <Text style={styles.padHospital}>MediCon Health</Text>
-                  </View>
+              {documentQuery.isLoading ? (
+                <View style={styles.documentState}>
+                  <ActivityIndicator size="large" color={Colors.primary} />
                 </View>
-
-                <View style={styles.padDivider} />
-
-                {/* Sub-header: Patient Info */}
-                <View style={styles.padPatientInfo}>
-                  <View style={styles.padPatCol}>
-                    <Text style={styles.padLabel}>Patient Name</Text>
-                    <Text style={styles.padValue}>{prescription.patient?.name ?? 'Unknown'}</Text>
-                  </View>
-                  <View style={styles.padPatCol}>
-                    <Text style={styles.padLabel}>Age / Gender</Text>
-                    <Text style={styles.padValue}>
-                      {(prescription.patient as any)?.patientProfile?.dateOfBirth 
-                        ? `${new Date().getFullYear() - new Date((prescription.patient as any).patientProfile.dateOfBirth).getFullYear()} Yrs` 
-                        : '--'} 
-                      { (prescription.patient as any)?.patientProfile?.gender ? ` / ${(prescription.patient as any).patientProfile.gender}` : '' }
-                    </Text>
-                  </View>
-                  <View style={styles.padPatCol}>
-                    <Text style={styles.padLabel}>Date</Text>
-                    <Text style={styles.padValue}>
-                      {new Date(prescription.issuedAt).toLocaleDateString()}
-                    </Text>
-                  </View>
+              ) : documentQuery.isError || !documentQuery.data ? (
+                <View style={styles.documentState}>
+                  <ErrorState
+                    message="Could not load the prescription document."
+                    onRetry={() => documentQuery.refetch()}
+                  />
                 </View>
-
-                {/* Rx Symbol */}
-                <View style={styles.padRxRow}>
-                  <Text style={styles.padRx}>Rx</Text>
+              ) : (
+                <View style={styles.documentCard}>
+                  <PrescriptionDocument ref={documentRef} doc={documentQuery.data} />
                 </View>
-
-                {/* Medicines List */}
-                <View style={styles.padMedicinesList}>
-                  {prescription.medicines.map((med, index) => (
-                    <View key={med.id} style={styles.padMedItem}>
-                      <Text style={styles.padMedIndex}>{index + 1}.</Text>
-                      <View style={styles.padMedDetails}>
-                        <Text style={styles.padMedName}>{med.name} {med.dosage ? `(${med.dosage})` : ''}</Text>
-                        <Text style={styles.padMedSchedule}>
-                          {med.scheduleFormat ? med.scheduleFormat : 'As directed'} 
-                          {med.durationDays ? ` — Continue for ${med.durationDays} days` : ''}
-                        </Text>
-                        {med.instructions ? (
-                          <Text style={styles.padMedInst}>{med.instructions}</Text>
-                        ) : null}
-                      </View>
-                    </View>
-                  ))}
-                </View>
-
-                {/* Diagnosis / Notes (if any) */}
-                {prescription.diagnosisSummary ? (
-                  <View style={styles.padDiagnosis}>
-                    <Text style={styles.padLabel}>Diagnosis</Text>
-                    <Text style={styles.padValue}>{prescription.diagnosisSummary}</Text>
-                  </View>
-                ) : null}
-
-                {/* Footer Signature */}
-                <View style={styles.padFooter}>
-                  <View style={styles.padSignatureBox}>
-                    <MaterialCommunityIcons name="draw" size={32} color={Colors.primary} style={{ opacity: 0.5 }} />
-                    <View style={styles.padSignatureLine} />
-                    <Text style={styles.padDocNameSmall}>{prescription.doctorName ?? 'Doctor'}</Text>
-                    <Text style={styles.padDocSpecSmall}>Signature</Text>
-                  </View>
-                </View>
-              </View>
+              )}
             </ScrollView>
           ) : prescription.imageUrl ? (
             <ScrollView
@@ -513,6 +488,13 @@ export default function PrescriptionDetailsScreen() {
               <Text style={styles.noOriginalText}>Document not available.</Text>
             </View>
           )}
+
+          <DownloadOptionsSheet
+            visible={downloadSheetVisible}
+            onClose={() => setDownloadSheetVisible(false)}
+            onSelect={handleDownload}
+            busyFormat={downloadingFormat}
+          />
         </SafeAreaView>
       </Modal>
     </View>
@@ -792,154 +774,34 @@ const styles = StyleSheet.create({
     height: '100%',
   },
 
-  // ── Digital Prescription Pad Styles ──
-  padContainer: {
-    backgroundColor: '#fff',
+  // Prescription document
+  documentState: {
+    paddingVertical: Spacing.xxl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  documentCard: {
     borderRadius: 12,
-    padding: 24,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 12,
     elevation: 3,
-    minHeight: 500,
   },
-  padHeader: {
+  downloadBtn: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
-  padHeaderLeft: {
-    flex: 1,
-  },
-  padHeaderRight: {
-    alignItems: 'flex-end',
-    opacity: 0.8,
-  },
-  padDocName: {
-    fontFamily: FontFamily.bold,
-    fontSize: 22,
-    color: Colors.primary,
-    marginBottom: 4,
-  },
-  padDocSpec: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-    marginBottom: 2,
-  },
-  padDocQual: {
-    fontFamily: FontFamily.regular,
-    fontSize: FontSize.sm,
-    color: Colors.textTertiary,
-  },
-  padHospital: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.sm,
-    color: Colors.primary,
-    marginTop: 4,
-  },
-  padDivider: {
-    height: 1,
-    backgroundColor: Colors.tertiary,
-    marginBottom: 16,
-  },
-  padPatientInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    backgroundColor: '#f8fafc',
-    padding: 12,
-    borderRadius: 8,
-  },
-  padPatCol: {
-    flex: 1,
-  },
-  padLabel: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.xs,
-    color: Colors.textTertiary,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  padValue: {
-    fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.md,
-    color: Colors.textPrimary,
-    textTransform: 'capitalize',
-  },
-  padRxRow: {
-    marginBottom: 16,
-  },
-  padRx: {
-    fontFamily: FontFamily.bold,
-    fontSize: 48,
-    color: Colors.textPrimary,
-    lineHeight: 56,
-  },
-  padMedicinesList: {
-    marginBottom: 32,
-  },
-  padMedItem: {
-    flexDirection: 'row',
-    marginBottom: 16,
-  },
-  padMedIndex: {
-    fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.lg,
-    color: Colors.textPrimary,
-    width: 24,
-  },
-  padMedDetails: {
-    flex: 1,
-  },
-  padMedName: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.lg,
-    color: Colors.textPrimary,
-    marginBottom: 4,
-  },
-  padMedSchedule: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-    marginBottom: 2,
-  },
-  padMedInst: {
-    fontFamily: FontFamily.regular,
-    fontSize: FontSize.sm,
-    color: Colors.textTertiary,
-    fontStyle: 'italic',
-  },
-  padDiagnosis: {
-    marginBottom: 40,
-  },
-  padFooter: {
-    marginTop: 'auto',
-    alignItems: 'flex-end',
-    paddingTop: 32,
-  },
-  padSignatureBox: {
     alignItems: 'center',
-    width: 140,
+    gap: 6,
+    backgroundColor: Colors.primary,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.md,
+    minHeight: 36,
   },
-  padSignatureLine: {
-    width: '100%',
-    height: 1,
-    backgroundColor: Colors.textPrimary,
-    marginTop: 8,
-    marginBottom: 8,
-  },
-  padDocNameSmall: {
-    fontFamily: FontFamily.semiBold,
+  downloadBtnText: {
+    fontFamily: FontFamily.bold,
     fontSize: FontSize.sm,
-    color: Colors.textPrimary,
-  },
-  padDocSpecSmall: {
-    fontFamily: FontFamily.regular,
-    fontSize: FontSize.xs,
-    color: Colors.textTertiary,
+    color: Colors.surface,
   },
   noOriginalText: {
     fontFamily: FontFamily.medium,
