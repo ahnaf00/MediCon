@@ -45,7 +45,7 @@ export const AppointmentQueueCard = ({
     <Card
       onPress={onPress}
       style={isCompleted ? styles.completedCard : undefined}
-      accessibilityLabel={`Appointment at ${formattedTime} with ${appointment.patientName}, ${appointment.age} years old, ${appointment.gender}, for ${appointment.reason}. Status: ${statusLabel}`}
+      accessibilityLabel={`Appointment at ${formattedTime} with ${appointment.patientName}${appointment.age !== null ? `, ${appointment.age} years old` : ''}${appointment.gender ? `, ${appointment.gender}` : ''}, for ${appointment.reason}. Status: ${statusLabel}`}
     >
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -62,9 +62,14 @@ export const AppointmentQueueCard = ({
           <Text style={styles.patientName} numberOfLines={1}>
             {appointment.patientName}
           </Text>
-          <Text style={styles.patientDetails}>
-            {appointment.age} {t('appointmentqueuecard.yrs') || 'yrs •'} {appointment.gender}
-          </Text>
+          {(appointment.age !== null || appointment.gender) && (
+            <Text style={styles.patientDetails}>
+              {appointment.age !== null
+                ? `${appointment.age} ${t('appointmentqueuecard.yrs') || 'yrs •'} `
+                : ''}
+              {appointment.gender ?? ''}
+            </Text>
+          )}
         </View>
       </View>
 

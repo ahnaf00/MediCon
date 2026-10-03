@@ -29,7 +29,11 @@ export interface ApiAppointment {
     avatarUrl?: string | null;
     doctorProfile?: { specialty?: string | null } | null;
   } | null;
-  patient?: { id: number; name: string } | null;
+  patient?: {
+    id: number;
+    name: string;
+    patientProfile?: { dateOfBirth?: string | null; gender?: string | null } | null;
+  } | null;
 }
 
 export interface ConsultationSummary {

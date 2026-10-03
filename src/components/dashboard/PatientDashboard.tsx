@@ -1,6 +1,13 @@
 // 1. IMPORTS
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,7 +25,7 @@ import { ApiAppointment, useRecentConsultation } from '../../services/api/consul
 export const PatientDashboard = (): React.JSX.Element => {
   const router = useRouter();
   const { t } = useTranslation();
-  const { nextAppointment, nextMedicine } = usePatientDashboard();
+  const { nextAppointment, nextMedicine, isLoading } = usePatientDashboard();
   const { data: recentConsultation } = useRecentConsultation();
 
   return (
@@ -108,14 +115,30 @@ export const PatientDashboard = (): React.JSX.Element => {
 
         {/* Dashboard Cards */}
         <View style={styles.cardsContainer}>
-          <AppointmentCard appointment={nextAppointment} />
-          {recentConsultation && (
-            <RecentConsultationLink
-              appointment={recentConsultation}
-              onPress={() => router.push(`/(app)/ai-chat/consultation/${recentConsultation.id}`)}
+          {/* Don't flash the empty states before the data has loaded. */}
+          {isLoading ? (
+            <ActivityIndicator
+              size="small"
+              color={Colors.primary}
+              accessibilityLabel={t('dashboard.loading', 'Loading')}
             />
+          ) : (
+            <>
+              <AppointmentCard appointment={nextAppointment} />
+              {recentConsultation && (
+                <RecentConsultationLink
+                  appointment={recentConsultation}
+                  onPress={() =>
+                    router.push(`/(app)/ai-chat/consultation/${recentConsultation.id}`)
+                  }
+                />
+              )}
+              <MedicationCard
+                medication={nextMedicine}
+                onPress={() => router.push('/(app)/(tabs)/prescriptions')}
+              />
+            </>
           )}
-          <MedicationCard medication={nextMedicine} />
         </View>
       </ScrollView>
     </SafeAreaView>

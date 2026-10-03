@@ -1,7 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { prescriptionsService } from '../services/api/prescriptionsService';
+import { usePrescriptions } from '../services/api/prescriptionsService';
+import { ApiAppointment, useAppointments } from '../services/api/consultationsService';
 import { getMealTiming } from '../utils/prescriptionFormatters';
+import type { Prescription, PrescriptionMedicine } from '../types/medical.types';
 
 // 2. TYPES
 export interface DashboardAppointment {
@@ -38,144 +40,122 @@ export interface DashboardMedication {
 
 export interface PatientDashboardData {
   nextAppointment: DashboardAppointment | null;
-  recentDoctor: DashboardDoctor | null;
   nextMedicine: DashboardMedication | null;
+  /** True until both appointments and prescriptions have loaded once. */
+  isLoading: boolean;
 }
 
-// 3. HOOK
+// 3. HELPERS
+/** The soonest visit still to happen: one in progress, or the earliest future scheduled one. */
+const pickNextAppointment = (appointments: ApiAppointment[]): DashboardAppointment | null => {
+  const now = Date.now();
+  const next = appointments
+    .filter(
+      (a) =>
+        a.datetime &&
+        (a.status === 'in_progress' ||
+          (a.status === 'scheduled' && new Date(a.datetime).getTime() >= now)),
+    )
+    .sort((a, b) => new Date(a.datetime!).getTime() - new Date(b.datetime!).getTime())[0];
+
+  if (!next) return null;
+  return {
+    id: String(next.id),
+    doctorName: next.doctor?.name ?? 'Doctor',
+    specialty: next.doctor?.doctorProfile?.specialty ?? '',
+    dateTime: next.datetime!,
+    format: next.format,
+    imageUrl: next.doctor?.avatarUrl ?? undefined,
+  };
+};
+
+type PeriodName = DashboardMedication['periodName'];
+const PERIODS: { name: PeriodName; key: 'morning' | 'noon' | 'night' }[] = [
+  { name: 'Morning', key: 'morning' },
+  { name: 'Noon', key: 'noon' },
+  { name: 'Night', key: 'night' },
+];
+
+const mapMed = (m: PrescriptionMedicine): DashboardMedicationItem => {
+  const mealTiming = getMealTiming(m.instructions ?? undefined);
+  return {
+    id: String(m.id),
+    name: m.name,
+    instructions: mealTiming ? `Take ${mealTiming.toLowerCase()}` : m.instructions || '',
+    scheduleFormat: m.scheduleFormat || m.dosagePattern || '',
+    dosage: m.dosage,
+  };
+};
+
+const format12Hour = (timeStr: string) => {
+  const [hStr, mStr] = timeStr.split(':');
+  let hour = parseInt(hStr, 10);
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12 || 12;
+  return `${hour.toString().padStart(2, '0')}:${mStr} ${ampm}`;
+};
+
 /**
- * Provides data for the Patient Dashboard.
- * Dynamically fetches the scheduled active prescription and calculates the next upcoming medication period based on the current time.
+ * The next dose period across all active prescriptions. Expired or cancelled
+ * prescriptions never feed the widget; with none active it shows its empty state.
+ */
+const pickNextMedicine = (prescriptions: Prescription[]): DashboardMedication | null => {
+  const medicines = prescriptions.filter((p) => p.status === 'active').flatMap((p) => p.medicines);
+
+  const periods = PERIODS.map(({ name, key }) => {
+    const meds = medicines.filter(
+      (m) => (m.dosageSchedule as Record<string, string> | undefined)?.[key],
+    );
+    return {
+      name,
+      time: meds.length ? (meds[0].dosageSchedule as Record<string, string>)[key] : '',
+      medicines: meds.map(mapMed),
+    };
+  }).filter((p) => p.medicines.length > 0);
+
+  if (periods.length === 0) return null;
+
+  const now = new Date();
+  const hasPassed = (timeStr: string) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    const periodDate = new Date();
+    periodDate.setHours(h, m, 0, 0);
+    return now >= periodDate;
+  };
+
+  // After the last period of the day, the next one is tomorrow's first.
+  const selected = periods.find((p) => !hasPassed(p.time)) ?? periods[0];
+
+  return {
+    periodName: selected.name,
+    scheduledTime: format12Hour(selected.time),
+    status: 'upcoming',
+    medicines: selected.medicines,
+  };
+};
+
+// 4. HOOK
+/**
+ * Data for the Patient Dashboard: the next appointment from GET /appointments and the
+ * next medication period from the patient's active prescriptions.
  */
 export const usePatientDashboard = (): PatientDashboardData => {
-  const [nextMedicine, setNextMedicine] = useState<DashboardMedication | null>(null);
+  const appointments = useAppointments();
+  const prescriptions = usePrescriptions();
 
-  const nextAppointment: DashboardAppointment = {
-    id: 'appt-001',
-    doctorName: 'Dr. Sarah Khan',
-    specialty: 'General Medicine',
-    dateTime: '2026-07-05T10:30:00',
-    format: 'video',
-    imageUrl: 'https://i.pravatar.cc/150?img=32',
-  };
-
-  const recentDoctor: DashboardDoctor = {
-    id: 'doc-001',
-    name: 'Dr. Ahmed Rahman',
-    specialty: 'Cardiology',
-    rating: 4.8,
-    experience: '12 years',
-  };
-
+  // The home tab stays mounted, so refresh when it regains focus.
+  const refetchAppointments = appointments.refetch;
+  const refetchPrescriptions = prescriptions.refetch;
   useFocusEffect(
     useCallback(() => {
-      let isMounted = true;
-      const fetchActivePrescription = async () => {
-        try {
-          // Fetch the first active prescription from the real API
-          const prescriptions = await prescriptionsService.getPrescriptions();
-          if (!isMounted) return;
-          const rx = prescriptions.find((p) => p.status === 'active') ?? prescriptions[0] ?? null;
-
-          if (!rx) {
-            setNextMedicine(null);
-            return;
-          }
-
-          type PeriodName = 'Morning' | 'Noon' | 'Night';
-          const periods: {
-            name: PeriodName;
-            time: string;
-            medicines: DashboardMedicationItem[];
-          }[] = [];
-
-          const mapMed = (m: typeof rx.medicines[0]) => {
-            const mealTiming = getMealTiming(m.instructions ?? undefined);
-            const formattedInstructions = mealTiming
-              ? `Take ${mealTiming.toLowerCase()}`
-              : m.instructions || '';
-
-            return {
-              id: String(m.id),
-              name: m.name,
-              instructions: formattedInstructions,
-              scheduleFormat: m.scheduleFormat || (m as any).dosagePattern || '',
-              dosage: m.dosage,
-            };
-          };
-
-          const morningMeds = rx.medicines.filter((m: typeof rx.medicines[0]) => (m.dosageSchedule as any)?.morning);
-          if (morningMeds.length > 0) {
-            periods.push({
-              name: 'Morning',
-              time: (morningMeds[0].dosageSchedule as any).morning,
-              medicines: morningMeds.map(mapMed),
-            });
-          }
-
-          const noonMeds = rx.medicines.filter((m: typeof rx.medicines[0]) => (m.dosageSchedule as any)?.noon);
-          if (noonMeds.length > 0) {
-            periods.push({
-              name: 'Noon',
-              time: (noonMeds[0].dosageSchedule as any).noon,
-              medicines: noonMeds.map(mapMed),
-            });
-          }
-
-          const nightMeds = rx.medicines.filter((m: typeof rx.medicines[0]) => (m.dosageSchedule as any)?.night);
-          if (nightMeds.length > 0) {
-            periods.push({
-              name: 'Night',
-              time: (nightMeds[0].dosageSchedule as any).night,
-              medicines: nightMeds.map(mapMed),
-            });
-          }
-
-          if (periods.length === 0) {
-            setNextMedicine(null);
-            return;
-          }
-
-          const now = new Date();
-          const hasPassed = (timeStr: string) => {
-            const [h, m] = timeStr.split(':').map(Number);
-            const periodDate = new Date();
-            periodDate.setHours(h, m, 0, 0);
-            return now >= periodDate;
-          };
-
-          let selectedPeriod = periods.find((p) => !hasPassed(p.time));
-
-          if (!selectedPeriod) {
-            selectedPeriod = periods[0];
-          }
-
-          const format12Hour = (timeStr: string) => {
-            const [hStr, mStr] = timeStr.split(':');
-            let hour = parseInt(hStr, 10);
-            const ampm = hour >= 12 ? 'PM' : 'AM';
-            hour = hour % 12 || 12;
-            return `${hour.toString().padStart(2, '0')}:${mStr} ${ampm}`;
-          };
-
-          setNextMedicine({
-            periodName: selectedPeriod.name,
-            scheduledTime: format12Hour(selectedPeriod.time),
-            status: 'upcoming',
-            medicines: selectedPeriod.medicines,
-          });
-        } catch {
-          // Non-critical: dashboard medication data unavailable
-        }
-      };
-
-      fetchActivePrescription();
-
-      return () => {
-        isMounted = false;
-      };
-    }, []),
+      refetchAppointments();
+      refetchPrescriptions();
+    }, [refetchAppointments, refetchPrescriptions]),
   );
 
-  return { nextAppointment, recentDoctor, nextMedicine };
+  return {
+    nextAppointment: pickNextAppointment(appointments.data ?? []),
+    nextMedicine: pickNextMedicine(prescriptions.data ?? []),
+    isLoading: appointments.isLoading || prescriptions.isLoading,
+  };
 };

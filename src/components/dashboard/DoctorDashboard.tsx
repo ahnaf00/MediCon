@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,9 +6,10 @@ import { Colors, Spacing, BorderRadius, FontFamily, FontSize } from '@theme';
 import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../../store/authStore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { dashboardService, DoctorDashboardStats } from '../../services/api/dashboardService';
-import { authService, User } from '../../services/api/authService';
+import { useQuery } from '@tanstack/react-query';
+import { authService } from '../../services/api/authService';
 import { useDoctorPresence } from '../../services/api/presenceService';
+import { useDoctorDashboard } from '../../hooks/useDoctorDashboard';
 
 export const DoctorDashboard = (): React.JSX.Element => {
   const { t } = useTranslation();
@@ -16,34 +17,8 @@ export const DoctorDashboard = (): React.JSX.Element => {
   const presence = useDoctorPresence();
   const setRole = useAuthStore((s) => s.setRole);
 
-  const [loading, setLoading] = useState(true);
-  const [doctorUser, setDoctorUser] = useState<User | null>(null);
-  const [stats, setStats] = useState<DoctorDashboardStats | null>(null);
-
-  useEffect(() => {
-    let isMounted = true;
-    const loadDashboard = async () => {
-      try {
-        setLoading(true);
-        // Fetch user profile and dashboard stats simultaneously
-        const [userResponse, statsResponse] = await Promise.all([
-          authService.me(),
-          dashboardService.getDoctorStats(),
-        ]);
-        
-        if (isMounted) {
-          setDoctorUser(userResponse);
-          setStats(statsResponse);
-        }
-      } catch (error) {
-        console.error('Failed to load doctor dashboard', error);
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    };
-    loadDashboard();
-    return () => { isMounted = false; };
-  }, []);
+  const { data: doctorUser } = useQuery({ queryKey: ['me'], queryFn: authService.me });
+  const { stats, isLoading: loading, isError } = useDoctorDashboard();
 
   const fullName = doctorUser?.name || 'Loading...';
   const profileImage = doctorUser?.avatarUrl 
@@ -119,6 +94,15 @@ export const DoctorDashboard = (): React.JSX.Element => {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.loadingText}>Loading your dashboard...</Text>
+          </View>
+        ) : isError || !stats ? (
+          <View style={styles.loadingContainer}>
+            <Text style={styles.loadingText}>
+              {t(
+                'doctordashboard.load_failed',
+                "Couldn't load your dashboard. Please try again later.",
+              )}
+            </Text>
           </View>
         ) : (
           /* Key Details Section */
