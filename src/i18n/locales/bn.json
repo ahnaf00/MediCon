@@ -173,7 +173,7 @@
   },
   "[protocol]": {
     "protocol_not_found": "প্রোটোকল পাওয়া যায়নি।",
-    "call_911_now": "এখনই ৯১১ এ কল করুন",
+    "call_emergency_now": "এখনই ৯৯৯ এ কল করুন",
     "treating_a_child_or_infant": "একটি শিশু বা নবজাতকের চিকিৎসা করছেন?",
     "view_pediatric_guidelines": "শিশুরোগ নির্দেশিকা দেখুন",
     "child_1_yr_puberty": "শিশু (১ বছর - বয়ঃসন্ধি)",
@@ -181,9 +181,9 @@
     "standard_protocol_applies_for_": "এই বয়স গোষ্ঠীর জন্য স্ট্যান্ডার্ড প্রোটোকল প্রযোজ্য।"
   },
   "emergency": {
-    "call_911": "৯১১ এ কল করুন",
+    "call_emergency": "৯৯৯ এ কল করুন",
     "emergency_triage": "জরুরি ট্রায়াজ",
-    "life_threatening_instruction": "গুরুতর জরুরি অবস্থার জন্য ৯১১ এ কল করুন, অথবা অফলাইন নির্দেশনার জন্য একটি পরিস্থিতি বেছে নিন।"
+    "life_threatening_instruction": "গুরুতর জরুরি অবস্থার জন্য ৯৯৯ এ কল করুন, অথবা অফলাইন নির্দেশনার জন্য একটি পরিস্থিতি বেছে নিন।"
   },
   "protocol": {
     "protocol": "প্রোটোকল"
@@ -233,7 +233,7 @@
     "interaction": "মিথস্ক্রিয়া"
   },
   "pediatric": {
-    "call_911": "৯১১ এ কল করুন",
+    "call_emergency": "৯৯৯ এ কল করুন",
     "pediatric_triage": "শিশুরোগ ট্রায়াজ",
     "emergency_guidance_for_childre": "শিশু এবং নবজাতকদের জন্য জরুরি নির্দেশনা"
   },

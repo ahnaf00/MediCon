@@ -189,7 +189,7 @@
   },
   "[protocol]": {
     "protocol_not_found": "Protocol not found.",
-    "call_911_now": "Call 911 Now",
+    "call_emergency_now": "Call 999 Now",
     "treating_a_child_or_infant": "Treating a child or infant?",
     "view_pediatric_guidelines": "View pediatric guidelines",
     "child_1_yr_puberty": "Child (1 yr - Puberty)",
@@ -197,9 +197,9 @@
     "standard_protocol_applies_for_": "Standard protocol applies for this age group."
   },
   "emergency": {
-    "call_911": "Call 911",
+    "call_emergency": "Call 999",
     "emergency_triage": "Emergency Triage",
-    "life_threatening_instruction": "Call 911 for severe emergencies, or\nchoose a situation for offline guidance."
+    "life_threatening_instruction": "Call 999 for severe emergencies, or\nchoose a situation for offline guidance."
   },
   "protocol": {
     "protocol": "Protocol"
@@ -249,7 +249,7 @@
     "interaction": "Interaction"
   },
   "pediatric": {
-    "call_911": "Call 911",
+    "call_emergency": "Call 999",
     "pediatric_triage": "Pediatric Triage",
     "emergency_guidance_for_childre": "Emergency guidance for children & infants"
   },

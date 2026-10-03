@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing, BorderRadius, FontFamily, FontSize, Layout } from '@theme';
@@ -95,16 +95,19 @@ export default function EmergencyTriageScreen() {
       <View style={styles.descSection}>
         <Text style={styles.descText} numberOfLines={2}>
           {t('emergency.life_threatening_instruction') ||
-            'Call 911 for severe emergencies, or\nchoose a situation for offline guidance.'}
+            'Call 999 for severe emergencies, or\nchoose a situation for offline guidance.'}
         </Text>
         <TouchableOpacity
-          style={styles.call911Button}
+          style={styles.callEmergencyButton}
+          onPress={() => Linking.openURL('tel:999')}
           accessibilityRole="button"
-          accessibilityLabel="Call 911"
+          accessibilityLabel="Call 999"
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons name="phone" color={Colors.surface} size={16} />
-          <Text style={styles.call911Text}>{t('emergency.call_911') || 'Call 911'}</Text>
+          <Text style={styles.callEmergencyText}>
+            {t('emergency.call_emergency') || 'Call 999'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -162,7 +165,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginRight: Spacing.md,
   },
-  call911Button: {
+  callEmergencyButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: (Colors as any).emergency || Colors.danger,
@@ -171,7 +174,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     gap: Spacing.xs,
   },
-  call911Text: {
+  callEmergencyText: {
     fontFamily: FontFamily.bold,
     fontSize: FontSize.sm,
     color: Colors.surface,

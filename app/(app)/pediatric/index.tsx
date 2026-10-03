@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, BorderRadius, FontFamily, FontSize, Layout, Shadows } from '@theme';
@@ -48,13 +48,18 @@ export default function PediatricTriageScreen() {
             {item.description}
           </Text>
           {item.callEmergencyServices && (
-            <View
+            <TouchableOpacity
               style={styles.callBadge}
-              accessibilityLabel="Calling emergency services may be required"
+              onPress={() => Linking.openURL('tel:999')}
+              accessibilityRole="button"
+              accessibilityLabel="Call 999"
+              accessibilityHint="Calling emergency services may be required"
             >
               <MaterialCommunityIcons name="phone" color={Colors.danger} size={12} />
-              <Text style={styles.callBadgeText}>{t('pediatric.call_911') || 'Call 911'}</Text>
-            </View>
+              <Text style={styles.callBadgeText}>
+                {t('pediatric.call_emergency') || 'Call 999'}
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
         <MaterialCommunityIcons name="chevron-right" color={Colors.textTertiary} size={24} />
