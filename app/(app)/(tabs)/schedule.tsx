@@ -98,7 +98,8 @@ export default function ScheduleScreen(): React.JSX.Element {
 
   // Compute available slots
   const generateBaseSlots = () => {
-    const dayConfig = schedule.find(s => s.index === selectedDateItem.index || s.day.startsWith(selectedDateItem.day));
+    // The API returns day names ("Monday"), not indexes; match on the name.
+    const dayConfig = schedule.find(s => s.day.startsWith(selectedDateItem.day));
     if (!dayConfig || !dayConfig.isWorkingDay) return [];
     
     const slots = [];
@@ -307,7 +308,7 @@ export default function ScheduleScreen(): React.JSX.Element {
                         value={isToggleOn}
                         onValueChange={() => handleToggleSlot(timeStr, isToggleOn)}
                         disabled={isPastSlot}
-                        trackColor={{ false: Colors.border, true: Colors.primary }}
+                        trackColor={{ false: Colors.tertiary, true: Colors.primary }}
                         thumbColor={Colors.surface}
                       />
                     </View>
@@ -356,7 +357,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.tertiary,
   },
   toggleWrapper: { alignItems: 'center' },
   onlineLabel: { fontSize: FontSize.xs, fontFamily: FontFamily.medium, color: Colors.textSecondary, marginBottom: 4 },
@@ -364,7 +365,7 @@ const styles = StyleSheet.create({
     width: 46,
     height: 24,
     borderRadius: 12,
-    backgroundColor: Colors.border,
+    backgroundColor: Colors.tertiary,
     justifyContent: 'center',
     paddingHorizontal: 2,
   },
@@ -382,7 +383,7 @@ const styles = StyleSheet.create({
     marginRight: Spacing.xs,
   },
   dateCardSelected: { backgroundColor: Colors.primary, ...Shadows.sm },
-  dateCardUnselected: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
+  dateCardUnselected: { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.tertiary },
   dateDayText: { fontSize: FontSize.sm, fontFamily: FontFamily.medium, marginBottom: Spacing.xs },
   dateNumberText: { fontSize: FontSize.lg, fontFamily: FontFamily.bold },
   dateTextActive: { color: Colors.surface },
@@ -390,9 +391,9 @@ const styles = StyleSheet.create({
   section: { paddingHorizontal: Spacing.lg, marginTop: Spacing.sm },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
   sectionTitle: { fontSize: FontSize.lg, fontFamily: FontFamily.semiBold, color: Colors.textPrimary },
-  addSlotBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 4 },
+  addSlotBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.tertiaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, gap: 4 },
   addSlotBtnText: { color: Colors.primary, fontSize: FontSize.sm, fontFamily: FontFamily.medium },
-  emptySection: { alignItems: 'center', justifyContent: 'center', padding: Spacing.xl, backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.border, borderStyle: 'dashed' },
+  emptySection: { alignItems: 'center', justifyContent: 'center', padding: Spacing.xl, backgroundColor: Colors.surface, borderRadius: BorderRadius.lg, borderWidth: 1, borderColor: Colors.tertiary, borderStyle: 'dashed' },
   emptyText: { marginTop: Spacing.sm, fontSize: FontSize.md, color: Colors.textSecondary, fontFamily: FontFamily.medium },
   queueContainer: { gap: Spacing.sm },
   queueCard: {
@@ -402,7 +403,7 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: Colors.tertiary,
     justifyContent: 'space-between',
   },
   queueCardDisabled: { backgroundColor: Colors.background, opacity: 0.7 },
@@ -410,7 +411,7 @@ const styles = StyleSheet.create({
   queueTimeText: { fontSize: FontSize.md, fontFamily: FontFamily.semiBold, color: Colors.textPrimary },
   textDisabled: { color: Colors.textTertiary },
   queueCenter: { flex: 1, alignItems: 'center' },
-  statusBadge: { backgroundColor: Colors.border, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
+  statusBadge: { backgroundColor: Colors.tertiary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   statusBadgeActive: { backgroundColor: '#E8F5E9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
   statusBadgeText: { fontSize: FontSize.xs, color: Colors.textSecondary, fontFamily: FontFamily.medium },
   statusBadgeTextActive: { fontSize: FontSize.xs, color: '#2E7D32', fontFamily: FontFamily.medium },

@@ -75,7 +75,7 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
         // Since we don't have a specific endpoint for patient's active meds,
         // we'll try to find the latest prescription for this patient (optional feature)
         if (isMounted) {
-          const patientPrescriptions = data.filter(p => p.patient.id.toString() === id);
+          const patientPrescriptions = data.filter(p => p.patient?.id.toString() === id);
           if (patientPrescriptions.length > 0) {
             setActivePrescription(patientPrescriptions[0]);
           }
