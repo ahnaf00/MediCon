@@ -140,7 +140,9 @@
     "locating_nearby_hospitals": "Locating nearby hospitals...",
     "location_unavailable": "Location Unavailable",
     "we_need_access_to_your_locatio": "We need access to your location to find nearby hospitals and emergency centers. Please enable location services in your device settings.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "search_placeholder": "Search hospitals",
+    "no_results": "No hospitals match \"{{query}}\"."
   },
   "prescriptions": {
     "no_active_prescriptions": "No active prescriptions.",
@@ -327,7 +329,36 @@
     "ai_recommendations": "AI Recommendations",
     "doctors_for": "Doctors for \"",
     "no_matching_doctors_found_for_": "No matching doctors found for these symptoms.",
-    "book_consultation": "Book Consultation"
+    "book_consultation": "Book Consultation",
+    "suggested_specialty": "Suggested specialty: {{specialty}}",
+    "specialty_fallback": "No {{specialty}} doctors are available yet. Showing General Medicine doctors instead.",
+    "one_doctor_available": "1 doctor available",
+    "n_doctors_available": "{{count}} doctors available",
+    "filter_doctors": "Filter doctors",
+    "filter_all": "All doctors",
+    "filter_today": "Available today",
+    "filter_week": "Available this week",
+    "next_available": "Next available: {{time}}",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "no_slots_soon": "No free slots in the next 2 weeks",
+    "no_doctors_for_filter": "No doctors match this filter.",
+    "error": "We couldn't search right now. Please check your connection and try again.",
+    "retry": "Try again",
+    "emergency_title": "This could be an emergency",
+    "emergency_body": "If these symptoms are happening now, call 999 or go to the nearest emergency department. Do not wait for an online consultation.",
+    "open_emergency_guide": "Open emergency guide",
+    "consult_when_safe": "When you are safe, these doctors can help:",
+    "red_flag": {
+      "chest_pain": "Chest pain can be a sign of a heart attack.",
+      "breathing": "Severe difficulty breathing needs urgent care.",
+      "stroke": "These can be signs of a stroke. Every minute matters.",
+      "bleeding": "Heavy bleeding or bringing up blood needs urgent care.",
+      "unresponsive": "Loss of consciousness needs urgent care.",
+      "seizure": "A seizure needs urgent care.",
+      "anaphylaxis": "Swelling of the throat or tongue can block breathing.",
+      "self_harm": "You do not have to go through this alone. Please reach out for help right now."
+    }
   },
   "triage": {
     "triage": "Triage"

@@ -23,10 +23,11 @@ export default function HospitalsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
+  const [search, setSearch] = useState('');
 
   const { data: hospitals = [], isLoading } = useQuery({
-    queryKey: ['hospitals'],
-    queryFn: () => hospitalsService.getNearbyHospitals(),
+    queryKey: ['hospitals', search],
+    queryFn: () => hospitalsService.getNearbyHospitals(undefined, undefined, search),
   });
 
   const handleHospitalPress = (hospital: Hospital) => {
@@ -49,7 +50,12 @@ export default function HospitalsScreen() {
       </View>
 
       <View style={styles.searchBarWrapper}>
-        <SymptomSearchBar interactive placeholder="Search hospitals" />
+        <SymptomSearchBar
+          interactive
+          placeholder={t('hospitals.search_placeholder') || 'Search hospitals'}
+          onSubmit={setSearch}
+          onClear={() => setSearch('')}
+        />
       </View>
 
       {/* List */}
@@ -63,6 +69,14 @@ export default function HospitalsScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={[styles.listContainer, { paddingBottom: insets.bottom + Spacing.xl }]}
           ItemSeparatorComponent={() => <View style={{ height: Spacing.md }} />}
+          ListEmptyComponent={
+            search ? (
+              <Text style={styles.emptyText}>
+                {t('hospitals.no_results', { query: search }) ||
+                  `No hospitals match "${search}".`}
+              </Text>
+            ) : null
+          }
           renderItem={({ item }) => (
             <HospitalCard
               hospital={item}
@@ -105,6 +119,13 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: Spacing.base,
     paddingTop: Spacing.sm,
+  },
+  emptyText: {
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.md,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    paddingTop: Spacing.xl,
   },
   centerContainer: {
     flex: 1,

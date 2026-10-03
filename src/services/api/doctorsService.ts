@@ -23,6 +23,10 @@ export interface Doctor extends DoctorProfile {
   services: string[];
   experienceList: DoctorExperienceEntry[];
   image?: ReturnType<(typeof doctorPlaceholders)[number]>;
+  /** ISO-8601 start of the first free slot; only returned by symptom search. null = none in the next 14 days. */
+  nextAvailableAt?: string | null;
+  /** Only returned by symptom search. */
+  completedConsultations?: number;
 }
 
 export interface ConsultationHistoryItem {

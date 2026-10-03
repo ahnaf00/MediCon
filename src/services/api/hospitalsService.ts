@@ -4,13 +4,16 @@ import { axiosClient } from './axiosClient';
 import { doctorPlaceholders } from '../../constants/images';
 
 export const hospitalsService = {
-  async getNearbyHospitals(lat?: number, lng?: number): Promise<Hospital[]> {
-    // Laravel API: GET /hospitals
+  async getNearbyHospitals(lat?: number, lng?: number, search?: string): Promise<Hospital[]> {
+    // Laravel API: GET /hospitals (?search= matches name or address)
     // The backend endpoint might accept lat/lng if we pass them
     const params: any = {};
     if (lat && lng) {
       params.lat = lat;
       params.lng = lng;
+    }
+    if (search?.trim()) {
+      params.search = search.trim();
     }
     const response = (await axiosClient.get('/hospitals', { params })) as any;
     
