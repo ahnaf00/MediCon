@@ -1,0 +1,462 @@
+// 1. IMPORTS
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
+import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '@theme';
+import {
+  ApiAppointment,
+  apiErrorMessage,
+  useConsultation,
+  useSaveConsultationSummary,
+  useUpdateAppointmentStatus,
+} from '../../services/api/consultationsService';
+
+// 2. TYPES
+export interface ConsultationPanelProps {
+  /** The appointment being run; null when the doctor has none with this patient. */
+  appointment: ApiAppointment | null;
+}
+
+const MAX_RED_FLAGS = 10;
+
+const formatWhen = (iso: string | null): string => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}, ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`;
+};
+
+// 3. COMPONENT
+/**
+ * The doctor's end-of-consultation workflow: start the visit (or mark a
+ * no-show), then write the structured summary (chief complaint, findings,
+ * advice, red flags) and complete it. The summary is what the patient's
+ * consultation AI chat answers from.
+ */
+export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): React.JSX.Element => {
+  const { t } = useTranslation();
+  const status = appointment?.status;
+  const canWrite = status === 'in_progress' || status === 'completed';
+
+  const consultation = useConsultation(appointment?.id, canWrite);
+  const updateStatus = useUpdateAppointmentStatus();
+  const saveSummary = useSaveConsultationSummary();
+
+  const [chiefComplaint, setChiefComplaint] = useState('');
+  const [findings, setFindings] = useState('');
+  const [advice, setAdvice] = useState('');
+  const [redFlags, setRedFlags] = useState<string[]>([]);
+  const [redFlagDraft, setRedFlagDraft] = useState('');
+  const [loadedSummaryId, setLoadedSummaryId] = useState<number | null>(null);
+
+  // Prefill once from a saved summary (adjusting state during render, not in an
+  // effect), without clobbering the doctor's edits on later refetches.
+  const savedSummary = consultation.data?.summary ?? null;
+  if (savedSummary && savedSummary.id !== loadedSummaryId) {
+    setLoadedSummaryId(savedSummary.id);
+    setChiefComplaint(savedSummary.chiefComplaint);
+    setFindings(savedSummary.findings ?? '');
+    setAdvice(savedSummary.advice ?? '');
+    setRedFlags(savedSummary.redFlags);
+  }
+
+  const busy = updateStatus.isPending || saveSummary.isPending;
+
+  if (!appointment) {
+    return (
+      <View style={styles.card}>
+        <Text style={styles.title}>{t('consultation.title', 'Consultation')}</Text>
+        <Text style={styles.muted}>
+          {t('consultation.no_appointment', 'You have no appointment with this patient.')}
+        </Text>
+      </View>
+    );
+  }
+
+  const changeStatus = (next: 'in_progress' | 'no_show') => {
+    updateStatus.mutate(
+      { appointmentId: appointment.id, status: next },
+      {
+        onError: (err) =>
+          Alert.alert(
+            t('consultation.error', 'Something went wrong'),
+            apiErrorMessage(
+              err,
+              t('consultation.status_failed', 'Could not update the appointment.'),
+            ),
+          ),
+      },
+    );
+  };
+
+  const confirmNoShow = () => {
+    Alert.alert(
+      t('consultation.no_show_title', 'Mark as no-show?'),
+      t('consultation.no_show_body', 'The patient did not attend this appointment.'),
+      [
+        { text: t('consultation.cancel', 'Cancel'), style: 'cancel' },
+        {
+          text: t('consultation.mark_no_show', 'Mark no-show'),
+          style: 'destructive',
+          onPress: () => changeStatus('no_show'),
+        },
+      ],
+    );
+  };
+
+  const addRedFlag = () => {
+    const value = redFlagDraft.trim();
+    if (!value || redFlags.length >= MAX_RED_FLAGS) return;
+    setRedFlags([...redFlags, value]);
+    setRedFlagDraft('');
+  };
+
+  const handleSave = async () => {
+    if (!chiefComplaint.trim()) {
+      Alert.alert(
+        t('consultation.required_title', 'Chief complaint required'),
+        t('consultation.required_body', 'Add the chief complaint before saving.'),
+      );
+      return;
+    }
+
+    // Include a red flag typed but not yet added.
+    const flags = redFlagDraft.trim() ? [...redFlags, redFlagDraft.trim()] : redFlags;
+
+    try {
+      await saveSummary.mutateAsync({
+        appointmentId: appointment.id,
+        input: {
+          chief_complaint: chiefComplaint.trim(),
+          findings: findings.trim() || null,
+          advice: advice.trim() || null,
+          red_flags: flags.slice(0, MAX_RED_FLAGS),
+        },
+      });
+      setRedFlags(flags.slice(0, MAX_RED_FLAGS));
+      setRedFlagDraft('');
+
+      if (status === 'in_progress') {
+        await updateStatus.mutateAsync({ appointmentId: appointment.id, status: 'completed' });
+        Alert.alert(
+          t('consultation.completed_title', 'Consultation completed'),
+          t('consultation.completed_body', 'The summary is saved and shared with the patient.'),
+        );
+      } else {
+        Alert.alert(t('consultation.saved_title', 'Summary saved'));
+      }
+    } catch (err) {
+      Alert.alert(
+        t('consultation.error', 'Something went wrong'),
+        apiErrorMessage(err, t('consultation.save_failed', 'Could not save the summary.')),
+      );
+    }
+  };
+
+  const statusLabel: Record<string, string> = {
+    scheduled: t('consultation.status_scheduled', 'Scheduled'),
+    in_progress: t('consultation.status_in_progress', 'In progress'),
+    completed: t('consultation.status_completed', 'Completed'),
+    cancelled: t('consultation.status_cancelled', 'Cancelled'),
+    no_show: t('consultation.status_no_show', 'No-show'),
+  };
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.headerRow}>
+        <Text style={styles.title}>{t('consultation.title', 'Consultation')}</Text>
+        <View style={[styles.chip, status === 'completed' && styles.chipDone]}>
+          <Text style={styles.chipText}>
+            {statusLabel[appointment.status] ?? appointment.status}
+          </Text>
+        </View>
+      </View>
+      <Text style={styles.muted}>{formatWhen(appointment.datetime)}</Text>
+
+      {status === 'scheduled' && (
+        <View style={styles.actionsRow}>
+          <TouchableOpacity
+            style={[styles.secondaryBtn, busy && styles.disabled]}
+            onPress={confirmNoShow}
+            disabled={busy}
+            accessibilityRole="button"
+          >
+            <Text style={styles.secondaryBtnText}>
+              {t('consultation.mark_no_show', 'Mark no-show')}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.primaryBtn, busy && styles.disabled]}
+            onPress={() => changeStatus('in_progress')}
+            disabled={busy}
+            accessibilityRole="button"
+          >
+            {updateStatus.isPending ? (
+              <ActivityIndicator size="small" color={Colors.surface} />
+            ) : (
+              <Text style={styles.primaryBtnText}>
+                {t('consultation.start', 'Start consultation')}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {(status === 'cancelled' || status === 'no_show') && (
+        <Text style={[styles.muted, styles.spaced]}>
+          {t('consultation.closed', 'This appointment is closed; no summary can be written.')}
+        </Text>
+      )}
+
+      {canWrite && consultation.isLoading && (
+        <ActivityIndicator size="small" color={Colors.primary} style={styles.spaced} />
+      )}
+
+      {canWrite && !consultation.isLoading && (
+        <View style={styles.form}>
+          <Text style={styles.label}>{t('consultation.chief_complaint', 'Chief complaint *')}</Text>
+          <TextInput
+            style={styles.input}
+            value={chiefComplaint}
+            onChangeText={setChiefComplaint}
+            placeholder={t('consultation.chief_complaint_ph', 'e.g. Chest pain after running')}
+            placeholderTextColor={Colors.textTertiary}
+            multiline
+            maxLength={2000}
+          />
+
+          <Text style={styles.label}>{t('consultation.findings', 'Findings')}</Text>
+          <TextInput
+            style={[styles.input, styles.inputTall]}
+            value={findings}
+            onChangeText={setFindings}
+            placeholder={t('consultation.findings_ph', 'Examination, tests reviewed, assessment')}
+            placeholderTextColor={Colors.textTertiary}
+            multiline
+            maxLength={5000}
+          />
+
+          <Text style={styles.label}>{t('consultation.advice', 'Advice')}</Text>
+          <TextInput
+            style={[styles.input, styles.inputTall]}
+            value={advice}
+            onChangeText={setAdvice}
+            placeholder={t('consultation.advice_ph', 'What the patient should do next')}
+            placeholderTextColor={Colors.textTertiary}
+            multiline
+            maxLength={5000}
+          />
+
+          <Text style={styles.label}>
+            {t('consultation.red_flags', 'Red flags (seek urgent care if…)')}
+          </Text>
+          {redFlags.map((flag, index) => (
+            <View key={`${flag}-${index}`} style={styles.flagRow}>
+              <MaterialCommunityIcons name="alert-circle-outline" size={18} color={Colors.danger} />
+              <Text style={styles.flagText}>{flag}</Text>
+              <TouchableOpacity
+                onPress={() => setRedFlags(redFlags.filter((_, i) => i !== index))}
+                accessibilityRole="button"
+                accessibilityLabel={t('consultation.remove_flag', 'Remove red flag')}
+                hitSlop={8}
+              >
+                <MaterialCommunityIcons name="close" size={18} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          ))}
+          {redFlags.length < MAX_RED_FLAGS && (
+            <View style={styles.flagInputRow}>
+              <TextInput
+                style={[styles.input, styles.flagInput]}
+                value={redFlagDraft}
+                onChangeText={setRedFlagDraft}
+                onSubmitEditing={addRedFlag}
+                placeholder={t('consultation.red_flag_ph', 'e.g. Chest pain at rest')}
+                placeholderTextColor={Colors.textTertiary}
+                maxLength={300}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={styles.addBtn}
+                onPress={addRedFlag}
+                accessibilityRole="button"
+                accessibilityLabel={t('consultation.add_flag', 'Add red flag')}
+              >
+                <MaterialCommunityIcons name="plus" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={[styles.primaryBtn, styles.saveBtn, busy && styles.disabled]}
+            onPress={handleSave}
+            disabled={busy}
+            accessibilityRole="button"
+          >
+            {busy ? (
+              <ActivityIndicator size="small" color={Colors.surface} />
+            ) : (
+              <Text style={styles.primaryBtnText}>
+                {status === 'in_progress'
+                  ? t('consultation.save_and_complete', 'Save summary & complete')
+                  : t('consultation.save', 'Save summary')}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
+  );
+};
+
+// 4. STYLES
+const styles = StyleSheet.create({
+  card: {
+    backgroundColor: Colors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.base,
+    borderWidth: 1,
+    borderColor: Colors.tertiary,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  title: {
+    fontFamily: FontFamily.bold,
+    fontWeight: 'bold',
+    fontSize: FontSize.lg,
+    color: Colors.textPrimary,
+  },
+  chip: {
+    backgroundColor: Colors.tertiaryLight,
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+  },
+  chipDone: {
+    backgroundColor: Colors.tertiary,
+  },
+  chipText: {
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.sm,
+    color: Colors.primary,
+  },
+  muted: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.base,
+    color: Colors.textSecondary,
+    marginTop: Spacing.xs,
+  },
+  spaced: {
+    marginTop: Spacing.md,
+  },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
+  primaryBtn: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.md,
+  },
+  primaryBtnText: {
+    fontFamily: FontFamily.bold,
+    fontWeight: 'bold',
+    fontSize: FontSize.base,
+    color: Colors.surface,
+  },
+  secondaryBtn: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.md,
+  },
+  secondaryBtnText: {
+    fontFamily: FontFamily.bold,
+    fontWeight: 'bold',
+    fontSize: FontSize.base,
+    color: Colors.danger,
+  },
+  disabled: {
+    opacity: 0.6,
+  },
+  form: {
+    marginTop: Spacing.sm,
+  },
+  label: {
+    fontFamily: FontFamily.semiBold,
+    fontWeight: '600',
+    fontSize: FontSize.base,
+    color: Colors.textPrimary,
+    marginTop: Spacing.md,
+    marginBottom: Spacing.xs,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.tertiary,
+    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.base,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.background,
+    minHeight: 46,
+    textAlignVertical: 'top',
+  },
+  inputTall: {
+    minHeight: 88,
+  },
+  flagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.xs,
+  },
+  flagText: {
+    flex: 1,
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.base,
+    color: Colors.textPrimary,
+  },
+  flagInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  flagInput: {
+    flex: 1,
+  },
+  addBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveBtn: {
+    marginTop: Spacing.lg,
+    flex: 0,
+  },
+});

@@ -105,6 +105,17 @@ class AppointmentsService {
   async cancelAppointment(appointmentId: string): Promise<void> {
     await axiosClient.patch(`/appointments/${appointmentId}/cancel`);
   }
+
+  /**
+   * Doctor moves a visit through its lifecycle:
+   * scheduled → in_progress → completed, or scheduled → no_show.
+   */
+  async updateStatus(
+    appointmentId: number | string,
+    status: 'in_progress' | 'completed' | 'no_show',
+  ): Promise<void> {
+    await axiosClient.patch(`/appointments/${appointmentId}/status`, { status });
+  }
 }
 
 export const appointmentsService = new AppointmentsService();

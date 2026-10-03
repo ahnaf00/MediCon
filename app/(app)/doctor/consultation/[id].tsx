@@ -24,6 +24,35 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { prescriptionsService } from '../../../../src/services/api/prescriptionsService';
 import { Prescription } from '../../../../src/types/medical.types';
 import { patientsService, ApiPatient } from '../../../../src/services/api/patientsService';
+import { ApiAppointment, useAppointments } from '../../../../src/services/api/consultationsService';
+import { ConsultationPanel } from '../../../../src/components/medical/ConsultationPanel';
+
+/**
+ * Which of this doctor's appointments with the patient the screen is about:
+ * the one named in the route, else the visit in progress, else the next
+ * scheduled one, else the most recently completed (so its summary can be edited).
+ */
+const pickAppointment = (
+  appointments: ApiAppointment[] | undefined,
+  patientId: string | undefined,
+  appointmentId: string | undefined,
+): ApiAppointment | null => {
+  if (!appointments || !patientId) return null;
+  if (appointmentId) {
+    return appointments.find((a) => String(a.id) === appointmentId) ?? null;
+  }
+  const mine = appointments.filter((a) => String(a.patient?.id) === patientId);
+  const time = (a: ApiAppointment) => (a.datetime ? new Date(a.datetime).getTime() : 0);
+  const now = Date.now();
+  return (
+    mine.find((a) => a.status === 'in_progress') ??
+    mine
+      .filter((a) => a.status === 'scheduled')
+      .sort((a, b) => Math.abs(time(a) - now) - Math.abs(time(b) - now))[0] ??
+    mine.filter((a) => a.status === 'completed').sort((a, b) => time(b) - time(a))[0] ??
+    null
+  );
+};
 
 // Calculate age from date of birth
 const calculateAge = (dob: string | null | undefined): string => {
@@ -39,13 +68,15 @@ const calculateAge = (dob: string | null | undefined): string => {
 };
 
 export default function DoctorConsultationScreen(): React.JSX.Element {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, appointmentId } = useLocalSearchParams<{ id: string; appointmentId?: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const [patient, setPatient] = useState<ApiPatient | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePrescription, setActivePrescription] = useState<Prescription | null>(null);
   const [loadingPrescription, setLoadingPrescription] = useState(true);
+  const appointments = useAppointments();
+  const appointment = pickAppointment(appointments.data, id, appointmentId);
 
   useEffect(() => {
     let isMounted = true;
@@ -183,6 +214,15 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
             <Text style={styles.cardInnerTitle}>Problem</Text>
             <Text style={styles.infoText}>{reason}</Text>
           </View>
+        </View>
+
+        {/* ── CONSULTATION: start / no-show / end-of-consultation summary ── */}
+        <View style={styles.section}>
+          {appointments.isLoading ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : (
+            <ConsultationPanel appointment={appointment} />
+          )}
         </View>
 
         {/* ── ALLERGIES ── */}
