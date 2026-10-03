@@ -1,3 +1,16 @@
+/**
+ * `{ morning: '08:00', night: '20:00' }` → `'1+0+1'`; undefined when no schedule was given.
+ * Same rule as the API's PrescriptionDocumentResource::dosePattern() (the letterhead).
+ */
+export const toDosePattern = (
+  schedule?: Record<string, string | null | undefined> | null,
+): string | undefined => {
+  if (!schedule || Object.keys(schedule).length === 0) return undefined;
+  return (['morning', 'noon', 'night'] as const)
+    .map((slot) => (schedule[slot] ? '1' : '0'))
+    .join('+');
+};
+
 export const getMedicineDescription = (pattern?: string, instructions?: string) => {
   let timeString = '';
   if (pattern) {

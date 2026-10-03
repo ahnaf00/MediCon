@@ -66,7 +66,7 @@ const MedicineDetailCard = ({
   const explanationText = med.explanation ?? med.aiDemystifierSummary;
 
   const formattedDescription = getMedicineDescription(
-    med.dosagePattern || '1+1+1',
+    med.dosagePattern,
     med.instructions ?? undefined,
   );
 
@@ -100,7 +100,7 @@ const MedicineDetailCard = ({
         </View>
         <View style={styles.ddItem}>
           <Text style={styles.ddLabel}>Schedule</Text>
-          <Text style={styles.ddValue}>{med.dosagePattern || '1+1+1'}</Text>
+          <Text style={styles.ddValue}>{med.dosagePattern ?? 'As directed'}</Text>
         </View>
       </View>
 

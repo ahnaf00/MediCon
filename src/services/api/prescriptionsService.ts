@@ -21,6 +21,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
 import { AdherenceRecord, Prescription } from '../../types/medical.types';
+import { toDosePattern } from '../../utils/prescriptionFormatters';
 
 // ─── Types (matching PrescriptionResource & StorePrescriptionRequest exactly) ──
 
@@ -155,7 +156,7 @@ const mapApiToPrescription = (api: ApiPrescription): Prescription => {
       dosageSchedule: m.dosageSchedule || undefined,
       scheduleFormat: m.scheduleFormat,
       instructions: m.instructions,
-      dosagePattern: m.scheduleFormat || undefined,
+      dosagePattern: toDosePattern(m.dosageSchedule),
       explanation: m.explanation ?? undefined,
     })),
   };
