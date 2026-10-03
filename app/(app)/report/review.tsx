@@ -15,7 +15,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../../src/theme';
-import { UploadRecordPage, useUploadRecord } from '../../../src/services/api/reportsService';
+import {
+  UploadRecordPage,
+  useAnalyzeRecord,
+  useUploadRecord,
+} from '../../../src/services/api/reportsService';
 import { pickReportImages, pickReportPdfs } from '../../../src/services/files/reportPicker';
 import { MAX_REPORT_PAGES, useReportDraftStore } from '../../../src/store/reportDraftStore';
 
@@ -34,7 +38,8 @@ export default function ReviewReportScreen() {
   const clearDraft = useReportDraftStore((s) => s.clear);
 
   const upload = useUploadRecord();
-  const isSubmitting = upload.isPending;
+  const analyze = useAnalyzeRecord();
+  const isSubmitting = upload.isPending || analyze.isPending;
   const remaining = MAX_REPORT_PAGES - pages.length;
 
   const appendFrom = async (pick: (limit: number) => Promise<UploadRecordPage[]>) => {
@@ -73,6 +78,11 @@ export default function ReviewReportScreen() {
     try {
       const record = await upload.mutateAsync({ pages });
       clearDraft();
+      try {
+        await analyze.mutateAsync(record.id);
+      } catch {
+        // The upload is saved either way; the report screen offers "Analyze" again.
+      }
       router.replace(`/(app)/report/${record.id}`);
     } catch (error: any) {
       // The draft is kept so the patient can retry without re-picking pages.
@@ -177,7 +187,9 @@ export default function ReviewReportScreen() {
             <>
               <ActivityIndicator size="small" color={Colors.surface} />
               <Text style={styles.primaryButtonText}>
-                {t('report_review.uploading', 'Uploading…')}
+                {analyze.isPending
+                  ? t('report_review.starting_analysis', 'Starting analysis…')
+                  : t('report_review.uploading', 'Uploading…')}
               </Text>
             </>
           ) : (

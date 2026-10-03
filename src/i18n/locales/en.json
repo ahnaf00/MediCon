@@ -284,7 +284,17 @@
     "upload_failed": "Upload Failed",
     "upload_failed_body": "Your report could not be uploaded. {{message}}",
     "page_limit_title": "Page limit reached",
-    "page_limit_body": "A report can have at most {{max}} pages."
+    "page_limit_body": "A report can have at most {{max}} pages.",
+    "starting_analysis": "Starting analysis…"
+  },
+  "report_analysis": {
+    "analyzing_title": "Analyzing Report…",
+    "analyzing_body": "Our AI is scanning the document and extracting clinical biomarkers. This may take 10–20 seconds.",
+    "stage_reading": "Reading document",
+    "stage_extracting": "Extracting biomarkers",
+    "stage_summary": "Generating summary",
+    "slow_note": "This is taking longer than usual. You can close this; the analysis will continue and this report will update when it is ready.",
+    "continue_in_background": "Continue in background"
   },
   "theme": {
     "theme": "Theme"

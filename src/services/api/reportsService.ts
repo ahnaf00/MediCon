@@ -169,6 +169,18 @@ export const reportsService = {
   },
 
   /**
+   * Goal: Queue AI extraction of lab results and a summary for an uploaded record.
+   * How: POST /api/v1/medical-records/{id}/analyze — returns 202 with
+   *      { message, record } where record.analysisStatus is "processing"
+   *      (or already "completed"/"failed" when the server runs the job inline).
+   * The original upload is never modified, whatever the outcome.
+   */
+  analyzeRecord: async (id: number): Promise<MedicalRecord> => {
+    const res = (await axiosClient.post(`/medical-records/${id}/analyze`)) as any;
+    return res?.record ?? res;
+  },
+
+  /**
    * Goal: Permanently delete a medical record by ID.
    * How: DELETE /api/v1/medical-records/{id}.
    */
@@ -210,13 +222,39 @@ export const useMedicalRecords = () =>
     queryFn: reportsService.getRecords,
   });
 
-/** Fetch a single medical record by ID. Only runs when id is truthy. */
+/** How often the detail screen re-checks a record while its analysis runs. */
+export const ANALYSIS_POLL_MS = 2000;
+
+/**
+ * Fetch a single medical record by ID. Only runs when id is truthy.
+ * Polls while the server reports the analysis as "processing".
+ */
 export const useMedicalRecord = (id: number) =>
   useQuery({
     queryKey: ['medical-records', id],
     queryFn: () => reportsService.getRecordById(id),
     enabled: !!id,
+    refetchInterval: (query) =>
+      query.state.data?.analysisStatus === 'processing' ? ANALYSIS_POLL_MS : false,
   });
+
+/**
+ * Start (or retry) analysis of a record. Seeds the detail cache with the
+ * returned record so polling starts immediately, and refreshes the list.
+ */
+export const useAnalyzeRecord = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: reportsService.analyzeRecord,
+    onSuccess: (record) => {
+      qc.setQueryData(['medical-records', record.id], (old: MedicalRecord | undefined) => ({
+        ...old,
+        ...record,
+      }));
+      qc.invalidateQueries({ queryKey: ['medical-records'], exact: true });
+    },
+  });
+};
 
 /**
  * Upload a new medical record file.
