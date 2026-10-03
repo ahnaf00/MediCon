@@ -22,6 +22,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius, Layout, Shadows } from '@theme';
 import { useAuthStore } from '../../../src/store/authStore';
 import { qnaService } from '../../../src/services/api/qnaService';
+import { useDoctorPresence } from '../../../src/services/api/presenceService';
 import { doctorsService } from '../../../src/services/api/doctorsService';
 import { Question } from '../../../src/types/medical.types';
 import { createAppError, AppError } from '../../../src/utils/errors';
@@ -159,7 +160,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
   const userId = useAuthStore((s) => s.userId) || 'doctor-1';
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('unanswered');
-  const [isOnline, setIsOnline] = useState(false);
+  const presence = useDoctorPresence();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
@@ -348,13 +349,16 @@ export default function QnaInboxScreen(): React.JSX.Element {
           <Text style={styles.onlineLabel}>{t('doctordashboard.online', 'Online')}</Text>
           <TouchableOpacity
             activeOpacity={0.8}
-            onPress={() => setIsOnline(!isOnline)}
+            onPress={presence.toggle}
+            disabled={!presence.canToggle}
             style={styles.toggleContainer}
             accessibilityRole="switch"
-            accessibilityState={{ checked: isOnline }}
+            accessibilityState={{ checked: presence.isOnline, disabled: !presence.canToggle }}
             accessibilityLabel="Online Status Toggle"
           >
-            <View style={[styles.toggleCircle, isOnline ? styles.toggleOn : styles.toggleOff]} />
+            <View
+              style={[styles.toggleCircle, presence.isOnline ? styles.toggleOn : styles.toggleOff]}
+            />
           </TouchableOpacity>
         </View>
 

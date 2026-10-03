@@ -8,11 +8,12 @@ import { useAuthStore } from '../../store/authStore';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { dashboardService, DoctorDashboardStats } from '../../services/api/dashboardService';
 import { authService, User } from '../../services/api/authService';
+import { useDoctorPresence } from '../../services/api/presenceService';
 
 export const DoctorDashboard = (): React.JSX.Element => {
   const { t } = useTranslation();
   const router = useRouter();
-  const [isOnline, setIsOnline] = useState(false);
+  const presence = useDoctorPresence();
   const setRole = useAuthStore((s) => s.setRole);
 
   const [loading, setLoading] = useState(true);
@@ -67,13 +68,19 @@ export const DoctorDashboard = (): React.JSX.Element => {
             <Text style={styles.onlineLabel}>{t('doctordashboard.online', 'Online')}</Text>
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => setIsOnline(!isOnline)}
+              onPress={presence.toggle}
+              disabled={!presence.canToggle}
               style={styles.toggleContainer}
               accessibilityRole="switch"
-              accessibilityState={{ checked: isOnline }}
+              accessibilityState={{ checked: presence.isOnline, disabled: !presence.canToggle }}
               accessibilityLabel="Online Status Toggle"
             >
-              <View style={[styles.toggleCircle, isOnline ? styles.toggleOn : styles.toggleOff]} />
+              <View
+                style={[
+                  styles.toggleCircle,
+                  presence.isOnline ? styles.toggleOn : styles.toggleOff,
+                ]}
+              />
             </TouchableOpacity>
           </View>
 
