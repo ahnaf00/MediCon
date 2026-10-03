@@ -46,7 +46,8 @@
   "doctorcard": {
     "no_recent_doctors": "No recent doctors",
     "explore_the_directory_to_find_": "Explore the directory to find a doctor.",
-    "recent_doctor": "Recent Doctor"
+    "recent_doctor": "Recent Doctor",
+    "specialist": "Specialist"
   },
   "hospitalcard": {
     "km": "km",

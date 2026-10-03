@@ -125,11 +125,13 @@ export const DoctorCard = ({
     const experienceText =
       !isHistory && !isDashboard && 'experience' in (doctor as Doctor)
         ? (doctor as Doctor).experience
-        : 'MBBS, FCPS';
-    const degreesText =
-      experienceText.length < 10
-        ? `MBBS, Diploma (Gynae & Obs), FCPS (${displaySpecialty})`
-        : experienceText;
+        : '';
+    // Only the doctor's own qualifications — never invent degrees when they are missing.
+    const qualifications =
+      !isHistory && !isDashboard && Array.isArray((doctor as Doctor).degrees)
+        ? (doctor as Doctor).degrees.filter((d) => d && d.trim()).join(', ')
+        : '';
+    const degreesText = qualifications || t('doctorcard.specialist', 'Specialist');
 
     return (
       <TouchableOpacity

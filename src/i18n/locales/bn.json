@@ -30,7 +30,8 @@
   "doctorcard": {
     "no_recent_doctors": "কোনো সাম্প্রতিক ডাক্তার নেই",
     "explore_the_directory_to_find_": "একজন ডাক্তার খুঁজে পেতে ডিরেক্টরি অন্বেষণ করুন।",
-    "recent_doctor": "সাম্প্রতিক ডাক্তার"
+    "recent_doctor": "সাম্প্রতিক ডাক্তার",
+    "specialist": "বিশেষজ্ঞ"
   },
   "hospitalcard": {
     "km": "কিমি",
