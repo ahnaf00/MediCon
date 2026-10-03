@@ -520,5 +520,24 @@
     "add_flag": "Add red flag",
     "save_and_complete": "Save summary & complete",
     "save": "Save summary"
+  },
+  "consultation_chat": {
+    "your_doctor": "Your doctor",
+    "greeting": "Hi! I can answer questions about your recent consultation with {{doctor}} on {{date}}, based on the notes your doctor recorded.",
+    "stopped": "(stopped)",
+    "suggest_discussed": "What was discussed between us?",
+    "suggest_medicines": "How should I take my medicines?",
+    "suggest_urgent": "When should I seek urgent care?",
+    "load_failed": "Could not load this consultation.",
+    "retry": "Retry",
+    "unavailable_title": "AI chat not available yet",
+    "unavailable_body": "{{doctor}} has not added a summary for this consultation yet. The AI only answers from your doctor’s notes, so this chat opens once they do.",
+    "subtitle": "AI assistant · Consultation on {{date}}",
+    "placeholder": "What do you want to know?",
+    "stop": "Stop answer",
+    "send": "Send",
+    "disclaimer": "AI answers are based on your doctor’s notes and can make mistakes. Not a substitute for medical advice — in an emergency, call 999.",
+    "ask_ai": "Ask AI about this consultation",
+    "recent_consultation": "Recent consultation"
   }
 }
