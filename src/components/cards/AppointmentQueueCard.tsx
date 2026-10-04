@@ -53,6 +53,9 @@ export const AppointmentQueueCard = ({
           <Text style={styles.timeText}>{formattedTime}</Text>
         </View>
         <View style={styles.badges}>
+          {appointment.format === 'video' && (
+            <Badge label={t('appointmentqueuecard.video', 'Video')} variant="info" />
+          )}
           <Badge label={statusLabel} variant={statusBadgeVariant} />
         </View>
       </View>

@@ -7,6 +7,8 @@ import { fromLocalDateString, toLocalDateString } from '../utils/localDate';
 // 2. TYPES
 export interface DoctorQueueAppointment {
   id: string;
+  /** For opening the consultation screen (`/doctor/consultation/{patientId}`). */
+  patientId: string | null;
   patientName: string;
   /** Null when the patient hasn't recorded a date of birth. */
   age: number | null;
@@ -56,6 +58,7 @@ const queueStatus = (status: ApiAppointment['status']): DoctorQueueAppointment['
 
 const toQueueItem = (a: ApiAppointment): DoctorQueueAppointment => ({
   id: String(a.id),
+  patientId: a.patient?.id != null ? String(a.patient.id) : null,
   patientName: a.patient?.name ?? 'Patient',
   age: ageFrom(a.patient?.patientProfile?.dateOfBirth),
   gender: genderCode(a.patient?.patientProfile?.gender),

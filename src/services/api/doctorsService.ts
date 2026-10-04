@@ -101,6 +101,8 @@ export const doctorsService = {
       avgConsultationMinutes: 15,
       services: [],
       experienceList: [],
+      // Server-computed: the doctor's toggle is on and their app has checked in recently.
+      isOnline: doc.doctorProfile?.isOnline === true,
       image: doc.avatarUrl ? { uri: doc.avatarUrl } : doctorPlaceholders[index % doctorPlaceholders.length],
     }));
   },
@@ -131,7 +133,7 @@ export const doctorsService = {
       services: [],
       experienceList: [],
       licenseNumber: 'N/A',
-      isOnline: false,
+      isOnline: doc.doctorProfile?.isOnline === true,
       about: doc.doctorProfile?.bio || '',
       image: doc.avatarUrl ? { uri: doc.avatarUrl } : doctorPlaceholders[Number(id) % doctorPlaceholders.length || 0],
     };

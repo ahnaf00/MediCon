@@ -11,7 +11,8 @@
   },
   "appointmentqueuecard": {
     "yrs": "বছর •",
-    "reason": "কারণ:"
+    "reason": "কারণ:",
+    "video": "ভিডিও"
   },
   "digestcard": {
     "preconsultation_digest": "প্রাক-পরামর্শ ডাইজেস্ট",
@@ -44,6 +45,8 @@
     "next_medication": "পরবর্তী ওষুধ"
   },
   "doctordashboard": {
+    "todays_appointments": "আজকের অ্যাপয়েন্টমেন্ট",
+    "no_appointments_today": "আজ কোনো অ্যাপয়েন্টমেন্ট নেই।",
     "pending_title": "আপনার অ্যাকাউন্ট যাচাইয়ের অপেক্ষায় আছে",
     "pending_body": "একজন অ্যাডমিনিস্ট্রেটরকে আপনার ডাক্তার অ্যাকাউন্ট যাচাই করতে হবে। ততক্ষণ আপনি অনলাইনে যেতে, অ্যাপয়েন্টমেন্ট দেখতে বা পরামর্শ শুরু করতে পারবেন না।",
     "doctor_dashboard": "ডাক্তারের ড্যাশবোর্ড",

@@ -1,5 +1,5 @@
 // 1. IMPORTS
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,13 @@ import {
   ActivityIndicator,
   FlatList,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, BorderRadius, FontFamily, FontSize } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { doctorsService } from '../../../src/services/api/doctorsService';
+import { isAwaitingVideoStart } from '../../../src/services/api/consultationsService';
 import { SymptomSearchBar } from '../../../src/components/forms/SymptomSearchBar';
 import { DoctorCard } from '../../../src/components/cards/DoctorCard';
 import { useTranslation } from 'react-i18next';
@@ -30,15 +31,38 @@ export default function DoctorsScreen(): React.JSX.Element {
     queryFn: doctorsService.getCategories,
   });
 
-  const { data: history = [], isLoading: historyLoading } = useQuery({
+  const {
+    data: history = [],
+    isLoading: historyLoading,
+    refetch: refetchHistory,
+  } = useQuery({
     queryKey: ['consultationHistory'],
     queryFn: doctorsService.getConsultationHistory,
+    // While a video visit may be about to start, re-check so "Join video call" appears.
+    refetchInterval: (query) =>
+      query.state.data?.some((h) =>
+        isAwaitingVideoStart({ format: h.format, status: h.status, datetime: h.startsAt }),
+      )
+        ? 15_000
+        : false,
   });
 
-  const { data: doctors = [], isLoading: doctorsLoading } = useQuery({
+  const {
+    data: doctors = [],
+    isLoading: doctorsLoading,
+    refetch: refetchDoctors,
+  } = useQuery({
     queryKey: ['doctors'],
     queryFn: () => doctorsService.getDoctors(),
   });
+
+  // Statuses and who is online change while the app is open; refresh on returning here.
+  useFocusEffect(
+    useCallback(() => {
+      refetchHistory();
+      refetchDoctors();
+    }, [refetchHistory, refetchDoctors]),
+  );
 
   // Since we only want online doctors here:
   const onlineDoctors = doctors.filter(doc => doc.isOnline);
@@ -109,6 +133,7 @@ export default function DoctorsScreen(): React.JSX.Element {
                       `/(app)/doctors/booking/digest?doctorId=${item.doctorId}&type=video`,
                     )
                   }
+                  onJoinPress={() => router.push(`/(app)/call/${item.id}`)}
                 />
               ))}
             </ScrollView>

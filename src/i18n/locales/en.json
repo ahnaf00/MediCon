@@ -27,7 +27,8 @@
   },
   "appointmentqueuecard": {
     "yrs": "yrs •",
-    "reason": "Reason:"
+    "reason": "Reason:",
+    "video": "Video"
   },
   "digestcard": {
     "preconsultation_digest": "Pre-Consultation Digest",
@@ -60,6 +61,8 @@
     "next_medication": "Next Medication"
   },
   "doctordashboard": {
+    "todays_appointments": "Today's appointments",
+    "no_appointments_today": "No appointments today.",
     "pending_title": "Your account is awaiting verification",
     "pending_body": "An administrator needs to verify your doctor account. Until then you can’t go online, see appointments or start consultations.",
     "doctor_dashboard": "Doctor Dashboard",

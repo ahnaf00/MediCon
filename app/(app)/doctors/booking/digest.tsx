@@ -164,7 +164,7 @@ export default function BookingDigestScreen() {
       // There is no instant-consultation flow on the backend; booking needs a real slot.
       Alert.alert(
         'Instant consultation unavailable',
-        'Instant consultations are not available yet. Please schedule a time slot.',
+        'Instant consultations are not available yet. Choose "Schedule Video Appointment" and pick the next free time slot. You can join the call from your appointment once the doctor starts it.',
       );
       return;
     }

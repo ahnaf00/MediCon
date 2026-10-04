@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { authService } from '../../services/api/authService';
 import { useDoctorPresence } from '../../services/api/presenceService';
 import { useDoctorDashboard } from '../../hooks/useDoctorDashboard';
+import { AppointmentQueueCard } from '../cards/AppointmentQueueCard';
 
 export const DoctorDashboard = (): React.JSX.Element => {
   const { t } = useTranslation();
@@ -18,7 +19,7 @@ export const DoctorDashboard = (): React.JSX.Element => {
   const setRole = useAuthStore((s) => s.setRole);
 
   const { data: doctorUser } = useQuery({ queryKey: ['me'], queryFn: authService.me });
-  const { stats, isLoading: loading, isError } = useDoctorDashboard();
+  const { stats, todayQueue, isLoading: loading, isError } = useDoctorDashboard();
   const awaitingVerification =
     !!doctorUser?.doctorProfile && doctorUser.doctorProfile.verificationStatus !== 'verified';
 
@@ -91,6 +92,35 @@ export const DoctorDashboard = (): React.JSX.Element => {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Today's appointments: the doctor's way into each consultation (and its video call). */}
+        {!loading && !isError && (
+          <View style={styles.todaySection}>
+            <Text style={styles.todayTitle}>
+              {t('doctordashboard.todays_appointments', "Today's appointments")}
+            </Text>
+            {todayQueue.length === 0 ? (
+              <Text style={styles.todayEmpty}>
+                {t('doctordashboard.no_appointments_today', 'No appointments today.')}
+              </Text>
+            ) : (
+              todayQueue.map((item) => (
+                <AppointmentQueueCard
+                  key={item.id}
+                  appointment={item}
+                  onPress={
+                    item.patientId
+                      ? () =>
+                          router.push(
+                            `/(app)/doctor/consultation/${item.patientId}?appointmentId=${item.id}`,
+                          )
+                      : undefined
+                  }
+                />
+              ))
+            )}
+          </View>
+        )}
 
         {loading ? (
           <View style={styles.loadingContainer}>
@@ -321,6 +351,20 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.medium,
     color: Colors.textSecondary,
     textAlign: 'center',
+  },
+  todaySection: {
+    marginTop: Spacing.base,
+    gap: Spacing.sm,
+  },
+  todayTitle: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.lg,
+    color: Colors.textPrimary,
+  },
+  todayEmpty: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.base,
+    color: Colors.textSecondary,
   },
   pendingTitle: {
     fontFamily: FontFamily.bold,
