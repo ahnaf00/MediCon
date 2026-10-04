@@ -1,7 +1,7 @@
 // 1. IMPORTS
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontFamily, FontSize } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { FlashList } from '@shopify/flash-list';
 import { doctorsService, ConsultationHistoryItem } from '../../../src/services/api/doctorsService';
 import { DoctorCard } from '../../../src/components/cards/DoctorCard';
 import { appointmentsService } from '../../../src/services/api/appointmentsService';
+import { isAwaitingVideoStart } from '../../../src/services/api/consultationsService';
 import { useTranslation } from 'react-i18next';
 
 // 2. TYPES
@@ -23,19 +24,39 @@ export default function ConsultationHistoryScreen(): React.JSX.Element {
   const [history, setHistory] = useState<ConsultationHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchHistory = useCallback(async () => {
+  const fetchHistory = useCallback(async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await doctorsService.getConsultationHistory();
       setHistory(data);
+    } catch {
+      // A failed background refresh keeps the list already shown.
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchHistory();
   }, [fetchHistory]);
+
+  // Coming back to this screen: statuses may have changed (e.g. the doctor started a call).
+  useFocusEffect(
+    useCallback(() => {
+      fetchHistory(true);
+    }, [fetchHistory]),
+  );
+
+  // No push notifications yet: while a video visit may be about to start, re-check every
+  // 15 s so "Join video call" appears without a manual refresh.
+  const awaitingStart = history.some((h) =>
+    isAwaitingVideoStart({ format: h.format, status: h.status, datetime: h.startsAt }),
+  );
+  useEffect(() => {
+    if (!awaitingStart) return;
+    const timer = setInterval(() => fetchHistory(true), 15_000);
+    return () => clearInterval(timer);
+  }, [awaitingStart, fetchHistory]);
 
   const handleCancel = useCallback((id: string) => {
     Alert.alert('Cancel Appointment', 'Are you sure you want to cancel this appointment?', [
@@ -69,6 +90,7 @@ export default function ConsultationHistoryScreen(): React.JSX.Element {
             }
             onCancelPress={() => handleCancel(item.id)}
             onAskAiPress={() => router.push(`/(app)/ai-chat/consultation/${item.id}`)}
+            onJoinPress={() => router.push(`/(app)/call/${item.id}`)}
           />
         </View>
       );

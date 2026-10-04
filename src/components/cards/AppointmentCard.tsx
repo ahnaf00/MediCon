@@ -1,6 +1,6 @@
 // 1. IMPORTS
 import React from 'react';
-import { View, Text, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Colors, Spacing, BorderRadius, FontFamily, FontSize } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { DashboardAppointment } from '../../hooks/usePatientDashboard';
@@ -11,12 +11,15 @@ import { useTranslation } from 'react-i18next';
 export interface AppointmentCardProps {
   appointment: DashboardAppointment | null;
   onPress?: () => void;
+  /** Opens the call screen; shown only while a video visit is in progress. */
+  onJoinPress?: () => void;
 }
 
 // 3. COMPONENT
 export const AppointmentCard = ({
   appointment,
   onPress,
+  onJoinPress,
 }: AppointmentCardProps): React.JSX.Element => {
   const { t } = useTranslation();
   if (!appointment) {
@@ -89,6 +92,26 @@ export const AppointmentCard = ({
           {formattedDate} · {formattedTime}
         </Text>
       </View>
+
+      {isVideo && appointment.status === 'in_progress' && onJoinPress && (
+        <TouchableOpacity
+          style={styles.joinButton}
+          onPress={onJoinPress}
+          accessibilityRole="button"
+          accessibilityLabel={t('call.join_video_call', 'Join video call')}
+        >
+          <MaterialCommunityIcons name="video" size={18} color={Colors.surface} />
+          <Text style={styles.joinButtonText}>{t('call.join_video_call', 'Join video call')}</Text>
+        </TouchableOpacity>
+      )}
+      {isVideo && appointment.status === 'scheduled' && (
+        <View style={styles.waitingRow}>
+          <MaterialCommunityIcons name="timer-sand" size={16} color={Colors.textSecondary} />
+          <Text style={styles.waitingText}>
+            {t('call.waiting_for_doctor', 'Waiting for doctor')}
+          </Text>
+        </View>
+      )}
     </Card>
   );
 };
@@ -157,6 +180,32 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.tertiary,
   },
   dateTime: {
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+  },
+  joinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+    minHeight: 44,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary,
+  },
+  joinButtonText: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.base,
+    color: Colors.surface,
+  },
+  waitingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    marginTop: Spacing.md,
+  },
+  waitingText: {
     fontFamily: FontFamily.medium,
     fontSize: FontSize.sm,
     color: Colors.textSecondary,

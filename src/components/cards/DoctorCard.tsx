@@ -16,6 +16,8 @@ export interface DoctorCardProps {
   onCancelPress?: () => void;
   /** History variant: opens the consultation AI chat (shown for completed visits with a summary). */
   onAskAiPress?: () => void;
+  /** History variant: opens the call screen (shown while a video visit is in progress). */
+  onJoinPress?: () => void;
   hideSectionLabel?: boolean;
   variant?: 'default' | 'history' | 'online';
   fullWidth?: boolean;
@@ -28,6 +30,7 @@ export const DoctorCard = ({
   onBookPress,
   onCancelPress,
   onAskAiPress,
+  onJoinPress,
   hideSectionLabel = false,
   variant = 'default',
   fullWidth = false,
@@ -79,6 +82,9 @@ export const DoctorCard = ({
   );
 
   if (variant === 'history') {
+    const item = isHistory ? (doctor as ConsultationHistoryItem) : null;
+    const videoLive = item?.format === 'video' && item.status === 'in_progress';
+    const videoWaiting = item?.format === 'video' && item.status === 'scheduled';
     const historyDate =
       isHistory && (doctor as ConsultationHistoryItem).date
         ? new Date((doctor as ConsultationHistoryItem).date).toLocaleDateString('en-US', {
@@ -131,10 +137,31 @@ export const DoctorCard = ({
                   </Text>
                 </TouchableOpacity>
               )}
-            <TouchableOpacity style={styles.primaryButton} onPress={onBookPress || onPress}>
-              <MaterialCommunityIcons name="video-outline" size={18} color={Colors.surface} />
-              <Text style={styles.primaryButtonText}>See Doctor Now</Text>
-            </TouchableOpacity>
+            {videoLive && onJoinPress ? (
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={onJoinPress}
+                accessibilityRole="button"
+              >
+                <MaterialCommunityIcons name="video" size={18} color={Colors.surface} />
+                <Text style={styles.primaryButtonText}>
+                  {t('call.join_video_call', 'Join video call')}
+                </Text>
+              </TouchableOpacity>
+            ) : videoWaiting ? (
+              // Booked and not started yet: nothing to press until the doctor starts the call.
+              <View style={styles.waitingPill} accessibilityRole="text">
+                <MaterialCommunityIcons name="timer-sand" size={16} color={Colors.textSecondary} />
+                <Text style={styles.waitingPillText}>
+                  {t('call.waiting_for_doctor', 'Waiting for doctor')}
+                </Text>
+              </View>
+            ) : (
+              <TouchableOpacity style={styles.primaryButton} onPress={onBookPress || onPress}>
+                <MaterialCommunityIcons name="video-outline" size={18} color={Colors.surface} />
+                <Text style={styles.primaryButtonText}>See Doctor Now</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
       </TouchableOpacity>
@@ -380,6 +407,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.sm,
+  },
+  waitingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.tertiaryLight,
+  },
+  waitingPillText: {
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
   },
   cancelButton: {
     paddingVertical: 8,

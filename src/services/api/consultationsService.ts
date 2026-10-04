@@ -106,10 +106,31 @@ export const consultationsService = {
 
 // ─── TanStack Query hooks ────────────────────────────────────────────────────
 
+const LIVE_POLL_MS = 15_000;
+const LIVE_WINDOW_BEFORE_MS = 15 * 60 * 1000;
+/** A doctor may start late; keep watching a scheduled visit this long after its start. */
+export const LATE_START_GRACE_MS = 60 * 60 * 1000;
+
+/**
+ * A video visit the patient may be waiting to join: scheduled and from 15 minutes
+ * before its start until an hour after. There are no push notifications yet, so
+ * the appointment list is re-polled while one exists.
+ */
+export const isAwaitingVideoStart = (
+  a: Pick<ApiAppointment, 'format' | 'status' | 'datetime'>,
+  now = Date.now(),
+): boolean => {
+  if (a.format !== 'video' || a.status !== 'scheduled' || !a.datetime) return false;
+  const start = new Date(a.datetime).getTime();
+  return now >= start - LIVE_WINDOW_BEFORE_MS && now <= start + LATE_START_GRACE_MS;
+};
+
 export const useAppointments = () =>
   useQuery({
     queryKey: ['appointments'],
     queryFn: () => consultationsService.getAppointments(),
+    refetchInterval: (query) =>
+      query.state.data?.some((a) => isAwaitingVideoStart(a)) ? LIVE_POLL_MS : false,
   });
 
 /** The caller's most recent completed consultation that has a doctor's summary, or null. */

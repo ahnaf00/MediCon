@@ -1,7 +1,11 @@
 import { useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { usePrescriptions } from '../services/api/prescriptionsService';
-import { ApiAppointment, useAppointments } from '../services/api/consultationsService';
+import {
+  ApiAppointment,
+  LATE_START_GRACE_MS,
+  useAppointments,
+} from '../services/api/consultationsService';
 import { getMealTiming } from '../utils/prescriptionFormatters';
 import type { Prescription, PrescriptionMedicine } from '../types/medical.types';
 
@@ -12,6 +16,7 @@ export interface DashboardAppointment {
   specialty: string;
   dateTime: string;
   format: 'video' | 'in-person';
+  status: ApiAppointment['status'];
   imageUrl?: string;
 }
 
@@ -46,7 +51,10 @@ export interface PatientDashboardData {
 }
 
 // 3. HELPERS
-/** The soonest visit still to happen: one in progress, or the earliest future scheduled one. */
+/**
+ * The soonest visit still to happen: one in progress, or the earliest scheduled one
+ * (kept for a while after its start time, since the doctor may start late).
+ */
 const pickNextAppointment = (appointments: ApiAppointment[]): DashboardAppointment | null => {
   const now = Date.now();
   const next = appointments
@@ -54,7 +62,8 @@ const pickNextAppointment = (appointments: ApiAppointment[]): DashboardAppointme
       (a) =>
         a.datetime &&
         (a.status === 'in_progress' ||
-          (a.status === 'scheduled' && new Date(a.datetime).getTime() >= now)),
+          (a.status === 'scheduled' &&
+            new Date(a.datetime).getTime() >= now - LATE_START_GRACE_MS)),
     )
     .sort((a, b) => new Date(a.datetime!).getTime() - new Date(b.datetime!).getTime())[0];
 
@@ -65,6 +74,7 @@ const pickNextAppointment = (appointments: ApiAppointment[]): DashboardAppointme
     specialty: next.doctor?.doctorProfile?.specialty ?? '',
     dateTime: next.datetime!,
     format: next.format,
+    status: next.status,
     imageUrl: next.doctor?.avatarUrl ?? undefined,
   };
 };

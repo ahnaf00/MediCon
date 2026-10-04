@@ -19,6 +19,8 @@ export const DoctorDashboard = (): React.JSX.Element => {
 
   const { data: doctorUser } = useQuery({ queryKey: ['me'], queryFn: authService.me });
   const { stats, isLoading: loading, isError } = useDoctorDashboard();
+  const awaitingVerification =
+    !!doctorUser?.doctorProfile && doctorUser.doctorProfile.verificationStatus !== 'verified';
 
   const fullName = doctorUser?.name || 'Loading...';
   const profileImage = doctorUser?.avatarUrl 
@@ -94,6 +96,20 @@ export const DoctorDashboard = (): React.JSX.Element => {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.primary} />
             <Text style={styles.loadingText}>Loading your dashboard...</Text>
+          </View>
+        ) : isError && awaitingVerification ? (
+          // The server refuses doctor features until an admin verifies the account.
+          <View style={styles.loadingContainer}>
+            <MaterialCommunityIcons name="shield-account-outline" size={40} color={Colors.warning} />
+            <Text style={[styles.loadingText, styles.pendingTitle]}>
+              {t('doctordashboard.pending_title', 'Your account is awaiting verification')}
+            </Text>
+            <Text style={styles.loadingText}>
+              {t(
+                'doctordashboard.pending_body',
+                'An administrator needs to verify your doctor account. Until then you can’t go online, see appointments or start consultations.',
+              )}
+            </Text>
           </View>
         ) : isError || !stats ? (
           <View style={styles.loadingContainer}>
@@ -304,6 +320,12 @@ const styles = StyleSheet.create({
   loadingText: {
     fontFamily: FontFamily.medium,
     color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  pendingTitle: {
+    fontFamily: FontFamily.bold,
+    color: Colors.textPrimary,
+    marginVertical: Spacing.sm,
   },
   profileCard: {
     flexDirection: 'row',

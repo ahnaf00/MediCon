@@ -124,7 +124,14 @@ export const PatientDashboard = (): React.JSX.Element => {
             />
           ) : (
             <>
-              <AppointmentCard appointment={nextAppointment} />
+              <AppointmentCard
+                appointment={nextAppointment}
+                onJoinPress={
+                  nextAppointment
+                    ? () => router.push(`/(app)/call/${nextAppointment.id}`)
+                    : undefined
+                }
+              />
               {recentConsultation && (
                 <RecentConsultationLink
                   appointment={recentConsultation}

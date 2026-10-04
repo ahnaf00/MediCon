@@ -6,6 +6,7 @@ import { Colors, Spacing, FontFamily, FontSize, Layout, BorderRadius } from '@th
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { patientsService, ApiPatient } from '../../../src/services/api/patientsService';
+import { useDoctorPresence } from '../../../src/services/api/presenceService';
 
 // Calculate age from date of birth
 const calculateAge = (dob: string | null | undefined): string => {
@@ -23,7 +24,8 @@ const calculateAge = (dob: string | null | undefined): string => {
 export default function PatientsScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
-  const [isOnline, setIsOnline] = useState(false);
+  // Same server-backed presence as the dashboard and Q&A inbox (was local-only state).
+  const presence = useDoctorPresence();
   const [patients, setPatients] = useState<ApiPatient[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -72,13 +74,19 @@ export default function PatientsScreen(): React.JSX.Element {
             <Text style={styles.onlineLabel}>{t('doctordashboard.online', 'Online')}</Text>
             <TouchableOpacity
               activeOpacity={0.8}
-              onPress={() => setIsOnline(!isOnline)}
+              onPress={presence.toggle}
+              disabled={!presence.canToggle}
               style={styles.toggleContainer}
               accessibilityRole="switch"
-              accessibilityState={{ checked: isOnline }}
+              accessibilityState={{ checked: presence.isOnline, disabled: !presence.canToggle }}
               accessibilityLabel="Online Status Toggle"
             >
-              <View style={[styles.toggleCircle, isOnline ? styles.toggleOn : styles.toggleOff]} />
+              <View
+                style={[
+                  styles.toggleCircle,
+                  presence.isOnline ? styles.toggleOn : styles.toggleOff,
+                ]}
+              />
             </TouchableOpacity>
           </View>
 

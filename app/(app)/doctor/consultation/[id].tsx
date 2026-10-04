@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   Image,
   ActivityIndicator,
 } from 'react-native';
@@ -303,15 +302,21 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
         >
           <MaterialCommunityIcons name="message-text-outline" size={24} color={Colors.primary} />
         </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => Alert.alert('Video Call', 'Video consultation feature coming soon.')}
-          accessibilityLabel="Start Video Consultation"
-          accessibilityRole="button"
-        >
-          <MaterialCommunityIcons name="video" size={20} color={Colors.surface} />
-          <Text style={styles.primaryButtonText}>Start Video Call</Text>
-        </TouchableOpacity>
+        {/* Only for a video visit that can still be joined; the call screen's Join starts it. */}
+        {appointment?.format === 'video' &&
+          (appointment.status === 'scheduled' || appointment.status === 'in_progress') && (
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => router.push(`/(app)/call/${appointment.id}`)}
+              accessibilityLabel="Start Video Consultation"
+              accessibilityRole="button"
+            >
+              <MaterialCommunityIcons name="video" size={20} color={Colors.surface} />
+              <Text style={styles.primaryButtonText}>
+                {appointment.status === 'in_progress' ? 'Rejoin Call' : 'Start Video Call'}
+              </Text>
+            </TouchableOpacity>
+          )}
       </View>
     </View>
   );

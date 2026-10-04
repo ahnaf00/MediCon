@@ -40,6 +40,9 @@ export interface ConsultationHistoryItem {
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
   /** True once the doctor has written a consultation summary (enables the AI chat). */
   hasSummary: boolean;
+  format: 'video' | 'in-person';
+  /** UTC ISO-8601 start, for the "doctor may start soon" polling window. */
+  startsAt: string | null;
   image?: ReturnType<(typeof doctorPlaceholders)[number]>;
 }
 
@@ -148,6 +151,8 @@ export const doctorsService = {
       date: appt.datetime ? toLocalDateString(new Date(appt.datetime)) : 'N/A',
       status: appt.status,
       hasSummary: appt.hasSummary === true,
+      format: appt.format,
+      startsAt: appt.datetime ?? null,
       image: appt.doctor?.avatarUrl ? { uri: appt.doctor.avatarUrl } : undefined,
     }));
   },

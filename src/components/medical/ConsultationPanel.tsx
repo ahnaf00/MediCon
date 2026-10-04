@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { useRouter } from 'expo-router';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '@theme';
 import {
   ApiAppointment,
@@ -43,6 +44,7 @@ const formatWhen = (iso: string | null): string => {
  */
 export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): React.JSX.Element => {
   const { t } = useTranslation();
+  const router = useRouter();
   const status = appointment?.status;
   const canWrite = status === 'in_progress' || status === 'completed';
 
@@ -69,6 +71,8 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
   }
 
   const busy = updateStatus.isPending || saveSummary.isPending;
+  const isVideo = appointment?.format === 'video';
+  const openCall = () => appointment && router.push(`/(app)/call/${appointment.id}`);
 
   if (!appointment) {
     return (
@@ -193,19 +197,43 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
               {t('consultation.mark_no_show', 'Mark no-show')}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.primaryBtn, busy && styles.disabled]}
-            onPress={() => changeStatus('in_progress')}
-            disabled={busy}
-            accessibilityRole="button"
-          >
-            {updateStatus.isPending ? (
-              <ActivityIndicator size="small" color={Colors.surface} />
-            ) : (
+          {isVideo ? (
+            // Joining the call fetches the first token, which starts the visit server-side.
+            <TouchableOpacity
+              style={[styles.primaryBtn, busy && styles.disabled]}
+              onPress={openCall}
+              disabled={busy}
+              accessibilityRole="button"
+            >
               <Text style={styles.primaryBtnText}>
-                {t('consultation.start', 'Start consultation')}
+                {t('consultation.start_video_call', 'Start video call')}
               </Text>
-            )}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.primaryBtn, busy && styles.disabled]}
+              onPress={() => changeStatus('in_progress')}
+              disabled={busy}
+              accessibilityRole="button"
+            >
+              {updateStatus.isPending ? (
+                <ActivityIndicator size="small" color={Colors.surface} />
+              ) : (
+                <Text style={styles.primaryBtnText}>
+                  {t('consultation.start', 'Start consultation')}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
+      {status === 'in_progress' && isVideo && (
+        <View style={styles.actionsRow}>
+          <TouchableOpacity style={styles.primaryBtn} onPress={openCall} accessibilityRole="button">
+            <Text style={styles.primaryBtnText}>
+              {t('consultation.rejoin_call', 'Rejoin call')}
+            </Text>
           </TouchableOpacity>
         </View>
       )}

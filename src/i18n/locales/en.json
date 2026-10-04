@@ -60,6 +60,8 @@
     "next_medication": "Next Medication"
   },
   "doctordashboard": {
+    "pending_title": "Your account is awaiting verification",
+    "pending_body": "An administrator needs to verify your doctor account. Until then you can’t go online, see appointments or start consultations.",
     "doctor_dashboard": "Doctor Dashboard",
     "welcome_back_dr_smith": "Welcome back, Dr. Smith",
     "pending": "Pending",
@@ -454,6 +456,8 @@
     "disconnected_body": "The connection to the call was lost.",
     "duplicate_body": "You joined this call from another device.",
     "rejoin": "Rejoin",
+    "join_video_call": "Join video call",
+    "waiting_for_doctor": "Waiting for doctor",
     "close": "Close"
   },
   "ask": {
@@ -547,6 +551,8 @@
     "status_cancelled": "Cancelled",
     "status_no_show": "No-show",
     "start": "Start consultation",
+    "start_video_call": "Start video call",
+    "rejoin_call": "Rejoin call",
     "closed": "This appointment is closed; no summary can be written.",
     "chief_complaint": "Chief complaint *",
     "chief_complaint_ph": "e.g. Chest pain after running",
