@@ -2,9 +2,13 @@ import { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClientProvider } from '@tanstack/react-query';
+import { registerGlobals } from '@livekit/react-native';
 import { queryClient } from '../src/services/queryClient';
 import { useOnboardingStore, useAuthStore } from '../src/store';
 import '../src/i18n';
+
+// WebRTC globals for livekit-client (video consultations). Must run once, before any Room is created.
+registerGlobals();
 
 const storesHydrated = () =>
   useAuthStore.persist.hasHydrated() && useOnboardingStore.persist.hasHydrated();

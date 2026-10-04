@@ -2,6 +2,12 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 const IS_DEV = process.env.APP_VARIANT === 'development' || process.env.NODE_ENV === 'development';
 
+// expo-image-picker and react-native-webrtc both write NSCameraUsageDescription; keep them identical.
+const CAMERA_PERMISSION =
+  'Allow $(PRODUCT_NAME) to use your camera to scan lab reports and for video consultations with your doctor.';
+const MICROPHONE_PERMISSION =
+  'Allow $(PRODUCT_NAME) to use your microphone so your doctor can hear you during video consultations.';
+
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: IS_DEV ? 'Medicon (Dev)' : 'Medicon',
@@ -54,7 +60,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       'expo-image-picker',
       {
         photosPermission: 'The app accesses your photos to let you share them with your doctors.',
-        cameraPermission: 'Allow $(PRODUCT_NAME) to access your camera to scan lab reports.',
+        cameraPermission: CAMERA_PERMISSION,
       },
     ],
     'expo-document-picker',
@@ -74,6 +80,18 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-image',
     'expo-secure-store',
     'expo-status-bar',
+    // Video consultations (Phase 6): LiveKit over WebRTC. Adds CAMERA / RECORD_AUDIO on Android.
+    [
+      '@config-plugins/react-native-webrtc',
+      {
+        cameraPermission: CAMERA_PERMISSION,
+        microphonePermission: MICROPHONE_PERMISSION,
+      },
+    ],
+    [
+      '@livekit/react-native-expo-plugin',
+      { android: { audioType: 'communication', enableScreenShareService: false } },
+    ],
   ],
   extra: {
     // Resolved per build profile from eas.json; read at runtime via src/constants/config.ts.

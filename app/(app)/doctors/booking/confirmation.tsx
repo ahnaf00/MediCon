@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 export default function BookingConfirmationScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { appointmentId, type, doctorId } = useLocalSearchParams<{
+  const { appointmentId, type } = useLocalSearchParams<{
     appointmentId: string;
     type: ConsultationType;
     doctorId: string;
@@ -18,7 +18,9 @@ export default function BookingConfirmationScreen() {
 
   const handleAction = () => {
     if (type === 'video') {
-      router.push(`/(app)/doctors/booking/video-call?id=${appointmentId}&doctorId=${doctorId}`);
+      // The call opens only once the doctor starts it; the appointment list is where to join.
+      router.dismissAll();
+      router.push('/(app)/doctors/history');
     } else {
       // Return to home or show directions
       router.dismissAll();
@@ -48,6 +50,11 @@ export default function BookingConfirmationScreen() {
             `has been successfully
                             scheduled.`}
         </Text>
+        {type === 'video' && (
+          <Text style={[styles.subtitle, styles.videoNote]}>
+            {t('confirmation.video_join_note')}
+          </Text>
+        )}
       </View>
 
       <View style={styles.footer}>
@@ -57,13 +64,13 @@ export default function BookingConfirmationScreen() {
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons
-            name={type === 'video' ? 'video' : 'map-marker'}
+            name={type === 'video' ? 'calendar-clock' : 'map-marker'}
             size={20}
             color={Colors.surface}
             style={styles.buttonIcon}
           />
           <Text style={styles.primaryButtonText}>
-            {type === 'video' ? 'Join Video Call' : 'View Directions'}
+            {type === 'video' ? t('confirmation.view_appointments') : 'View Directions'}
           </Text>
         </TouchableOpacity>
 
@@ -108,6 +115,10 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     lineHeight: FontSize.md * 1.5,
+  },
+  videoNote: {
+    marginTop: Spacing.md,
+    color: Colors.textPrimary,
   },
   footer: {
     padding: Spacing.xl,
