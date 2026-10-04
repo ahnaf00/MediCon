@@ -353,7 +353,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   todaySection: {
-    marginTop: Spacing.base,
+    marginTop: Spacing.xl,
+    paddingHorizontal: Spacing.lg,
     gap: Spacing.sm,
   },
   todayTitle: {

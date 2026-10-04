@@ -1,4 +1,6 @@
 // 1. IMPORTS
+import { useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService, DoctorDashboardStats } from '../services/api/dashboardService';
 import { ApiAppointment, useAppointments } from '../services/api/consultationsService';
@@ -79,6 +81,22 @@ export const useDoctorDashboard = (): DoctorDashboardData => {
     queryFn: dashboardService.getDoctorStats,
   });
   const appointmentsQuery = useAppointments();
+
+  // New bookings and status changes happen elsewhere; refresh on returning to the
+  // dashboard and once a minute while it is on screen (no push notifications yet).
+  const { refetch: refetchStats } = statsQuery;
+  const { refetch: refetchAppointments } = appointmentsQuery;
+  useFocusEffect(
+    useCallback(() => {
+      refetchStats();
+      refetchAppointments();
+      const timer = setInterval(() => {
+        refetchStats();
+        refetchAppointments();
+      }, 60_000);
+      return () => clearInterval(timer);
+    }, [refetchStats, refetchAppointments]),
+  );
 
   // "Today" is the device's calendar day, never the UTC day from toISOString().
   const today = toLocalDateString(new Date());
