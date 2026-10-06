@@ -580,6 +580,7 @@
     "notice": "Transcribed automatically from the call recording. It may contain mistakes, and times are approximate.",
     "doctor": "Doctor",
     "patient": "Patient",
+    "you": "You",
     "finishing": "Finishing the call recording… This can take a few minutes.",
     "transcribing": "Transcribing the call…",
     "summarizing": "Writing the AI draft summary…",
@@ -600,7 +601,9 @@
   "consultation_chat": {
     "your_doctor": "Your doctor",
     "greeting": "Hi! I can answer questions about your recent consultation with {{doctor}} on {{date}}, based on the notes your doctor recorded.",
+    "greeting_transcript": "Hi! I can answer questions about your recent consultation with {{doctor}} on {{date}}, based on your doctor’s notes and the call transcript they reviewed.",
     "stopped": "(stopped)",
+    "suggest_summary": "Summarise my consultation",
     "suggest_discussed": "What was discussed between us?",
     "suggest_medicines": "How should I take my medicines?",
     "suggest_urgent": "When should I seek urgent care?",

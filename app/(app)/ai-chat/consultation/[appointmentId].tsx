@@ -71,17 +71,26 @@ export default function ConsultationChatScreen() {
   const doctorName = details?.doctor.name ?? t('consultation_chat.your_doctor', 'Your doctor');
   const consultationDate = formatDate(details?.appointment.datetime);
   const available = details?.appointment.status === 'completed' && !!details.summary;
+  // The doctor saved the summary from the call transcript, so the patient may read it
+  // and the chat is grounded on it too (AppointmentPolicy::viewTranscript).
+  const hasTranscript = details?.summary?.source === 'transcript';
   const historyReady = !historySessionId || history.isSuccess || history.isError;
 
   // Seed once, when the consultation (and any earlier chat) has loaded.
   if (!seeded && details && available && historyReady) {
     setSeeded(true);
     const greeting = makeMessage(
-      t(
-        'consultation_chat.greeting',
-        'Hi! I can answer questions about your recent consultation with {{doctor}} on {{date}}, based on the notes your doctor recorded.',
-        { doctor: doctorName, date: consultationDate },
-      ),
+      hasTranscript
+        ? t(
+            'consultation_chat.greeting_transcript',
+            'Hi! I can answer questions about your recent consultation with {{doctor}} on {{date}}, based on your doctor’s notes and the call transcript they reviewed.',
+            { doctor: doctorName, date: consultationDate },
+          )
+        : t(
+            'consultation_chat.greeting',
+            'Hi! I can answer questions about your recent consultation with {{doctor}} on {{date}}, based on the notes your doctor recorded.',
+            { doctor: doctorName, date: consultationDate },
+          ),
       'system',
     );
     const previous = (history.data ?? []).map((m) => ({
@@ -157,6 +166,7 @@ export default function ConsultationChatScreen() {
   };
 
   const suggestions = [
+    t('consultation_chat.suggest_summary', 'Summarise my consultation'),
     t('consultation_chat.suggest_discussed', 'What was discussed between us?'),
     t('consultation_chat.suggest_medicines', 'How should I take my medicines?'),
     t('consultation_chat.suggest_urgent', 'When should I seek urgent care?'),
@@ -278,7 +288,18 @@ export default function ConsultationChatScreen() {
               </Text>
             )}
           </View>
-          <View style={styles.emptyRightSlot} />
+          {hasTranscript ? (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.push(`/(app)/ai-chat/consultation/transcript/${appointmentId}`)}
+              accessibilityRole="button"
+              accessibilityLabel={t('transcript.title', 'Call transcript')}
+            >
+              <MaterialCommunityIcons name="text-box-outline" size={24} color={Colors.primary} />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.emptyRightSlot} />
+          )}
         </View>
 
         {renderBody()}
