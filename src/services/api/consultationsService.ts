@@ -72,6 +72,11 @@ export interface ConsultationSummaryInput {
   findings?: string | null;
   advice?: string | null;
   red_flags?: string[];
+  /**
+   * `transcript` when the doctor started from the call transcript's AI draft
+   * (needs a ready transcript). Omitted on later edits to keep the saved source.
+   */
+  source?: 'doctor_note' | 'transcript';
 }
 
 /** The server's message from an API error (422 bodies arrive unwrapped, others as AxiosError). */

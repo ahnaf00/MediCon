@@ -6,7 +6,10 @@
 //                                            call starts the visit; the patient can
 //                                            only join once it is in progress.
 //   POST /appointments/{id}/call/end       → doctor: close the room, complete the visit
-//   GET  /consultations/{id}/transcript    → transcript status, segments, AI draft
+//   GET  /consultations/{id}/transcript    → transcript status, segments, AI draft (draft:
+//                                            doctor only; patient once the doctor saved
+//                                            a transcript-based summary)
+//   POST /consultations/{id}/transcript/retry → doctor: re-run a failed transcript
 // ─────────────────────────────────────────────────────────────────────────────
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
@@ -36,18 +39,27 @@ export interface TranscriptSegment {
   text: string;
 }
 
+/** AI draft of the doctor's summary. Fields say "Not discussed" when the call did not cover them. */
 export interface TranscriptDraftSummary {
-  chiefComplaint: string;
-  findings: string;
-  advice: string;
+  chiefComplaint: string | null;
+  findings: string | null;
+  advice: string | null;
   redFlags: string[];
 }
 
+export type TranscriptSkipReason = 'no_consent' | 'no_audio';
+
 export interface ConsultationTranscript {
+  appointmentId: number;
   status: TranscriptStatus;
+  /** Set when status is `skipped`. */
+  skipReason: TranscriptSkipReason | null;
+  /** A message safe to show; only when status is `failed`. */
   error: string | null;
+  /** bn | en | mixed */
   language: string | null;
-  draftSummary: TranscriptDraftSummary | null;
+  /** Doctor only (absent for the patient); null until ready, or when nothing was said. */
+  draftSummary?: TranscriptDraftSummary | null;
   segments: TranscriptSegment[];
   transcribedAt: string | null;
 }
@@ -82,6 +94,12 @@ export const callsService = {
   getTranscript: async (appointmentId: number | string): Promise<ConsultationTranscript> => {
     return (await axiosClient.get(
       `/consultations/${appointmentId}/transcript`,
+    )) as unknown as ConsultationTranscript;
+  },
+
+  retryTranscript: async (appointmentId: number | string): Promise<ConsultationTranscript> => {
+    return (await axiosClient.post(
+      `/consultations/${appointmentId}/transcript/retry`,
     )) as unknown as ConsultationTranscript;
   },
 };
@@ -144,3 +162,15 @@ export const useConsultationTranscript = (
       return status && TERMINAL_TRANSCRIPT_STATUSES.includes(status) ? false : 5000;
     },
   });
+
+/** Doctor re-runs a failed transcription or draft; polling resumes from the returned status. */
+export const useRetryTranscript = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ appointmentId }: { appointmentId: number | string }) =>
+      callsService.retryTranscript(appointmentId),
+    onSuccess: (data, { appointmentId }) => {
+      qc.setQueryData(['consultation-transcript', String(appointmentId)], data);
+    },
+  });
+};

@@ -20,6 +20,8 @@ import {
   useSaveConsultationSummary,
   useUpdateAppointmentStatus,
 } from '../../services/api/consultationsService';
+import type { TranscriptDraftSummary } from '../../services/api/callsService';
+import { TranscriptCard } from './TranscriptCard';
 
 // 2. TYPES
 export interface ConsultationPanelProps {
@@ -28,6 +30,11 @@ export interface ConsultationPanelProps {
 }
 
 const MAX_RED_FLAGS = 10;
+
+/** What the AI draft writes for a field the call did not cover (TranscriptSummaryService). */
+const NOT_DISCUSSED = 'Not discussed';
+const fromDraft = (value: string | null): string =>
+  value && value.trim() !== NOT_DISCUSSED ? value.trim() : '';
 
 const formatWhen = (iso: string | null): string => {
   if (!iso) return '';
@@ -58,6 +65,8 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
   const [redFlags, setRedFlags] = useState<string[]>([]);
   const [redFlagDraft, setRedFlagDraft] = useState('');
   const [loadedSummaryId, setLoadedSummaryId] = useState<number | null>(null);
+  // True once the doctor pre-filled the form from the call transcript's AI draft.
+  const [usedDraft, setUsedDraft] = useState(false);
 
   // Prefill once from a saved summary (adjusting state during render, not in an
   // effect), without clobbering the doctor's edits on later refetches.
@@ -73,6 +82,8 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
   const busy = updateStatus.isPending || saveSummary.isPending;
   const isVideo = appointment?.format === 'video';
   const openCall = () => appointment && router.push(`/(app)/call/${appointment.id}`);
+  const openTranscript = () =>
+    appointment && router.push(`/(app)/doctor/consultation/transcript/${appointment.id}`);
 
   if (!appointment) {
     return (
@@ -116,6 +127,34 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
     );
   };
 
+  const applyDraft = (draft: TranscriptDraftSummary) => {
+    const fill = () => {
+      setChiefComplaint(fromDraft(draft.chiefComplaint));
+      setFindings(fromDraft(draft.findings));
+      setAdvice(fromDraft(draft.advice));
+      setRedFlags(draft.redFlags.slice(0, MAX_RED_FLAGS));
+      setRedFlagDraft('');
+      setUsedDraft(true);
+    };
+
+    const hasInput =
+      [chiefComplaint, findings, advice, redFlagDraft].some((v) => v.trim() !== '') ||
+      redFlags.length > 0;
+    if (!hasInput) {
+      fill();
+      return;
+    }
+
+    Alert.alert(
+      t('transcript.replace_title', 'Replace the summary?'),
+      t('transcript.replace_body', 'The AI draft will replace what is in the form now.'),
+      [
+        { text: t('consultation.cancel', 'Cancel'), style: 'cancel' },
+        { text: t('transcript.replace', 'Replace'), style: 'destructive', onPress: fill },
+      ],
+    );
+  };
+
   const addRedFlag = () => {
     const value = redFlagDraft.trim();
     if (!value || redFlags.length >= MAX_RED_FLAGS) return;
@@ -143,10 +182,13 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
           findings: findings.trim() || null,
           advice: advice.trim() || null,
           red_flags: flags.slice(0, MAX_RED_FLAGS),
+          // Otherwise omitted, so an edit keeps the saved source.
+          ...(usedDraft ? { source: 'transcript' as const } : {}),
         },
       });
       setRedFlags(flags.slice(0, MAX_RED_FLAGS));
       setRedFlagDraft('');
+      setUsedDraft(false);
 
       if (status === 'in_progress') {
         await updateStatus.mutateAsync({ appointmentId: appointment.id, status: 'completed' });
@@ -244,12 +286,37 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
         </Text>
       )}
 
+      {/* Transcription starts once the visit is completed. */}
+      {isVideo && status === 'completed' && (
+        <TranscriptCard
+          appointmentId={appointment.id}
+          onUseDraft={applyDraft}
+          onViewTranscript={openTranscript}
+        />
+      )}
+
       {canWrite && consultation.isLoading && (
         <ActivityIndicator size="small" color={Colors.primary} style={styles.spaced} />
       )}
 
       {canWrite && !consultation.isLoading && (
         <View style={styles.form}>
+          {usedDraft && (
+            <View style={styles.draftBanner}>
+              <MaterialCommunityIcons name="robot-outline" size={18} color={Colors.primary} />
+              <Text style={styles.draftBannerText}>
+                {t(
+                  'transcript.draft_banner',
+                  'AI-generated draft from the call transcript — review and edit before saving. Fields the call did not cover are left blank.',
+                )}
+              </Text>
+            </View>
+          )}
+          {!usedDraft && savedSummary?.source === 'transcript' && (
+            <Text style={styles.muted}>
+              {t('transcript.based_on', 'This summary was started from the call transcript.')}
+            </Text>
+          )}
           <Text style={styles.label}>{t('consultation.chief_complaint', 'Chief complaint *')}</Text>
           <TextInput
             style={styles.input}
@@ -482,6 +549,21 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  draftBanner: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    backgroundColor: Colors.tertiaryLight,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    marginTop: Spacing.md,
+  },
+  draftBannerText: {
+    flex: 1,
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.sm,
+    color: Colors.textPrimary,
+    lineHeight: FontSize.sm * 1.5,
   },
   saveBtn: {
     marginTop: Spacing.lg,
