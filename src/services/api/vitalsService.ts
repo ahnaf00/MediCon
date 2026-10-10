@@ -4,11 +4,11 @@ import { ApiVital } from '../../types/medical.types';
 // ─── Payload Types ─────────────────────────────────────────────────────────────
 
 export interface StoreVitalPayload {
-  blood_pressure?: string | null;    // "120/80" format
-  pulse_rate?: number | null;         // BPM integer
-  glucose_level?: number | null;      // mmol/L float
-  oxygen_saturation?: number | null;  // % integer
-  logged_at?: string | null;          // ISO 8601
+  blood_pressure?: string | null; // "120/80" format
+  pulse_rate?: number | null; // BPM integer
+  glucose_level?: number | null; // mmol/L float
+  oxygen_saturation?: number | null; // % integer
+  logged_at?: string | null; // ISO 8601
 }
 
 // ─── Mapper ────────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ export const vitalsService = {
    */
   getVitals: async (): Promise<ApiVital[]> => {
     const res = (await axiosClient.get('/vitals')) as any;
-    const items = Array.isArray(res) ? res : res?.data ?? [];
+    const items = Array.isArray(res) ? res : (res?.data ?? []);
     return items.map(mapApiToVital);
   },
 

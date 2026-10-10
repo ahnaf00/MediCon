@@ -1,5 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Colors, Spacing, FontFamily, FontSize, Layout, BorderRadius } from '@theme';
@@ -43,14 +50,16 @@ export default function PatientsScreen(): React.JSX.Element {
       }
     };
     loadPatients();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // For this list, we'll just display all patients returned by the API
   const activePatients = patients;
-  
+
   // Since the backend doesn't return visitType, we'll just say 0 for now or hide the count.
-  const totalNew = 0; 
+  const totalNew = 0;
   const totalFollowUp = activePatients.length;
 
   const currentDate = new Date().toLocaleDateString('en-US', {
@@ -97,7 +106,11 @@ export default function PatientsScreen(): React.JSX.Element {
             accessibilityLabel="Settings"
             accessibilityRole="button"
           >
-            <MaterialCommunityIcons name="account-outline" size={27.6} color={Colors.textSecondary} />
+            <MaterialCommunityIcons
+              name="account-outline"
+              size={27.6}
+              color={Colors.textSecondary}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -126,9 +139,7 @@ export default function PatientsScreen(): React.JSX.Element {
                 <MaterialCommunityIcons name="account-group" size={22} color={Colors.primary} />
               </View>
               <View style={styles.overviewColText}>
-                <Text style={styles.overviewLabel}>
-                  Total Patients
-                </Text>
+                <Text style={styles.overviewLabel}>Total Patients</Text>
                 <Text style={styles.overviewValue}>{activePatients.length}</Text>
               </View>
             </View>
@@ -173,22 +184,19 @@ export default function PatientsScreen(): React.JSX.Element {
                       {item.name}
                     </Text>
                     <Text style={styles.cardPatientDetails}>
-                      {calculateAge(item.patientProfile?.dateOfBirth)} yrs • {item.patientProfile?.gender || 'Unknown'}
+                      {calculateAge(item.patientProfile?.dateOfBirth)} yrs •{' '}
+                      {item.patientProfile?.gender || 'Unknown'}
                     </Text>
                   </View>
-                  
+
                   <View style={[styles.visitBadge, styles.followUpBadge]}>
-                    <Text style={[styles.visitBadgeText, styles.followUpBadgeText]}>
-                      Patient
-                    </Text>
+                    <Text style={[styles.visitBadgeText, styles.followUpBadgeText]}>Patient</Text>
                   </View>
                 </View>
 
                 {/* Footer: Phone */}
                 <View style={styles.cardFooter}>
-                  <Text style={styles.cardReasonLabel}>
-                    Phone:
-                  </Text>
+                  <Text style={styles.cardReasonLabel}>Phone:</Text>
                   <Text style={styles.cardReasonText} numberOfLines={1}>
                     {item.phone || 'N/A'}
                   </Text>

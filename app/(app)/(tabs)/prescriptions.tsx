@@ -156,6 +156,8 @@ export default function PrescriptionsScreen(): React.JSX.Element {
 
   useEffect(() => {
     if (openActivePrescription === 'true') {
+      // Opening the quick view is the response to the route param, not derived state.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       handleOpenQuickView();
       router.setParams({ openActivePrescription: '' });
     }
@@ -312,7 +314,6 @@ export default function PrescriptionsScreen(): React.JSX.Element {
 
       {/* Two-tab switcher */}
       {renderTabs()}
-
 
       {/* List */}
       <View style={styles.listWrapper}>

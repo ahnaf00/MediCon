@@ -77,7 +77,7 @@ export const medicineAiService = {
     const res = (await axiosClient.get('/medicines/search', {
       params: { q: query },
     })) as any;
-    return Array.isArray(res) ? res : res?.data ?? [];
+    return Array.isArray(res) ? res : (res?.data ?? []);
   },
 
   /**

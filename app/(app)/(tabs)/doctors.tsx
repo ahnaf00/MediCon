@@ -65,7 +65,7 @@ export default function DoctorsScreen(): React.JSX.Element {
   );
 
   // Since we only want online doctors here:
-  const onlineDoctors = doctors.filter(doc => doc.isOnline);
+  const onlineDoctors = doctors.filter((doc) => doc.isOnline);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -191,9 +191,7 @@ export default function DoctorsScreen(): React.JSX.Element {
         {/* Online Doctors Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>
-              {t('doctors.online_doctors', 'Online Doctors')}
-            </Text>
+            <Text style={styles.sectionTitle}>{t('doctors.online_doctors', 'Online Doctors')}</Text>
             <TouchableOpacity
               onPress={() => router.push('/(app)/doctors/')}
               hitSlop={{ top: 8, right: 8, bottom: 8, left: 8 }}

@@ -18,14 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
-import {
-  Colors,
-  Spacing,
-  BorderRadius,
-  FontFamily,
-  FontSize,
-  Layout,
-} from '../../../src/theme';
+import { Colors, Spacing, BorderRadius, FontFamily, FontSize, Layout } from '../../../src/theme';
 import { vitalsService, StoreVitalPayload } from '../../../src/services/api/vitalsService';
 import { ApiVital } from '../../../src/types/medical.types';
 import { createAppError, AppError } from '../../../src/utils/errors';
@@ -148,18 +141,19 @@ const MetricCard = ({ config, latest }: MetricCardProps): React.JSX.Element => {
       </View>
       <Text style={cardStyles.label}>{config.label}</Text>
       <View style={cardStyles.valueRow}>
-        <Text style={[cardStyles.value, { color: displayVal ? Colors.textPrimary : Colors.textTertiary }]}>
+        <Text
+          style={[
+            cardStyles.value,
+            { color: displayVal ? Colors.textPrimary : Colors.textTertiary },
+          ]}
+        >
           {displayVal ?? '–'}
         </Text>
-        {displayVal && (
-          <Text style={cardStyles.unit}>{config.unit}</Text>
-        )}
+        {displayVal && <Text style={cardStyles.unit}>{config.unit}</Text>}
       </View>
       <View style={[cardStyles.statusBadge, { backgroundColor: statusColor + '20' }]}>
         <View style={[cardStyles.statusDot, { backgroundColor: statusColor }]} />
-        <Text style={[cardStyles.statusText, { color: statusColor }]}>
-          {STATUS_LABELS[status]}
-        </Text>
+        <Text style={[cardStyles.statusText, { color: statusColor }]}>{STATUS_LABELS[status]}</Text>
       </View>
     </View>
   );
@@ -235,13 +229,20 @@ interface HistoryRowProps {
 
 const HistoryRow = ({ vital }: HistoryRowProps): React.JSX.Element => {
   const date = new Date(vital.loggedAt || vital.createdAt);
-  const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const dateStr = date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
   const timeStr = date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 
   const metrics: { label: string; value: string | null }[] = [
     { label: 'BP', value: vital.bloodPressure },
     { label: 'HR', value: vital.pulseRate != null ? `${vital.pulseRate} BPM` : null },
-    { label: 'Glucose', value: vital.glucoseLevel != null ? `${vital.glucoseLevel.toFixed(1)} mmol/L` : null },
+    {
+      label: 'Glucose',
+      value: vital.glucoseLevel != null ? `${vital.glucoseLevel.toFixed(1)} mmol/L` : null,
+    },
     { label: 'SpO₂', value: vital.oxygenSaturation != null ? `${vital.oxygenSaturation}%` : null },
   ].filter((m) => m.value != null);
 
@@ -258,9 +259,7 @@ const HistoryRow = ({ vital }: HistoryRowProps): React.JSX.Element => {
             <Text style={histRowStyles.chipValue}>{m.value}</Text>
           </View>
         ))}
-        {metrics.length === 0 && (
-          <Text style={histRowStyles.noData}>No metrics recorded</Text>
-        )}
+        {metrics.length === 0 && <Text style={histRowStyles.noData}>No metrics recorded</Text>}
       </View>
     </View>
   );
@@ -483,7 +482,12 @@ export default function VitalsScreen(): React.JSX.Element {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>My Vitals</Text>
@@ -501,7 +505,13 @@ export default function VitalsScreen(): React.JSX.Element {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={Colors.primary}
+          />
+        }
       >
         {/* Latest reading section */}
         <Text style={styles.sectionTitle}>Latest Readings</Text>
@@ -539,7 +549,10 @@ export default function VitalsScreen(): React.JSX.Element {
         visible={modalVisible}
         animationType="slide"
         transparent
-        onRequestClose={() => { setModalVisible(false); resetForm(); }}
+        onRequestClose={() => {
+          setModalVisible(false);
+          resetForm();
+        }}
       >
         <KeyboardAvoidingView
           style={styles.modalOverlay}
@@ -550,7 +563,10 @@ export default function VitalsScreen(): React.JSX.Element {
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Log Vital Signs</Text>
               <TouchableOpacity
-                onPress={() => { setModalVisible(false); resetForm(); }}
+                onPress={() => {
+                  setModalVisible(false);
+                  resetForm();
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Close"
               >
@@ -645,7 +661,15 @@ interface FormFieldProps {
 }
 
 const FormField = ({
-  label, placeholder, value, onChangeText, keyboardType, icon, iconColor, unit, hint,
+  label,
+  placeholder,
+  value,
+  onChangeText,
+  keyboardType,
+  icon,
+  iconColor,
+  unit,
+  hint,
 }: FormFieldProps): React.JSX.Element => (
   <View style={formStyles.fieldGroup}>
     <View style={formStyles.fieldLabelRow}>
@@ -710,7 +734,11 @@ const formStyles = StyleSheet.create({
 function renderHeader(router: ReturnType<typeof useRouter>): React.JSX.Element {
   return (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={styles.backBtn}
+        accessibilityRole="button"
+      >
         <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
       </TouchableOpacity>
       <Text style={styles.headerTitle}>My Vitals</Text>

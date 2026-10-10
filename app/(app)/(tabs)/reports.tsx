@@ -225,7 +225,10 @@ export default function ReportsScreen() {
         />
         <Text style={styles.emptyTitle}>{t('reports.no_reports_yet', 'No Reports Yet')}</Text>
         <Text style={styles.emptySubtitle}>
-          {t('reports.upload_or_scan_your_lab_report', 'Upload or scan your lab reports and medical documents to get AI-powered interpretations and track your health metrics.')}
+          {t(
+            'reports.upload_or_scan_your_lab_report',
+            'Upload or scan your lab reports and medical documents to get AI-powered interpretations and track your health metrics.',
+          )}
         </Text>
         <TouchableOpacity
           style={styles.uploadBtn}

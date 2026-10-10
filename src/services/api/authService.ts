@@ -55,7 +55,7 @@ export const authService = {
         phone,
         otp,
       })) as any;
-      
+
       if (response.isNewUser) {
         return { isNewUser: true };
       }
@@ -67,8 +67,13 @@ export const authService = {
         user: response.user,
       };
     } catch (error: any) {
-      if (error?.status === 401 || error?.status === 422 || error?.status === 400 || error?.status === 429) {
-         throw error;
+      if (
+        error?.status === 401 ||
+        error?.status === 422 ||
+        error?.status === 400 ||
+        error?.status === 429
+      ) {
+        throw error;
       }
       throw error;
     }
@@ -107,7 +112,7 @@ export const authService = {
       user: response.user,
     };
   },
-  
+
   /**
    * Gets current user profile
    */
@@ -145,5 +150,5 @@ export const authService = {
     })) as any;
 
     return response.avatarUrl;
-  }
+  },
 };

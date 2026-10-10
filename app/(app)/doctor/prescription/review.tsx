@@ -70,9 +70,11 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
 
       await axiosClient.post('/prescriptions', payload);
 
-      Alert.alert('Prescription Sent', 'The prescription has been successfully saved and sent to the patient.', [
-        { text: 'Done', onPress: () => router.dismissAll() },
-      ]);
+      Alert.alert(
+        'Prescription Sent',
+        'The prescription has been successfully saved and sent to the patient.',
+        [{ text: 'Done', onPress: () => router.dismissAll() }],
+      );
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to issue prescription.');
     } finally {
@@ -103,15 +105,14 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
         <Text style={styles.headerTitle}>Review Prescription</Text>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* ── PATIENT INFO CARD ── */}
         <View style={styles.patientInfoCard}>
           <View style={styles.patientInfoLeft}>
             <Text style={styles.patientInfoName}>{params.patientName || 'Unknown Patient'}</Text>
-            <Text style={styles.patientInfoAge}>{params.patientAge ? `${params.patientAge} years old` : 'Age unknown'}</Text>
+            <Text style={styles.patientInfoAge}>
+              {params.patientAge ? `${params.patientAge} years old` : 'Age unknown'}
+            </Text>
           </View>
           {params.allergies ? (
             <View style={styles.allergyBox}>
@@ -127,13 +128,16 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
             <MaterialCommunityIcons name="bottle-tonic-plus" size={20} color={Colors.primary} />
             <Text style={styles.sectionTitle}>Prescribed Medicines</Text>
           </View>
-          
+
           {parsedMedicines.length === 0 ? (
             <Text style={styles.emptyText}>No medicines added.</Text>
           ) : (
             <View style={styles.cardList}>
               {parsedMedicines.map((med, idx) => (
-                <View key={med.id || idx} style={[styles.cardItem, idx < parsedMedicines.length - 1 && styles.cardBorder]}>
+                <View
+                  key={med.id || idx}
+                  style={[styles.cardItem, idx < parsedMedicines.length - 1 && styles.cardBorder]}
+                >
                   <View style={styles.medHeaderRow}>
                     <Text style={styles.medName}>
                       {med.name} <Text style={styles.medDosage}>({med.dosage})</Text>
@@ -141,16 +145,30 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
                   </View>
                   <View style={styles.medDetailsRow}>
                     <View style={styles.medDetailChip}>
-                      <MaterialCommunityIcons name="clock-outline" size={14} color={Colors.textSecondary} />
-                      <Text style={styles.medDetailText}>{med.frequencyPattern} ({med.interval})</Text>
+                      <MaterialCommunityIcons
+                        name="clock-outline"
+                        size={14}
+                        color={Colors.textSecondary}
+                      />
+                      <Text style={styles.medDetailText}>
+                        {med.frequencyPattern} ({med.interval})
+                      </Text>
                     </View>
                     <View style={styles.medDetailChip}>
-                      <MaterialCommunityIcons name="calendar-range" size={14} color={Colors.textSecondary} />
+                      <MaterialCommunityIcons
+                        name="calendar-range"
+                        size={14}
+                        color={Colors.textSecondary}
+                      />
                       <Text style={styles.medDetailText}>{med.duration}</Text>
                     </View>
                     {med.instructions ? (
                       <View style={styles.medDetailChip}>
-                        <MaterialCommunityIcons name={getInstructionIcon(med.instructions)} size={14} color={Colors.textSecondary} />
+                        <MaterialCommunityIcons
+                          name={getInstructionIcon(med.instructions)}
+                          size={14}
+                          color={Colors.textSecondary}
+                        />
                         <Text style={styles.medDetailText}>{med.instructions}</Text>
                       </View>
                     ) : null}
@@ -170,11 +188,17 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
             </View>
             <View style={styles.cardList}>
               {parsedTests.map((test, idx) => (
-                <View key={test.id || idx} style={[styles.cardItem, idx < parsedTests.length - 1 && styles.cardBorder]}>
+                <View
+                  key={test.id || idx}
+                  style={[styles.cardItem, idx < parsedTests.length - 1 && styles.cardBorder]}
+                >
                   <Text style={styles.medName}>{test.name}</Text>
                   {test.reason ? (
                     <Text style={styles.testReason}>
-                      <Text style={{ fontFamily: FontFamily.bold, fontWeight: 'bold' }}>Reason:</Text> {test.reason}
+                      <Text style={{ fontFamily: FontFamily.bold, fontWeight: 'bold' }}>
+                        Reason:
+                      </Text>{' '}
+                      {test.reason}
                     </Text>
                   ) : null}
                 </View>
@@ -200,7 +224,11 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
         {params.advice ? (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <MaterialCommunityIcons name="comment-text-outline" size={20} color={Colors.primary} />
+              <MaterialCommunityIcons
+                name="comment-text-outline"
+                size={20}
+                color={Colors.primary}
+              />
               <Text style={styles.sectionTitle}>Advice</Text>
             </View>
             <View style={styles.notesCard}>
@@ -225,9 +253,7 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
       </ScrollView>
 
       {/* ── FIXED BOTTOM ACTION BAR ── */}
-      <View
-        style={[styles.bottomActionBar, { paddingBottom: insets.bottom + Spacing.base }]}
-      >
+      <View style={[styles.bottomActionBar, { paddingBottom: insets.bottom + Spacing.base }]}>
         <TouchableOpacity
           style={[styles.submitButton, submitting && styles.submitButtonLoading]}
           onPress={handleSubmit}

@@ -78,7 +78,7 @@ export const doctorsService = {
     if (categoryId) {
       // Find category name by ID
       const categories = await doctorsService.getCategories();
-      const cat = categories.find(c => c.id === categoryId);
+      const cat = categories.find((c) => c.id === categoryId);
       if (cat) params.department = cat.name;
     }
     const doctors = (await axiosClient.get('/doctors', { params })) as any;
@@ -103,7 +103,9 @@ export const doctorsService = {
       experienceList: [],
       // Server-computed: the doctor's toggle is on and their app has checked in recently.
       isOnline: doc.doctorProfile?.isOnline === true,
-      image: doc.avatarUrl ? { uri: doc.avatarUrl } : doctorPlaceholders[index % doctorPlaceholders.length],
+      image: doc.avatarUrl
+        ? { uri: doc.avatarUrl }
+        : doctorPlaceholders[index % doctorPlaceholders.length],
     }));
   },
 
@@ -135,7 +137,9 @@ export const doctorsService = {
       licenseNumber: 'N/A',
       isOnline: doc.doctorProfile?.isOnline === true,
       about: doc.doctorProfile?.bio || '',
-      image: doc.avatarUrl ? { uri: doc.avatarUrl } : doctorPlaceholders[Number(id) % doctorPlaceholders.length || 0],
+      image: doc.avatarUrl
+        ? { uri: doc.avatarUrl }
+        : doctorPlaceholders[Number(id) % doctorPlaceholders.length || 0],
     };
   },
 

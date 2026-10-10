@@ -10,15 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import {
-  Colors,
-  Spacing,
-  FontFamily,
-  FontSize,
-  BorderRadius,
-  Layout,
-  Shadows,
-} from '@theme';
+import { Colors, Spacing, FontFamily, FontSize, BorderRadius, Layout, Shadows } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { prescriptionsService } from '../../../../src/services/api/prescriptionsService';
 import { Prescription } from '../../../../src/types/medical.types';
@@ -93,7 +85,9 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
       }
     };
     fetchPatient();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [id]);
 
   useEffect(() => {
@@ -105,7 +99,7 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
         // Since we don't have a specific endpoint for patient's active meds,
         // we'll try to find the latest prescription for this patient (optional feature)
         if (isMounted) {
-          const patientPrescriptions = data.filter(p => p.patient?.id.toString() === id);
+          const patientPrescriptions = data.filter((p) => p.patient?.id.toString() === id);
           if (patientPrescriptions.length > 0) {
             setActivePrescription(patientPrescriptions[0]);
           }
@@ -158,7 +152,7 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
   const bloodGroup = patient.patientProfile?.bloodGroup || 'N/A';
   // Mock fields that don't exist in UserResource yet
   const allergies: string[] = [];
-  const reason = "General Consultation";
+  const reason = 'General Consultation';
 
   const bottomMargin = Math.max(insets.bottom, Spacing.base);
 
@@ -190,7 +184,7 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
               <Text style={styles.bannerName}>{patientName}</Text>
             </View>
           </View>
-          
+
           <View style={styles.bannerStatsRow}>
             <View style={styles.bannerStatCol}>
               <Text style={styles.bannerStatLabel}>Age</Text>
@@ -240,7 +234,7 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
         <View style={styles.section}>
           <View style={styles.infoCard}>
             <Text style={styles.cardInnerTitle}>Current Medications</Text>
-            
+
             {loadingPrescription ? (
               <ActivityIndicator
                 size="small"
@@ -272,13 +266,10 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
             )}
           </View>
         </View>
-
       </ScrollView>
 
       {/* ── FIXED BOTTOM ACTION BAR ── */}
-      <View
-        style={[styles.bottomActionBar, { paddingBottom: insets.bottom + Spacing.base }]}
-      >
+      <View style={[styles.bottomActionBar, { paddingBottom: insets.bottom + Spacing.base }]}>
         <TouchableOpacity
           style={styles.circleBtn}
           onPress={() =>
@@ -293,10 +284,12 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.circleBtn}
-          onPress={() => router.push({
-            pathname: `/(app)/doctor/consultation/chat/[id]`,
-            params: { id, patientName: patientName }
-          })}
+          onPress={() =>
+            router.push({
+              pathname: `/(app)/doctor/consultation/chat/[id]`,
+              params: { id, patientName: patientName },
+            })
+          }
           accessibilityLabel="Chat with Patient"
           accessibilityRole="button"
         >

@@ -54,7 +54,11 @@ export default function AiChatScreen() {
     if (rawSessionId === 'new' || !backendSessionId) {
       // New chat — clear any stale local messages and show welcome
       clearHistory(storeKey);
-      addMessage(storeKey, 'Hello! I\'m MediCon AI, your health assistant. Ask me anything about your symptoms, medications, or general health questions. Remember, I\'m not a substitute for a real doctor! 😊', 'system');
+      addMessage(
+        storeKey,
+        "Hello! I'm MediCon AI, your health assistant. Ask me anything about your symptoms, medications, or general health questions. Remember, I'm not a substitute for a real doctor! 😊",
+        'system',
+      );
       return;
     }
 
@@ -72,15 +76,21 @@ export default function AiChatScreen() {
         }
       } catch {
         if (isMounted) {
-          addMessage(storeKey, 'Failed to load chat history. You can still send new messages.', 'system');
+          addMessage(
+            storeKey,
+            'Failed to load chat history. You can still send new messages.',
+            'system',
+          );
         }
       } finally {
         if (isMounted) setLoadingHistory(false);
       }
     })();
 
-    return () => { isMounted = false; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ─── Keyboard tracking ─────────────────────────────────────────────────────
@@ -95,7 +105,10 @@ export default function AiChatScreen() {
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
       () => setKeyboardVisible(false),
     );
-    return () => { showSub.remove(); hideSub.remove(); };
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   // ─── Send message ───────────────────────────────────────────────────────────
@@ -234,9 +247,7 @@ export default function AiChatScreen() {
                   <MaterialCommunityIcons
                     name="arrow-up"
                     size={20}
-                    color={
-                      !inputText.trim() ? Colors.textTertiary : Colors.surface
-                    }
+                    color={!inputText.trim() ? Colors.textTertiary : Colors.surface}
                   />
                 )}
               </TouchableOpacity>

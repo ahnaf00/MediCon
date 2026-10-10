@@ -1,5 +1,13 @@
 import React from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Image, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ActivityIndicator,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, BorderRadius, FontFamily, FontSize } from '@theme';
@@ -24,8 +32,8 @@ export const DoctorDashboard = (): React.JSX.Element => {
     !!doctorUser?.doctorProfile && doctorUser.doctorProfile.verificationStatus !== 'verified';
 
   const fullName = doctorUser?.name || 'Loading...';
-  const profileImage = doctorUser?.avatarUrl 
-    ? { uri: doctorUser.avatarUrl } 
+  const profileImage = doctorUser?.avatarUrl
+    ? { uri: doctorUser.avatarUrl }
     : require('../../assets/images/doctors/doctorPlaceholder1.png');
 
   const handleSwitchRole = () => {
@@ -41,7 +49,6 @@ export const DoctorDashboard = (): React.JSX.Element => {
           <Text style={styles.greeting}>MediCon</Text>
         </View>
         <View style={styles.headerActions}>
-          
           <View style={styles.toggleWrapper}>
             <Text style={styles.onlineLabel}>{t('doctordashboard.online', 'Online')}</Text>
             <TouchableOpacity
@@ -69,7 +76,11 @@ export const DoctorDashboard = (): React.JSX.Element => {
             accessibilityLabel="Settings"
             accessibilityRole="button"
           >
-            <MaterialCommunityIcons name="account-outline" size={27.6} color={Colors.textSecondary} />
+            <MaterialCommunityIcons
+              name="account-outline"
+              size={27.6}
+              color={Colors.textSecondary}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -84,7 +95,7 @@ export const DoctorDashboard = (): React.JSX.Element => {
             <Text style={styles.profileBmdc}>
               {doctorUser?.doctorProfile?.qualification || 'No Qualifications Listed'}
             </Text>
-            
+
             <TouchableOpacity style={styles.switchRoleButton} onPress={handleSwitchRole}>
               <Text style={styles.switchRoleText}>
                 {t('doctordashboard.switch_to_patient', 'Switch to your Patient Profile')}
@@ -130,7 +141,11 @@ export const DoctorDashboard = (): React.JSX.Element => {
         ) : isError && awaitingVerification ? (
           // The server refuses doctor features until an admin verifies the account.
           <View style={styles.loadingContainer}>
-            <MaterialCommunityIcons name="shield-account-outline" size={40} color={Colors.warning} />
+            <MaterialCommunityIcons
+              name="shield-account-outline"
+              size={40}
+              color={Colors.warning}
+            />
             <Text style={[styles.loadingText, styles.pendingTitle]}>
               {t('doctordashboard.pending_title', 'Your account is awaiting verification')}
             </Text>
@@ -194,13 +209,17 @@ export const DoctorDashboard = (): React.JSX.Element => {
                   <Text style={styles.detailLabel}>
                     {t('doctordashboard.avg_all_time', 'Avg (All-time)')}
                   </Text>
-                  <Text style={styles.detailValue}>{stats?.time_metrics.avg_all_time_mins || 0} mins</Text>
+                  <Text style={styles.detailValue}>
+                    {stats?.time_metrics.avg_all_time_mins || 0} mins
+                  </Text>
                 </View>
                 <View style={styles.detailBlock}>
                   <Text style={styles.detailLabel}>
                     {t('doctordashboard.avg_this_month', 'Avg (This month)')}
                   </Text>
-                  <Text style={styles.detailValue}>{stats?.time_metrics.avg_this_month_mins || 0} mins</Text>
+                  <Text style={styles.detailValue}>
+                    {stats?.time_metrics.avg_this_month_mins || 0} mins
+                  </Text>
                 </View>
               </View>
 
@@ -209,7 +228,11 @@ export const DoctorDashboard = (): React.JSX.Element => {
               {/* Payments Overview */}
               <View style={styles.detailCardHeader}>
                 <View style={styles.iconSquare}>
-                  <MaterialCommunityIcons name="credit-card-outline" size={24} color={Colors.primary} />
+                  <MaterialCommunityIcons
+                    name="credit-card-outline"
+                    size={24}
+                    color={Colors.primary}
+                  />
                 </View>
                 <Text style={styles.detailCardTitle}>
                   {t('doctordashboard.payments_overview', 'Payments Overview')}
@@ -250,25 +273,29 @@ export const DoctorDashboard = (): React.JSX.Element => {
                 </View>
                 <Text style={styles.detailCardTitle}>Quick Actions</Text>
               </View>
-              
+
               <View style={{ flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md }}>
-                <TouchableOpacity 
-                  style={[styles.primaryButton, { flex: 1, paddingVertical: Spacing.md }]} 
+                <TouchableOpacity
+                  style={[styles.primaryButton, { flex: 1, paddingVertical: Spacing.md }]}
                   onPress={() => {
                     // Navigate to patients tab and tell them to pick a patient
                     router.push('/(app)/(tabs)/patients');
                   }}
                 >
                   <MaterialCommunityIcons name="prescription" size={20} color={Colors.surface} />
-                  <Text style={[styles.primaryButtonText, { marginTop: Spacing.xs }]}>Write Prescription</Text>
+                  <Text style={[styles.primaryButtonText, { marginTop: Spacing.xs }]}>
+                    Write Prescription
+                  </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity 
-                  style={[styles.outlineButton, { flex: 1, paddingVertical: Spacing.md }]} 
+                <TouchableOpacity
+                  style={[styles.outlineButton, { flex: 1, paddingVertical: Spacing.md }]}
                   onPress={() => router.push('/(app)/(tabs)/schedule')}
                 >
                   <MaterialCommunityIcons name="calendar-clock" size={20} color={Colors.primary} />
-                  <Text style={[styles.outlineButtonText, { marginTop: Spacing.xs }]}>My Schedule</Text>
+                  <Text style={[styles.outlineButtonText, { marginTop: Spacing.xs }]}>
+                    My Schedule
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>

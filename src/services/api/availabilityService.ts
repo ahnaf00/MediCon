@@ -31,18 +31,23 @@ export const availabilityService = {
     const params = new URLSearchParams();
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
-    
+
     const url = `/doctor/exceptions${params.toString() ? '?' + params.toString() : ''}`;
     const res = await axiosClient.get(url);
     return res as unknown as ExceptionsResponse;
   },
 
-  toggleException: async (date: string, time: string, type: ExceptionType, action: 'add' | 'remove'): Promise<void> => {
+  toggleException: async (
+    date: string,
+    time: string,
+    type: ExceptionType,
+    action: 'add' | 'remove',
+  ): Promise<void> => {
     await axiosClient.post('/doctor/exceptions/toggle', {
       date,
       time,
       type,
-      action
+      action,
     });
-  }
+  },
 };

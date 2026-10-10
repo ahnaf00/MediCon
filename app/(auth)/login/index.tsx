@@ -43,11 +43,12 @@ export default function LoginScreen(): React.JSX.Element {
     },
     onError: (e: any) => {
       setError(e.message ?? 'Failed to send OTP');
-    }
+    },
   });
 
   const verifyOtpMutation = useMutation({
-    mutationFn: ({ phone, otp }: { phone: string; otp: string }) => authService.verifyOtp(phone, otp),
+    mutationFn: ({ phone, otp }: { phone: string; otp: string }) =>
+      authService.verifyOtp(phone, otp),
     onSuccess: (result, variables) => {
       setError(undefined);
       if (result.isNewUser) {
@@ -75,7 +76,7 @@ export default function LoginScreen(): React.JSX.Element {
       } else {
         setError(e.message ?? 'Invalid OTP');
       }
-    }
+    },
   });
 
   const handleSendOtp = () => {
@@ -91,7 +92,7 @@ export default function LoginScreen(): React.JSX.Element {
     sendOtpMutation.mutate(phone, {
       onSuccess: () => {
         Alert.alert('OTP Resent', `A new code has been sent to ${phone}.`);
-      }
+      },
     });
   };
 

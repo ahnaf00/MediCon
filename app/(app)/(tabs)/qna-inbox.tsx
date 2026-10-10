@@ -1,5 +1,5 @@
 // 1. IMPORTS
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -54,12 +54,7 @@ interface DoctorQuestionCardProps {
   onEdit: () => void;
 }
 
-const DoctorQuestionCard = ({
-  question,
-  isAnswered,
-  onReply,
-  onEdit,
-}: DoctorQuestionCardProps) => {
+const DoctorQuestionCard = ({ question, isAnswered, onReply, onEdit }: DoctorQuestionCardProps) => {
   const [menuVisible, setMenuVisible] = useState(false);
   const [menuCoords, setMenuCoords] = useState({ x: 0, y: 0 });
 
@@ -133,13 +128,22 @@ const DoctorQuestionCard = ({
       </View>
 
       {/* Menu Modal */}
-      <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+      <Modal
+        visible={menuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMenuVisible(false)}
+      >
         <TouchableWithoutFeedback onPress={() => setMenuVisible(false)}>
           <View style={styles.menuOverlay}>
             <View style={[styles.menuContainer, { top: menuCoords.y, left: menuCoords.x }]}>
               {/* Doctors can revise their own answer; deleting a patient's question is not offered. */}
               <TouchableOpacity style={styles.menuItem} onPress={() => handleAction(onEdit)}>
-                <MaterialCommunityIcons name="pencil-outline" size={20} color={Colors.textPrimary} />
+                <MaterialCommunityIcons
+                  name="pencil-outline"
+                  size={20}
+                  color={Colors.textPrimary}
+                />
                 <Text style={styles.menuItemText}>Edit</Text>
               </TouchableOpacity>
             </View>
@@ -169,21 +173,21 @@ export default function QnaInboxScreen(): React.JSX.Element {
   const [activeQuestion, setActiveQuestion] = useState<Question | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editingAnswerId, setEditingAnswerId] = useState<string | null>(null);
-  
+
   const [replyText, setReplyText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [questionExpanded, setQuestionExpanded] = useState(false);
-  const sheetAnim = useRef(new Animated.Value(0)).current;
+  const [sheetAnim] = useState(() => new Animated.Value(0));
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
 
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setKeyboardVisible(true)
+      () => setKeyboardVisible(true),
     );
     const hideSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setKeyboardVisible(false)
+      () => setKeyboardVisible(false),
     );
     return () => {
       showSub.remove();
@@ -203,9 +207,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
         const data = await qnaService.getDoctorInbox(doc.department);
         const filteredData = data.map((q) => ({
           ...q,
-          answers: q.answers.filter(
-            (a) => a.doctorId === userId || a.doctorId === doc!.fullName,
-          ),
+          answers: q.answers.filter((a) => a.doctorId === userId || a.doctorId === doc!.fullName),
         }));
         setQuestions(filteredData);
       } else {
@@ -231,7 +233,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
     setActiveQuestion(question);
     setReplyText('');
     setQuestionExpanded(false);
-    
+
     Animated.spring(sheetAnim, {
       toValue: 1,
       useNativeDriver: true,
@@ -249,7 +251,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
     setActiveQuestion(question);
     setReplyText(answer.content);
     setQuestionExpanded(false);
-    
+
     Animated.spring(sheetAnim, {
       toValue: 1,
       useNativeDriver: true,
@@ -289,14 +291,14 @@ export default function QnaInboxScreen(): React.JSX.Element {
           activeQuestion.id,
           editingAnswerId,
           doc ? doc.fullName : userId, // qnaService answers use doctor name often in mock data
-          replyText.trim()
+          replyText.trim(),
         );
         setQuestions((prev) =>
           prev.map((q) => {
             if (q.id === activeQuestion.id) {
               return {
                 ...q,
-                answers: q.answers.map(a => a.id === updatedAnswer.id ? updatedAnswer : a)
+                answers: q.answers.map((a) => (a.id === updatedAnswer.id ? updatedAnswer : a)),
               };
             }
             return q;
@@ -332,7 +334,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
   });
 
   const currentList = questions.filter((q) =>
-    activeTab === 'unanswered' ? q.answers.length === 0 : q.answers.length > 0
+    activeTab === 'unanswered' ? q.answers.length === 0 : q.answers.length > 0,
   );
 
   // ── Render Helpers ──────────────────────────────────────────────────────────
@@ -433,7 +435,10 @@ export default function QnaInboxScreen(): React.JSX.Element {
             </View>
           ) : (
             currentList.map((item, index) => (
-              <View key={item.id} style={index < currentList.length - 1 ? styles.questionGap : undefined}>
+              <View
+                key={item.id}
+                style={index < currentList.length - 1 ? styles.questionGap : undefined}
+              >
                 <DoctorQuestionCard
                   question={item}
                   isAnswered={activeTab === 'answered'}
@@ -467,7 +472,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
               styles.sheet,
               {
                 maxHeight: SHEET_MAX_HEIGHT,
-                paddingBottom: isKeyboardVisible ? Spacing.base : (Spacing.base + insets.bottom),
+                paddingBottom: isKeyboardVisible ? Spacing.base : Spacing.base + insets.bottom,
                 transform: [{ translateY: sheetTranslateY }],
               },
             ]}
@@ -484,14 +489,14 @@ export default function QnaInboxScreen(): React.JSX.Element {
               {activeQuestion && (
                 <View style={styles.sheetQuestion}>
                   <Text style={styles.sheetPatientNameTop}>{getPatientName(activeQuestion)}</Text>
-                  
+
                   <Text
                     style={styles.sheetQuestionText}
                     numberOfLines={questionExpanded ? undefined : 3}
                   >
                     {activeQuestion.content}
                   </Text>
-                  
+
                   {!questionExpanded && activeQuestion.content.length > 100 && (
                     <TouchableOpacity onPress={handleExpandQuestion} style={styles.expandToggle}>
                       <Text style={styles.expandToggleText}>Read full question ▼</Text>
@@ -537,8 +542,14 @@ export default function QnaInboxScreen(): React.JSX.Element {
                   <ActivityIndicator size="small" color={Colors.surface} />
                 ) : (
                   <>
-                    <MaterialCommunityIcons name={isEditing ? "check" : "send"} size={16} color={Colors.surface} />
-                    <Text style={styles.submitBtnText}>{isEditing ? 'Save Edits' : 'Submit Answer'}</Text>
+                    <MaterialCommunityIcons
+                      name={isEditing ? 'check' : 'send'}
+                      size={16}
+                      color={Colors.surface}
+                    />
+                    <Text style={styles.submitBtnText}>
+                      {isEditing ? 'Save Edits' : 'Submit Answer'}
+                    </Text>
                   </>
                 )}
               </TouchableOpacity>
@@ -626,7 +637,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xxl,
     color: Colors.primary,
   },
-  
+
   // ── Tab Bar ─────────────────────────────────────────────────────────────────
   tabBar: {
     flexDirection: 'row',
@@ -794,7 +805,7 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.success,
   },
-  
+
   // ── Menu Modal ─────────────────────────────────────────────────────────────
   menuOverlay: {
     flex: 1,
@@ -853,14 +864,14 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   sheetScrollArea: {
-    flexGrow: 0, 
+    flexGrow: 0,
   },
   sheetScrollContent: {
     paddingHorizontal: Spacing.base,
     paddingBottom: Spacing.md,
   },
   sheetQuestion: {
-    backgroundColor: Colors.primary + '0D', 
+    backgroundColor: Colors.primary + '0D',
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     marginBottom: Spacing.lg,

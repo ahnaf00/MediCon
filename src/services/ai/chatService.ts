@@ -52,7 +52,7 @@ class ChatService {
     const res = (await axiosClient.get('/ai/sessions')) as any;
     // axiosClient unwraps Laravel's top-level .data; Laravel pagination wraps items
     // in a second .data. Handle both shapes gracefully.
-    return Array.isArray(res) ? res : res?.data ?? [];
+    return Array.isArray(res) ? res : (res?.data ?? []);
   }
 
   /**
@@ -61,7 +61,7 @@ class ChatService {
    */
   async getMessages(sessionId: number): Promise<AiChatMessage[]> {
     const res = (await axiosClient.get(`/ai/sessions/${sessionId}/messages`)) as any;
-    return Array.isArray(res) ? res : res?.data ?? [];
+    return Array.isArray(res) ? res : (res?.data ?? []);
   }
 }
 

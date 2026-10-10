@@ -186,7 +186,7 @@ export interface ApiVital {
   pulseRate: number | null;
   glucoseLevel: number | null;
   oxygenSaturation: number | null;
-  loggedAt: string;             // ISO 8601
+  loggedAt: string; // ISO 8601
   createdAt: string;
 }
 

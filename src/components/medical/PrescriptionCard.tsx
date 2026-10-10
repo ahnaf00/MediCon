@@ -20,9 +20,9 @@ export interface PrescriptionCardProps {
 // 3. STATUS BADGE
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  active:    { label: 'Active',    color: Colors.success,  bg: '#e6f9f0' },
-  expired:   { label: 'Expired',   color: Colors.textTertiary, bg: Colors.tertiary },
-  cancelled: { label: 'Cancelled', color: Colors.danger,   bg: '#fde8e8' },
+  active: { label: 'Active', color: Colors.success, bg: '#e6f9f0' },
+  expired: { label: 'Expired', color: Colors.textTertiary, bg: Colors.tertiary },
+  cancelled: { label: 'Cancelled', color: Colors.danger, bg: '#fde8e8' },
 };
 
 // 4. COMPONENT
@@ -44,8 +44,8 @@ export function PrescriptionCard({
   const statusCfg = STATUS_CONFIG[statusKey] ?? STATUS_CONFIG.active;
 
   const doctorName = prescription.doctorName ?? prescription.doctor?.name ?? 'Doctor';
-  const diagnosis  = prescription.diagnosisSummary ?? 'Prescription';
-  const medCount   = prescription.medicines?.length ?? 0;
+  const diagnosis = prescription.diagnosisSummary ?? 'Prescription';
+  const medCount = prescription.medicines?.length ?? 0;
 
   return (
     <TouchableOpacity

@@ -61,27 +61,26 @@ export default function HospitalsScreen() {
       {/* List */}
       {isLoading ? (
         <View style={styles.centerContainer}>
-           <ActivityIndicator size="large" color={Colors.primary} />
+          <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       ) : (
         <FlatList
           data={hospitals}
           keyExtractor={(item) => item.id}
-          contentContainerStyle={[styles.listContainer, { paddingBottom: insets.bottom + Spacing.xl }]}
+          contentContainerStyle={[
+            styles.listContainer,
+            { paddingBottom: insets.bottom + Spacing.xl },
+          ]}
           ItemSeparatorComponent={() => <View style={{ height: Spacing.md }} />}
           ListEmptyComponent={
             search ? (
               <Text style={styles.emptyText}>
-                {t('hospitals.no_results', { query: search }) ||
-                  `No hospitals match "${search}".`}
+                {t('hospitals.no_results', { query: search }) || `No hospitals match "${search}".`}
               </Text>
             ) : null
           }
           renderItem={({ item }) => (
-            <HospitalCard
-              hospital={item}
-              onPress={() => handleHospitalPress(item)}
-            />
+            <HospitalCard hospital={item} onPress={() => handleHospitalPress(item)} />
           )}
         />
       )}

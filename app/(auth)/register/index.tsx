@@ -67,7 +67,7 @@ export default function RegisterScreen(): React.JSX.Element {
       } else {
         Alert.alert('Registration Failed', e.message ?? 'An unknown error occurred.');
       }
-    }
+    },
   });
 
   const handlePatientSubmit = (data: PatientFormData) => {
@@ -146,9 +146,15 @@ export default function RegisterScreen(): React.JSX.Element {
       </Text>
 
       {role === 'patient' ? (
-        <PatientRegistrationForm onSubmit={handlePatientSubmit} isLoading={registerMutation.isPending} />
+        <PatientRegistrationForm
+          onSubmit={handlePatientSubmit}
+          isLoading={registerMutation.isPending}
+        />
       ) : (
-        <DoctorRegistrationForm onSubmit={handleDoctorSubmit} isLoading={registerMutation.isPending} />
+        <DoctorRegistrationForm
+          onSubmit={handleDoctorSubmit}
+          isLoading={registerMutation.isPending}
+        />
       )}
     </View>
   );

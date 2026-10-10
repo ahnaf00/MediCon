@@ -57,8 +57,12 @@ export function ProfileSettings() {
           if (user.doctorProfile) {
             setSpecialty(user.doctorProfile.specialty || '');
             setQualification(user.doctorProfile.qualification || '');
-            setExperienceYears(user.doctorProfile.experienceYears ? String(user.doctorProfile.experienceYears) : '');
-            setConsultationFee(user.doctorProfile.consultationFee ? String(user.doctorProfile.consultationFee) : '');
+            setExperienceYears(
+              user.doctorProfile.experienceYears ? String(user.doctorProfile.experienceYears) : '',
+            );
+            setConsultationFee(
+              user.doctorProfile.consultationFee ? String(user.doctorProfile.consultationFee) : '',
+            );
             setBio(user.doctorProfile.bio || '');
           }
         }
@@ -69,7 +73,9 @@ export function ProfileSettings() {
       }
     })();
 
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleSave = async () => {
@@ -127,7 +133,7 @@ export function ProfileSettings() {
 
         {/* Basic Information */}
         <Text style={styles.sectionHeader}>Basic Information</Text>
-        
+
         <Input
           label={t('profile.fullName') || 'Full Name'}
           value={name}
@@ -153,8 +159,10 @@ export function ProfileSettings() {
         {/* Role-Specific Fields: Patient */}
         {role === 'patient' && (
           <>
-            <Text style={[styles.sectionHeader, { marginTop: Spacing.sm }]}>Medical & Personal Info</Text>
-            
+            <Text style={[styles.sectionHeader, { marginTop: Spacing.sm }]}>
+              Medical & Personal Info
+            </Text>
+
             <Input
               label="Date of Birth (YYYY-MM-DD)"
               value={dateOfBirth}
@@ -196,8 +204,10 @@ export function ProfileSettings() {
         {/* Role-Specific Fields: Doctor */}
         {role === 'doctor' && (
           <>
-            <Text style={[styles.sectionHeader, { marginTop: Spacing.sm }]}>Professional Details</Text>
-            
+            <Text style={[styles.sectionHeader, { marginTop: Spacing.sm }]}>
+              Professional Details
+            </Text>
+
             <Input
               label="Specialty / Department"
               value={specialty}
@@ -238,11 +248,7 @@ export function ProfileSettings() {
           </>
         )}
 
-        <Button
-          label={t('common.save') || 'Save Changes'}
-          onPress={handleSave}
-          loading={saving}
-        />
+        <Button label={t('common.save') || 'Save Changes'} onPress={handleSave} loading={saving} />
       </View>
     </ScrollView>
   );

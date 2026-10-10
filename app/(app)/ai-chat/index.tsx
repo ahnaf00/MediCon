@@ -100,7 +100,9 @@ export default function AiChatSessionsScreen() {
           <Text style={styles.sessionPreview} numberOfLines={2}>
             {preview}
           </Text>
-          <Text style={styles.sessionDate}>{dateStr} · {timeStr}</Text>
+          <Text style={styles.sessionDate}>
+            {dateStr} · {timeStr}
+          </Text>
         </View>
         <MaterialCommunityIcons name="chevron-right" size={20} color={Colors.textTertiary} />
       </TouchableOpacity>
@@ -173,7 +175,11 @@ export default function AiChatSessionsScreen() {
             { paddingBottom: insets.bottom + Spacing.xl },
           ]}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.primary}
+            />
           }
           ListHeaderComponent={
             sessions.length > 0 ? (

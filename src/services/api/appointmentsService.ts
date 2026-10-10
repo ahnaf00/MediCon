@@ -43,10 +43,10 @@ class AppointmentsService {
   async getAvailableSlots(doctorId: string, date: string): Promise<TimeSlot[]> {
     // Laravel API: GET /doctors/{id}/slots
     const response = (await axiosClient.get(`/doctors/${doctorId}/slots`, {
-      params: { date }
+      params: { date },
     })) as any;
     const slotsArray = response.slots || [];
-    
+
     // The backend returns an array of slot objects inside the `slots` key.
     return slotsArray.map((slot: any) => ({
       id: typeof slot === 'string' ? slot : slot.datetime || slot.id || slot.time,

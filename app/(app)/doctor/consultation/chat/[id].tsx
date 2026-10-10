@@ -66,22 +66,22 @@ export default function ChatScreen() {
   const { id, patientName } = useLocalSearchParams<{ id: string; patientName: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  
+
   const [messages, setMessages] = useState<Message[]>(MOCK_MESSAGES);
   const [inputText, setInputText] = useState('');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  
+
   const flatListRef = useRef<FlatList>(null);
 
   // Keyboard visibility listener
   useEffect(() => {
     const showSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
-      () => setIsKeyboardVisible(true)
+      () => setIsKeyboardVisible(true),
     );
     const hideSub = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
-      () => setIsKeyboardVisible(false)
+      () => setIsKeyboardVisible(false),
     );
     return () => {
       showSub.remove();
@@ -102,7 +102,7 @@ export default function ChatScreen() {
 
     setMessages((prev) => [...prev, newMessage]);
     setInputText('');
-    
+
     // Scroll to bottom
     setTimeout(() => {
       flatListRef.current?.scrollToEnd({ animated: true });
@@ -112,12 +112,32 @@ export default function ChatScreen() {
   const renderMessage = ({ item }: { item: Message }) => {
     return (
       <View>
-        <View style={[styles.messageBubbleWrapper, item.isOutgoing ? styles.wrapperOutgoing : styles.wrapperIncoming]}>
-          <View style={[styles.messageBubble, item.isOutgoing ? styles.bubbleOutgoing : styles.bubbleIncoming]}>
-            <Text style={[styles.messageText, item.isOutgoing ? styles.textOutgoing : styles.textIncoming]}>
+        <View
+          style={[
+            styles.messageBubbleWrapper,
+            item.isOutgoing ? styles.wrapperOutgoing : styles.wrapperIncoming,
+          ]}
+        >
+          <View
+            style={[
+              styles.messageBubble,
+              item.isOutgoing ? styles.bubbleOutgoing : styles.bubbleIncoming,
+            ]}
+          >
+            <Text
+              style={[
+                styles.messageText,
+                item.isOutgoing ? styles.textOutgoing : styles.textIncoming,
+              ]}
+            >
               {item.text}
             </Text>
-            <Text style={[styles.timestamp, item.isOutgoing ? styles.timestampOutgoing : styles.timestampIncoming]}>
+            <Text
+              style={[
+                styles.timestamp,
+                item.isOutgoing ? styles.timestampOutgoing : styles.timestampIncoming,
+              ]}
+            >
               {item.timestamp}
             </Text>
           </View>
@@ -143,8 +163,8 @@ export default function ChatScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView 
-        style={styles.keyboardAvoidingView} 
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoidingView}
         behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
       >
         {/* ── CHAT FEED ── */}
@@ -190,10 +210,10 @@ export default function ChatScreen() {
               onPress={handleSend}
               disabled={!inputText.trim()}
             >
-              <MaterialCommunityIcons 
-                name="send" 
-                size={20} 
-                color={inputText.trim() ? Colors.surface : Colors.textTertiary} 
+              <MaterialCommunityIcons
+                name="send"
+                size={20}
+                color={inputText.trim() ? Colors.surface : Colors.textTertiary}
               />
             </TouchableOpacity>
           </View>

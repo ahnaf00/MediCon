@@ -37,6 +37,8 @@ export default function ConsultationHistoryScreen(): React.JSX.Element {
   }, []);
 
   useEffect(() => {
+    // Fetch on mount; the state updates happen once the request settles.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchHistory();
   }, [fetchHistory]);
 

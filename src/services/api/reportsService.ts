@@ -73,11 +73,11 @@ export interface MedicalRecord {
 
 export interface Vital {
   id: string;
-  bloodPressure: string | null;   // "SYS/DIA" format, e.g. "120/80"
+  bloodPressure: string | null; // "SYS/DIA" format, e.g. "120/80"
   pulseRate: number | null;
   glucoseLevel: number | null;
   oxygenSaturation: number | null;
-  loggedAt: string;               // ISO 8601
+  loggedAt: string; // ISO 8601
   createdAt: string;
 }
 
@@ -121,7 +121,7 @@ export const reportsService = {
    */
   getRecords: async (): Promise<MedicalRecord[]> => {
     const res = (await axiosClient.get('/medical-records')) as any;
-    return Array.isArray(res) ? res : res?.data ?? [];
+    return Array.isArray(res) ? res : (res?.data ?? []);
   },
 
   /**
@@ -198,7 +198,7 @@ export const vitalsService = {
    */
   getVitals: async (): Promise<Vital[]> => {
     const res = (await axiosClient.get('/vitals')) as any;
-    return Array.isArray(res) ? res : res?.data ?? [];
+    return Array.isArray(res) ? res : (res?.data ?? []);
   },
 
   /**

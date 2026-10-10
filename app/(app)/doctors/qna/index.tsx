@@ -61,7 +61,9 @@ export default function QnaIndexScreen() {
     try {
       const answers = await qnaService.getThread(question.id);
       setSelectedQuestion((current) =>
-        current?.id === question.id ? { ...current, answers, answerCount: answers.length } : current,
+        current?.id === question.id
+          ? { ...current, answers, answerCount: answers.length }
+          : current,
       );
     } catch {
       // Keep the latest reply from the listing if the thread can't be fetched.
@@ -88,6 +90,8 @@ export default function QnaIndexScreen() {
     if (openQuestionId && questions.length > 0) {
       const targetQ = questions.find((q) => q.id === openQuestionId);
       if (targetQ) {
+        // Opening the sheet is the response to the route param, not derived state.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         openQuestion(targetQ);
         // Clear the param so it doesn't re-trigger on subsequent tab visits
         router.setParams({ openQuestionId: '' });
@@ -119,7 +123,10 @@ export default function QnaIndexScreen() {
     } catch {
       Alert.alert(
         t('common.error', 'Error'),
-        t('qna.delete_failed', 'This question could not be deleted. Questions a doctor has answered cannot be deleted.'),
+        t(
+          'qna.delete_failed',
+          'This question could not be deleted. Questions a doctor has answered cannot be deleted.',
+        ),
       );
     }
   };
@@ -240,7 +247,9 @@ export default function QnaIndexScreen() {
                         style={styles.doctorImage}
                       />
                       <View style={styles.doctorInfo}>
-                        <Text style={styles.doctorName}>{answer.doctorName ?? t('qna.doctor_fallback', 'Doctor')}</Text>
+                        <Text style={styles.doctorName}>
+                          {answer.doctorName ?? t('qna.doctor_fallback', 'Doctor')}
+                        </Text>
                         <View style={styles.doctorSubInfo}>
                           <View style={styles.doctorBadge}>
                             <Text style={styles.doctorBadgeText}>

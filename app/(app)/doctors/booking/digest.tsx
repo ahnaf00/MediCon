@@ -631,8 +631,7 @@ export default function BookingDigestScreen() {
                       contentContainerStyle={styles.dateSelectorContent}
                     >
                       {datesList.map((d, index) => {
-                        const isSelected =
-                          toLocalDateString(tempDate) === toLocalDateString(d);
+                        const isSelected = toLocalDateString(tempDate) === toLocalDateString(d);
                         const dayName =
                           index === 0
                             ? 'Today'

@@ -99,13 +99,13 @@ export interface StorePrescriptionPayload {
   patient_user_id: number;
   diagnosis_summary: string;
   appointment_id?: number;
-  medicines: Array<{
+  medicines: {
     medicine_name: string;
     dosage: string;
     duration_days: number;
     dosage_schedule?: Record<string, string>;
     instructions?: string;
-  }>;
+  }[];
   tests?: { name: string; instructions?: string }[];
   /** Calendar date, YYYY-MM-DD (build with toLocalDateString, not toISOString). */
   follow_up_date?: string;
@@ -173,7 +173,7 @@ export const prescriptionsService = {
    */
   getPrescriptions: async (): Promise<Prescription[]> => {
     const res = (await axiosClient.get('/prescriptions')) as any;
-    const items = Array.isArray(res) ? res : res?.data ?? [];
+    const items = Array.isArray(res) ? res : (res?.data ?? []);
     return items.map(mapApiToPrescription);
   },
 
@@ -203,7 +203,9 @@ export const prescriptionsService = {
    * How: GET /api/v1/prescriptions/{id}/document — patient or prescribing doctor only.
    */
   getDocument: async (id: number): Promise<PrescriptionDocumentData> => {
-    return (await axiosClient.get(`/prescriptions/${id}/document`)) as unknown as PrescriptionDocumentData;
+    return (await axiosClient.get(
+      `/prescriptions/${id}/document`,
+    )) as unknown as PrescriptionDocumentData;
   },
 
   /**

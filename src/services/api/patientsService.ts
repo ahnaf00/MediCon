@@ -36,5 +36,5 @@ export const patientsService = {
   getPatientById: async (id: string | number): Promise<ApiPatient> => {
     const res = (await axiosClient.get(`/patients/${id}`)) as any;
     return res;
-  }
+  },
 };

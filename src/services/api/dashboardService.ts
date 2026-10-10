@@ -26,5 +26,5 @@ export const dashboardService = {
     // Note: the interceptor might unwrap it. The backend returns a direct JSON object (not wrapped in 'data').
     // So response itself will be the stats object.
     return response as DoctorDashboardStats;
-  }
+  },
 };
