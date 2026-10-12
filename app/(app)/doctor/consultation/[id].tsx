@@ -14,7 +14,11 @@ import { Colors, Spacing, FontFamily, FontSize, BorderRadius, Layout, Shadows } 
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { prescriptionsService } from '../../../../src/services/api/prescriptionsService';
 import { Prescription } from '../../../../src/types/medical.types';
-import { patientsService, ApiPatient } from '../../../../src/services/api/patientsService';
+import {
+  patientsService,
+  ApiPatient,
+  splitProfileList,
+} from '../../../../src/services/api/patientsService';
 import { ApiAppointment, useAppointments } from '../../../../src/services/api/consultationsService';
 import { ConsultationPanel } from '../../../../src/components/medical/ConsultationPanel';
 
@@ -150,8 +154,8 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
   const patientAge = calculateAge(patient.patientProfile?.dateOfBirth);
   const patientGender = patient.patientProfile?.gender || 'N/A';
   const bloodGroup = patient.patientProfile?.bloodGroup || 'N/A';
-  // Mock fields that don't exist in UserResource yet
-  const allergies: string[] = [];
+  const allergies = splitProfileList(patient.patientProfile?.allergies);
+  // Mock field that doesn't exist in UserResource yet
   const reason = 'General Consultation';
 
   const bottomMargin = Math.max(insets.bottom, Spacing.base);

@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
 
 export interface ApiPatient {
@@ -11,8 +12,27 @@ export interface ApiPatient {
     bloodGroup: string | null;
     emergencyContact: string | null;
     address: string | null;
+    /** Free text as the patient entered it. null = not recorded, which is not "none". */
+    allergies: string | null;
+    chronicConditions: string | null;
   } | null;
 }
+
+/** Age in whole years from a `YYYY-MM-DD` date of birth, or null when none is recorded. */
+export const ageFromDateOfBirth = (dob?: string | null, today = new Date()): number | null => {
+  const [year, month, day] = (dob ?? '').split('-').map(Number);
+  if (!year || !month || !day) return null;
+  const hadBirthday =
+    today.getMonth() + 1 > month || (today.getMonth() + 1 === month && today.getDate() >= day);
+  return today.getFullYear() - year - (hadBirthday ? 0 : 1);
+};
+
+/** Splits a profile's free-text list ("Penicillin, Aspirin") into its items. */
+export const splitProfileList = (text?: string | null): string[] =>
+  (text ?? '')
+    .split(/[,;\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 
 export const patientsService = {
   /**
@@ -38,3 +58,11 @@ export const patientsService = {
     return res;
   },
 };
+
+/** One patient's profile, for the doctor screens. Disabled until an id is known. */
+export const usePatient = (id?: string | number) =>
+  useQuery({
+    queryKey: ['patient', String(id)],
+    queryFn: () => patientsService.getPatientById(id as string | number),
+    enabled: id !== undefined && id !== '',
+  });
