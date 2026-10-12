@@ -57,9 +57,11 @@ export default function InteractionCheckerScreen() {
     setConflicts(null);
     try {
       // Build peer array: the new medicine + all active medicines
-      const allMedicines = [newMedicine.trim(), ...activeMedicines.map((m) => m.name)];
+      const checked = newMedicine.trim();
+      const allMedicines = [checked, ...activeMedicines.map((m) => m.name)];
       const data = await medicineAiService.checkInteractions(allMedicines);
-      setConflicts(data);
+      // Every warning is shown; "not checked" cards only for pairs with the new medicine.
+      setConflicts(data.filter((c) => c.severity !== 'NOT_CHECKED' || c.pair[0] === checked));
     } catch (err) {
       setError(createAppError('AI_SERVICE_ERROR', String(err)));
     } finally {
@@ -119,6 +121,9 @@ export default function InteractionCheckerScreen() {
           <View style={styles.resultsContainer}>
             <Text style={styles.resultsTitle}>
               {t('interaction-checker.results_for') || 'Results for'} {newMedicine.trim()}
+            </Text>
+            <Text style={styles.disclaimerText}>
+              {t('interaction-checker.limited_check_disclaimer')}
             </Text>
             {conflicts.map((conflict, i) => (
               <InteractionFlag key={i} conflict={conflict} />
@@ -189,6 +194,13 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
     fontSize: FontSize.lg,
     color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  disclaimerText: {
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: FontSize.sm * 1.5,
     marginBottom: Spacing.md,
   },
   noMedsText: {

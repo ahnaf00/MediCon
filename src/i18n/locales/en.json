@@ -251,7 +251,10 @@
     "results_for": "Results for",
     "no_active_prescriptions_to_che": "No active prescriptions to check against.",
     "enter_new_medicine_to_check": "Enter new medicine to check...",
-    "check_interactions": "Check Interactions"
+    "check_interactions": "Check Interactions",
+    "not_checked": "Not checked",
+    "not_checked_explanation": "Not checked — ask your doctor or pharmacist.",
+    "limited_check_disclaimer": "Only a very small list of known combinations is recognised. \"Not checked\" does not mean a combination is safe. Ask your doctor or pharmacist before combining medicines."
   },
   "interaction": {
     "interaction": "Interaction"

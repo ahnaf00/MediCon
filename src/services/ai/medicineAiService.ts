@@ -8,8 +8,10 @@
 //   - Medicine search: GET /api/v1/medicines/search?q=<query> — returns a list
 //     of matching medicine names or stubs from the backend.
 //   - Interaction check: POST /api/v1/medicines/interactions — accepts an array
-//     of medicine name strings (all peers, min 2 max 5). The backend calls
-//     OpenFDA and returns { disclaimer, pairs: [{ pair, warning, severity }] }.
+//     of medicine name strings (all peers, min 2 max 20). The backend matches
+//     a very small rule list and returns
+//     { disclaimer, pairs: [{ pair, warning, severity, checked }] } — one entry
+//     per pair. A pair with checked: false was NOT checked; it is never "safe".
 //
 // IMPORTANT payload change from the old mock:
 //   Old: checkInteractions(newMedicine: string, existingMedicines: {id, name}[])
@@ -30,10 +32,11 @@ export interface MedicineSearchResult {
 export interface InteractionPair {
   /** The two medicine names involved in this interaction. */
   pair: string[];
-  /** Human-readable warning text from OpenFDA. */
+  /** Human-readable warning text from the backend. */
   warning: string;
-  /** Severity level from OpenFDA analysis. */
-  severity: 'high' | 'none';
+  /** 'unknown' means no rule covered the pair — it was not checked. */
+  severity: 'high' | 'unknown';
+  checked: boolean;
 }
 
 export interface InteractionResult {
@@ -62,8 +65,11 @@ export interface ComparisonResult {
 export interface InteractionConflict {
   existingMedicineId: string;
   existingMedicineName: string;
-  severity: 'SAFE' | 'MINOR' | 'SEVERE';
+  /** There is deliberately no "safe" value: an unmatched pair is NOT_CHECKED. */
+  severity: 'NOT_CHECKED' | 'MINOR' | 'SEVERE';
   explanation: string;
+  /** The two medicine names this result is about. */
+  pair: string[];
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -111,7 +117,7 @@ export const medicineAiService = {
     const pairs: InteractionPair[] = res?.pairs ?? [];
     const warnings = pairs.map((p: InteractionPair) => p.warning).filter(Boolean);
     return {
-      similarities: warnings.length ? warnings : ['No known interactions detected.'],
+      similarities: warnings.length ? warnings : ['Interactions were not checked.'],
       differences: [`${medA} and ${medB} may have different pharmacokinetic profiles.`],
       rationale: res?.disclaimer ?? 'Always consult your doctor before switching medicines.',
     };
@@ -121,11 +127,11 @@ export const medicineAiService = {
    * Goal: Check for dangerous interactions between a list of medicines.
    * How: POST /api/v1/medicines/interactions
    *      Payload: { medicines: [{ name: "DrugA" }, { name: "DrugB" }] }
-   *      All medicines are treated as peers (min 2, max 5).
+   *      All medicines are treated as peers (min 2, max 20).
    * Maps the backend InteractionPair[] to the legacy InteractionConflict[] shape
    * expected by the InteractionFlag UI component.
    *
-   * @param medicines - Array of medicine name strings (2–5 items).
+   * @param medicines - Array of medicine name strings (2–20 items).
    */
   checkInteractions: async (medicines: string[]): Promise<InteractionConflict[]> => {
     const payload = {
@@ -136,9 +142,10 @@ export const medicineAiService = {
     // Map backend peer-pair model → legacy conflict model for UI compatibility
     return pairs.map((p) => ({
       existingMedicineId: p.pair[1] ?? '',
-      existingMedicineName: p.pair[1] ?? '',
-      severity: p.severity === 'high' ? 'SEVERE' : 'SAFE',
+      existingMedicineName: p.pair.join(' + '),
+      severity: p.severity === 'high' ? 'SEVERE' : 'NOT_CHECKED',
       explanation: p.warning,
+      pair: p.pair,
     }));
   },
 };
