@@ -55,7 +55,7 @@ export default function LoginScreen(): React.JSX.Element {
         // Navigate to registration with phone param
         router.replace({
           pathname: '/(auth)/register',
-          params: { phone: variables.phone },
+          params: { phone: variables.phone, registrationToken: result.registrationToken ?? '' },
         });
       } else if (result.token && result.user) {
         // Existing user — log them in
@@ -91,7 +91,7 @@ export default function LoginScreen(): React.JSX.Element {
     setError(undefined);
     sendOtpMutation.mutate(phone, {
       onSuccess: () => {
-        Alert.alert('OTP Resent', `A new code has been sent to ${phone}.`);
+        Alert.alert('Demo OTP', 'No SMS is sent in this demo. Use the code 123456.');
       },
     });
   };
@@ -123,7 +123,7 @@ export default function LoginScreen(): React.JSX.Element {
           <Text style={styles.subtitle}>
             {step === 'phone_entry'
               ? 'Enter your phone number to get started.'
-              : 'We sent a verification code to your phone.'}
+              : 'Demo login: no SMS is sent. Use the demo code below.'}
           </Text>
 
           <View style={styles.formWrapper}>

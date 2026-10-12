@@ -32,7 +32,7 @@ type RegisterStep = 'role_selection' | 'profile_form';
 export default function RegisterScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
-  const params = useLocalSearchParams<{ phone: string }>();
+  const params = useLocalSearchParams<{ phone: string; registrationToken: string }>();
   const login = useAuthStore((s) => s.login);
 
   const [step, setStep] = useState<RegisterStep>('role_selection');
@@ -48,7 +48,7 @@ export default function RegisterScreen(): React.JSX.Element {
   const registerMutation = useMutation({
     mutationFn: (data: PatientFormData | DoctorFormData) => {
       if (!role) throw new Error('Role is required');
-      return authService.register(phone, role, data);
+      return authService.register(phone, role, data, params.registrationToken ?? '');
     },
     onSuccess: (result) => {
       login({

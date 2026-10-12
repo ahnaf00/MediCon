@@ -48,7 +48,7 @@ export const authService = {
   async verifyOtp(
     phone: string,
     otp: string,
-  ): Promise<{ isNewUser: boolean; token?: string; user?: User }> {
+  ): Promise<{ isNewUser: boolean; token?: string; user?: User; registrationToken?: string }> {
     try {
       // Laravel API: POST /auth/verify-otp
       const response = (await axiosClient.post('/auth/verify-otp', {
@@ -57,7 +57,8 @@ export const authService = {
       })) as any;
 
       if (response.isNewUser) {
-        return { isNewUser: true };
+        // Single-use proof that this phone passed OTP; register() must send it back.
+        return { isNewUser: true, registrationToken: response.registration_token };
       }
 
       // Response returns access_token and user object
@@ -86,10 +87,12 @@ export const authService = {
     phone: string,
     role: UserRole,
     profileData: any,
+    registrationToken: string,
   ): Promise<{ token: string; user: User }> {
     const payload: any = {
       phone,
       role,
+      registration_token: registrationToken,
       name: profileData.fullName,
     };
 

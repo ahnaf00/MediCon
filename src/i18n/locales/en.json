@@ -77,8 +77,8 @@
     "patients": "Patients"
   },
   "authotpform": {
-    "enter_the_6digit_code_sent_to": "Enter the 6-digit code sent to",
-    "dev_otp_123456": "(Dev OTP: 123456)",
+    "enter_the_6digit_code_sent_to": "Enter the 6-digit code for",
+    "dev_otp_123456": "(Demo OTP: 123456 — no SMS is sent)",
     "resend_code": "Resend Code"
   },
   "authphoneform": {

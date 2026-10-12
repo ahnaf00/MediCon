@@ -61,8 +61,8 @@
     "patients": "রোগী"
   },
   "authotpform": {
-    "enter_the_6digit_code_sent_to": "এখানে পাঠানো ৬-সংখ্যার কোডটি লিখুন",
-    "dev_otp_123456": "(ডেভ ওটিপি: ১২৩৪৫৬)",
+    "enter_the_6digit_code_sent_to": "এই নম্বরের জন্য ৬-সংখ্যার কোডটি লিখুন",
+    "dev_otp_123456": "(ডেমো ওটিপি: 123456 — কোনো এসএমএস পাঠানো হয় না)",
     "resend_code": "কোড পুনরায় পাঠান"
   },
   "authphoneform": {
