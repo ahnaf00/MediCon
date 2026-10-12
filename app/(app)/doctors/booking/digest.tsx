@@ -153,12 +153,9 @@ export default function BookingDigestScreen() {
     return d;
   });
 
+  // Payment is a demo: no gateway is called and no money moves. Every method,
+  // card included, simply completes the booking.
   const handleConfirmBooking = async () => {
-    if (paymentCategory === 'card') {
-      router.push('/(app)/payment/card-details');
-      return;
-    }
-
     if (!doctorId) return;
     if (mode === 'instant') {
       // There is no instant-consultation flow on the backend; booking needs a real slot.
@@ -468,7 +465,11 @@ export default function BookingDigestScreen() {
 
           {/* Payment Methods */}
           <View style={styles.card}>
-            <Text style={[styles.cardTitle, { marginBottom: Spacing.lg }]}>Payment Method</Text>
+            <Text style={styles.cardTitle}>Payment Method</Text>
+            <Text style={[styles.cardPaymentText, { flex: 0, marginBottom: Spacing.lg }]}>
+              Demo payment — no money is charged and no payment details are collected. Choosing a
+              method only completes the booking.
+            </Text>
 
             {/* Mobile Banking Option */}
             <TouchableOpacity
@@ -544,7 +545,7 @@ export default function BookingDigestScreen() {
                 color={Colors.textSecondary}
               />
               <Text style={styles.cardPaymentText}>
-                Pay securely using your Visa, MasterCard, or Amex.
+                Demo only — Visa, MasterCard or Amex. No card number is asked for.
               </Text>
             </View>
           </View>
@@ -563,7 +564,7 @@ export default function BookingDigestScreen() {
             {booking ? (
               <ActivityIndicator size="small" color={Colors.surface} />
             ) : (
-              <Text style={styles.proceedButtonText}>Proceed to Pay</Text>
+              <Text style={styles.proceedButtonText}>Confirm Booking (Demo Payment)</Text>
             )}
           </TouchableOpacity>
         </View>
