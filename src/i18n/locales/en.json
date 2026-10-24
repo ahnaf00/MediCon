@@ -507,7 +507,7 @@
     "title": "Settings",
     "profile": "Profile",
     "dependents": "Dependents",
-    "editDependent": "Dependent",
+    "dependentsUnavailable": "Adding family members is not available yet. Each person needs their own account for now.",
     "language": "Language",
     "languageSelection": "Select Language",
     "logout": "Log out"

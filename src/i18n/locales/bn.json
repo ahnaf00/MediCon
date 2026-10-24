@@ -491,7 +491,7 @@
     "title": "সেটিংস",
     "profile": "প্রোফাইল",
     "dependents": "নির্ভরশীলরা",
-    "editDependent": "নির্ভরশীল",
+    "dependentsUnavailable": "পরিবারের সদস্য যোগ করার সুবিধা এখনো চালু হয়নি। আপাতত প্রত্যেকের নিজের অ্যাকাউন্ট লাগবে।",
     "language": "ভাষা",
     "languageSelection": "ভাষা নির্বাচন করুন",
     "logout": "লগ আউট"

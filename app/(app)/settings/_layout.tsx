@@ -21,10 +21,6 @@ export default function SettingsLayout() {
         options={{ headerShown: false, title: t('settings.title') || 'Settings' }}
       />
       <Stack.Screen name="theme" options={{ title: t('settings.theme') || 'Theme' }} />
-      <Stack.Screen
-        name="dependents/[id]"
-        options={{ title: t('settings.editDependent') || 'Dependent' }}
-      />
     </Stack>
   );
 }
