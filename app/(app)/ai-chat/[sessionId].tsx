@@ -38,7 +38,7 @@ export default function AiChatScreen() {
   // Use the rawSessionId as the local store key (so "new" chats get their own bucket)
   const storeKey = rawSessionId || 'new';
 
-  const { conversations, addMessage, updateMessage, clearHistory } = useChatStore();
+  const { conversations, addMessage, updateMessage, removeMessage, clearHistory } = useChatStore();
   const messages = conversations[storeKey] || [];
 
   const [inputText, setInputText] = useState('');
@@ -118,39 +118,33 @@ export default function AiChatScreen() {
 
     const trimmed = text.trim();
 
-    // Add user bubble immediately
-    addMessage(storeKey, trimmed, 'user');
+    // Add user bubble immediately, with a typing bubble until the reply arrives
+    const userMessageId = addMessage(storeKey, trimmed, 'user');
     setInputText('');
-
-    // Add empty AI placeholder bubble
     const aiMessageId = addMessage(storeKey, '', 'ai');
     setActiveStreamingId(aiMessageId);
 
     try {
       const response = await chatService.sendMessage(trimmed, backendSessionId ?? undefined);
-      const fullContent = response.message.content;
 
       // If this was a new chat, capture the backend session ID for future messages
       if (!backendSessionId && response.sessionId) {
         setBackendSessionId(response.sessionId);
-        // Update header title from the session's auto-generated title
         if (rawSessionId === 'new') {
           setHeaderTitle(trimmed.substring(0, 40) + (trimmed.length > 40 ? '…' : ''));
         }
       }
 
-      // Client-side character-reveal animation
-      let revealed = '';
-      for (let i = 0; i < fullContent.length; i++) {
-        revealed += fullContent[i];
-        updateMessage(storeKey, aiMessageId, revealed);
-        if (i % 5 === 0) await new Promise((r) => setTimeout(r, 10));
-      }
+      updateMessage(storeKey, aiMessageId, response.message.content);
     } catch {
-      updateMessage(
+      // The server saved nothing, so take the question back out and return it to the box.
+      removeMessage(storeKey, aiMessageId);
+      removeMessage(storeKey, userMessageId);
+      setInputText(trimmed);
+      addMessage(
         storeKey,
-        aiMessageId,
-        'Sorry, I encountered an error processing your request. Please try again.',
+        'The AI assistant could not answer just now, so your message was not sent. Please try again.',
+        'system',
       );
     } finally {
       setActiveStreamingId(null);

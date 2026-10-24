@@ -13,6 +13,7 @@ interface ChatState {
   conversations: Record<string, ChatMessage[]>;
   addMessage: (consultationId: string, text: string, sender: 'user' | 'ai' | 'system') => string;
   updateMessage: (consultationId: string, messageId: string, text: string) => void;
+  removeMessage: (consultationId: string, messageId: string) => void;
   clearHistory: (consultationId: string) => void;
   seedLongConversation: (consultationId: string) => void;
 }
@@ -52,6 +53,16 @@ export const useChatStore = create<ChatState>()(
             },
           };
         });
+      },
+      removeMessage: (consultationId, messageId) => {
+        set((state) => ({
+          conversations: {
+            ...state.conversations,
+            [consultationId]: (state.conversations[consultationId] || []).filter(
+              (msg) => msg.id !== messageId,
+            ),
+          },
+        }));
       },
       clearHistory: (consultationId) => {
         set((state) => {
