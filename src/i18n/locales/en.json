@@ -210,6 +210,8 @@
     "standard_protocol_applies_for_": "Standard protocol applies for this age group."
   },
   "emergency": {
+    "dial_failed_title": "Call 999 now",
+    "dial_failed_body": "This device could not open the phone dialer. Dial 999 from any phone, or ask someone nearby to call.",
     "call_emergency": "Call 999",
     "emergency_triage": "Emergency Triage",
     "life_threatening_instruction": "Call 999 for severe emergencies, or\nchoose a situation for offline guidance."

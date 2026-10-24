@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   FlatList,
-  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -19,6 +18,7 @@ import { useSymptomSearch } from '../../../src/services/api/symptomSearchService
 import { Doctor } from '../../../src/services/api/doctorsService';
 import { DoctorCard } from '../../../src/components/cards/DoctorCard';
 import { DraggableBottomSheet } from '../../../src/components/ui/DraggableBottomSheet';
+import { callEmergency } from '../../../src/utils/callEmergency';
 
 type FilterType = 'all' | 'today' | 'week';
 
@@ -135,7 +135,7 @@ export default function SymptomResultsScreen() {
           </Text>
           <TouchableOpacity
             style={styles.callButton}
-            onPress={() => Linking.openURL('tel:999')}
+            onPress={callEmergency}
             accessibilityRole="button"
             accessibilityLabel={t('emergency.call_emergency') || 'Call 999'}
           >
