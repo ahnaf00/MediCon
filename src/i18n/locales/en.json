@@ -369,12 +369,14 @@
     "consult_when_safe": "When you are safe, these doctors can help:",
     "red_flag": {
       "chest_pain": "Chest pain can be a sign of a heart attack.",
+      "heart_attack": "A heart attack is an emergency. Every minute matters.",
       "breathing": "Severe difficulty breathing needs urgent care.",
       "stroke": "These can be signs of a stroke. Every minute matters.",
       "bleeding": "Heavy bleeding or bringing up blood needs urgent care.",
       "unresponsive": "Loss of consciousness needs urgent care.",
       "seizure": "A seizure needs urgent care.",
       "anaphylaxis": "Swelling of the throat or tongue can block breathing.",
+      "poisoning": "Poisoning or an overdose needs urgent care, even if the person seems fine.",
       "self_harm": "You do not have to go through this alone. Please reach out for help right now."
     }
   },

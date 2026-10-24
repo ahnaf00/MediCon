@@ -6,6 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from '../api/axiosClient';
 import { getAllPages } from '../api/pagination';
+import type { RedFlag } from './redFlag';
 
 // ─── Types (matching AiChatController response shapes exactly) ───────────────
 
@@ -26,6 +27,8 @@ export interface AiChatSession {
 export interface SendMessageResponse {
   sessionId: number;
   message: AiChatMessage;
+  /** Set when the question matched the server's emergency rules. */
+  redFlag?: RedFlag | null;
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────

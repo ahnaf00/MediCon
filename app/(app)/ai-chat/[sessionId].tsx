@@ -19,6 +19,8 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useChatStore, ChatMessage } from '../../../src/store/chatStore';
 import { ChatBubble } from '../../../src/components/medical/ChatBubble';
 import { chatService, AiChatMessage } from '../../../src/services/ai/chatService';
+import { isRedFlag, redFlagFromError, type RedFlag } from '../../../src/services/ai/redFlag';
+import { EmergencyCard } from '../../../src/components/medical/EmergencyCard';
 
 // 2. COMPONENT
 
@@ -42,6 +44,8 @@ export default function AiChatScreen() {
   const messages = conversations[storeKey] || [];
 
   const [inputText, setInputText] = useState('');
+  // Shown until dismissed: the server flagged a message as a possible emergency.
+  const [redFlag, setRedFlag] = useState<RedFlag | null>(null);
   const [activeStreamingId, setActiveStreamingId] = useState<string | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [headerTitle, setHeaderTitle] = useState(title || 'MediCon AI');
@@ -136,7 +140,10 @@ export default function AiChatScreen() {
       }
 
       updateMessage(storeKey, aiMessageId, response.message.content);
-    } catch {
+      if (isRedFlag(response.redFlag)) setRedFlag(response.redFlag);
+    } catch (err) {
+      const flag = redFlagFromError(err);
+      if (flag) setRedFlag(flag);
       // The server saved nothing, so take the question back out and return it to the box.
       removeMessage(storeKey, aiMessageId);
       removeMessage(storeKey, userMessageId);
@@ -208,6 +215,15 @@ export default function AiChatScreen() {
           </View>
         )}
 
+        {redFlag ? (
+          <EmergencyCard
+            redFlag={redFlag}
+            onOpenGuide={() => router.push('/(app)/emergency')}
+            onDismiss={() => setRedFlag(null)}
+            style={styles.emergencyCard}
+          />
+        ) : null}
+
         {/* Input Area */}
         <View
           style={[
@@ -262,6 +278,10 @@ export default function AiChatScreen() {
 // 3. STYLES
 
 const styles = StyleSheet.create({
+  emergencyCard: {
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.surface,

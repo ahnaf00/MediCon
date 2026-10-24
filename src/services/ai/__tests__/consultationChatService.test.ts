@@ -109,6 +109,23 @@ describe('streamConsultationChat', () => {
     expect(h.onError).not.toHaveBeenCalled();
   });
 
+  it('passes on a red flag, even when the reply then fails (audit CLIN-004)', () => {
+    const h = { ...handlers(), onRedFlag: jest.fn() };
+    streamConsultationChat(1, 'q', h);
+    FakeXhr.last.push(
+      event('session', { sessionId: 3 }) +
+        event('redFlag', { code: 'poisoning', message: 'Poisoning needs urgent care.' }) +
+        event('error', { message: 'Unavailable' }),
+    );
+    FakeXhr.last.finish();
+
+    expect(h.onRedFlag).toHaveBeenCalledWith({
+      code: 'poisoning',
+      message: 'Poisoning needs urgent care.',
+    });
+    expect(h.onError).toHaveBeenCalledWith('Unavailable');
+  });
+
   it('reports a server error event once', () => {
     const h = handlers();
     streamConsultationChat(1, 'q', h);

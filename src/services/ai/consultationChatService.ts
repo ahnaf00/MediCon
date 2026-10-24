@@ -4,11 +4,13 @@
 // React Native's fetch does not expose a readable body stream, so this uses
 // XMLHttpRequest and parses `responseText` incrementally on each progress event.
 //
-// Server events: `session` {sessionId} → `delta` {text}… → `done` {messageId}
+// Server events: `session` {sessionId} → `redFlag` {code, message} (possible
+// emergency, by fixed rules) → `delta` {text}… → `done` {messageId}
 // or `error` {message}. Non-200 responses (403/409/422) are plain JSON.
 // ─────────────────────────────────────────────────────────────────────────────
 import { Config } from '../../constants/config';
 import { useAuthStore } from '../../store/authStore';
+import { isRedFlag, type RedFlag } from './redFlag';
 
 export interface SseEvent {
   event: string;
@@ -17,6 +19,7 @@ export interface SseEvent {
 
 export interface ConsultationChatHandlers {
   onSession?: (sessionId: number) => void;
+  onRedFlag?: (flag: RedFlag) => void;
   onDelta: (text: string) => void;
   onDone?: (messageId: number) => void;
   onError: (message: string) => void;
@@ -88,6 +91,9 @@ export const streamConsultationChat = (
     switch (evt.event) {
       case 'session':
         if (typeof data.sessionId === 'number') handlers.onSession?.(data.sessionId);
+        break;
+      case 'redFlag':
+        if (isRedFlag(data)) handlers.onRedFlag?.(data);
         break;
       case 'delta':
         if (typeof data.text === 'string') handlers.onDelta(data.text);
