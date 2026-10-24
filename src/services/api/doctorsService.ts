@@ -36,8 +36,8 @@ export interface ConsultationHistoryItem {
   doctorName: string;
   specialty: string;
   date: string;
-  /** Raw API status. Only 'scheduled' visits can be cancelled. */
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+  /** Raw API status. Only 'scheduled' visits can be cancelled or moved. */
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'expired';
   /** True once the doctor has written a consultation summary (enables the AI chat). */
   hasSummary: boolean;
   format: 'video' | 'in-person';

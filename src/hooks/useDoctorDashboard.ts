@@ -106,6 +106,7 @@ export const useDoctorDashboard = (): DoctorDashboardData => {
         a.datetime &&
         a.status !== 'cancelled' &&
         a.status !== 'no_show' &&
+        a.status !== 'expired' &&
         toLocalDateString(new Date(a.datetime)) === today,
     )
     .map(toQueueItem)

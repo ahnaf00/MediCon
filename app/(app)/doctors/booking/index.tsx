@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -15,11 +16,14 @@ import { appointmentsService, TimeSlot } from '../../../../src/services/api/appo
 import { doctorsService, Doctor } from '../../../../src/services/api/doctorsService';
 import { useTranslation } from 'react-i18next';
 import { toLocalDateString } from '../../../../src/utils/localDate';
+import { apiErrorMessage } from '../../../../src/utils/errors';
 
 export default function BookingScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // With `rescheduleId`, the chosen slot moves that visit instead of starting a booking (audit F10).
+  const { id, rescheduleId } = useLocalSearchParams<{ id: string; rescheduleId?: string }>();
+  const [moving, setMoving] = useState(false);
   const insets = useSafeAreaInsets();
 
   const [doctor, setDoctor] = useState<Doctor | null>(null);
@@ -67,8 +71,27 @@ export default function BookingScreen() {
     void fetchSlots();
   }, [id, selectedDate]);
 
+  const moveVisit = async (slot: string) => {
+    if (!rescheduleId) return;
+    try {
+      setMoving(true);
+      await appointmentsService.rescheduleAppointment(rescheduleId, slot);
+      Alert.alert('Visit moved', 'Your appointment now has the new time.', [
+        { text: 'OK', onPress: () => router.back() },
+      ]);
+    } catch (err) {
+      Alert.alert('Not moved', apiErrorMessage(err, 'Could not move the visit. Please try again.'));
+    } finally {
+      setMoving(false);
+    }
+  };
+
   const handleContinue = () => {
     if (!id || !selectedSlot) return;
+    if (rescheduleId) {
+      void moveVisit(selectedSlot);
+      return;
+    }
     const dateString = toLocalDateString(selectedDate);
     router.push({
       pathname: '/(app)/doctors/booking/digest',
@@ -141,7 +164,9 @@ export default function BookingScreen() {
             <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>
-            {t('booking.book_appointment') || 'Book Appointment'}
+            {rescheduleId
+              ? t('booking.reschedule', 'Choose a new time')
+              : t('booking.book_appointment') || 'Book Appointment'}
           </Text>
         </View>
       </View>
@@ -230,7 +255,7 @@ export default function BookingScreen() {
       <View style={[styles.bottomFixedContainer, { bottom: Spacing.base + insets.bottom }]}>
         <TouchableOpacity
           style={[styles.confirmFullBtn, !selectedSlot && styles.confirmFullBtnDisabled]}
-          disabled={!selectedSlot}
+          disabled={!selectedSlot || moving}
           onPress={handleContinue}
           activeOpacity={0.8}
           accessibilityRole="button"
@@ -239,7 +264,9 @@ export default function BookingScreen() {
           <Text
             style={[styles.confirmFullBtnText, !selectedSlot && styles.confirmFullBtnTextDisabled]}
           >
-            {t('booking.continue') || 'Confirm'}
+            {rescheduleId
+              ? t('booking.move_here', 'Move visit to this time')
+              : t('booking.continue') || 'Confirm'}
           </Text>
         </TouchableOpacity>
       </View>

@@ -28,6 +28,7 @@ import { useQuery } from '@tanstack/react-query';
 import { authService } from '../../../../src/services/api/authService';
 import { fromLocalDateString, toLocalDateString } from '../../../../src/utils/localDate';
 import { DoctorPhoto } from '../../../../src/components/ui/DoctorPhoto';
+import { apiErrorMessage } from '../../../../src/utils/errors';
 
 const MOBILE_BANKING = ['bKash', 'Rocket', 'Nagad', 'Upay'];
 const MOBILE_BANKING_LOGOS: Record<string, any> = {
@@ -194,8 +195,12 @@ export default function BookingDigestScreen() {
           },
         });
       }
-    } catch {
-      Alert.alert('Booking Failed', 'An error occurred while booking. Please try again.');
+    } catch (err) {
+      // e.g. an overlapping visit with another doctor (audit F10): show the API's reason.
+      Alert.alert(
+        'Booking Failed',
+        apiErrorMessage(err, 'An error occurred while booking. Please try again.'),
+      );
     } finally {
       setBooking(false);
     }

@@ -9,12 +9,15 @@ import { Card } from '../ui/Card';
 import { Avatar } from '../ui/Avatar';
 import { useTranslation } from 'react-i18next';
 import { DoctorPhoto } from '../ui/DoctorPhoto';
+import { patientMayChange } from '../../utils/appointmentRules';
 
 export interface DoctorCardProps {
   doctor: DashboardDoctor | Doctor | ConsultationHistoryItem | null;
   onPress?: () => void;
   onBookPress?: () => void;
   onCancelPress?: () => void;
+  /** History: move a scheduled visit to another time (audit F10). */
+  onReschedulePress?: () => void;
   /** History variant: opens the consultation AI chat (shown for completed visits with a summary). */
   onAskAiPress?: () => void;
   /** History variant: opens the call screen (shown while a video visit is in progress). */
@@ -30,6 +33,7 @@ export const DoctorCard = ({
   onPress,
   onBookPress,
   onCancelPress,
+  onReschedulePress,
   onAskAiPress,
   onJoinPress,
   hideSectionLabel = false,
@@ -83,6 +87,8 @@ export const DoctorCard = ({
     const item = isHistory ? (doctor as ConsultationHistoryItem) : null;
     const videoLive = item?.format === 'video' && item.status === 'in_progress';
     const videoWaiting = item?.format === 'video' && item.status === 'scheduled';
+    // Cancel and move close an hour before the visit, as the API enforces (audit F10).
+    const canChange = item?.status === 'scheduled' && patientMayChange(item.startsAt);
     const historyDate =
       isHistory && (doctor as ConsultationHistoryItem).date
         ? new Date((doctor as ConsultationHistoryItem).date).toLocaleDateString('en-US', {
@@ -111,15 +117,38 @@ export const DoctorCard = ({
             </Text>
             {renderBadge()}
             <Text style={styles.historyDate}>Last consulted: {historyDate}</Text>
+            {item?.status === 'scheduled' && !canChange ? (
+              <Text style={styles.historyNote}>
+                {t('history.change_closed', 'Too close to the visit to cancel or move it.')}
+              </Text>
+            ) : null}
+            {item?.status === 'expired' ? (
+              <Text style={styles.historyNote}>
+                {t('history.expired', 'Missed: the visit was not started in time.')}
+              </Text>
+            ) : null}
           </View>
           <View style={styles.historyActionButtons}>
-            {isHistory &&
-              (doctor as ConsultationHistoryItem).status === 'scheduled' &&
-              onCancelPress && (
-                <TouchableOpacity style={styles.cancelButton} onPress={onCancelPress}>
-                  <Text style={styles.cancelButtonText}>Cancel</Text>
-                </TouchableOpacity>
-              )}
+            {canChange && onCancelPress && (
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={onCancelPress}
+                accessibilityRole="button"
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            )}
+            {canChange && onReschedulePress && (
+              <TouchableOpacity
+                style={styles.rescheduleButton}
+                onPress={onReschedulePress}
+                accessibilityRole="button"
+              >
+                <Text style={styles.rescheduleButtonText}>
+                  {t('history.reschedule', 'Reschedule')}
+                </Text>
+              </TouchableOpacity>
+            )}
             {isHistory &&
               (doctor as ConsultationHistoryItem).status === 'completed' &&
               (doctor as ConsultationHistoryItem).hasSummary &&
@@ -412,6 +441,7 @@ const styles = StyleSheet.create({
   historyActionButtons: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: Spacing.sm,
   },
   waitingPill: {
@@ -442,6 +472,26 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
     fontSize: FontSize.sm,
     color: Colors.danger,
+  },
+  rescheduleButton: {
+    paddingVertical: 8,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rescheduleButtonText: {
+    fontFamily: FontFamily.bold,
+    fontSize: FontSize.sm,
+    color: Colors.primary,
+  },
+  historyNote: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
 
   // --- History variant ---

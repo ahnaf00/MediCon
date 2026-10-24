@@ -10,7 +10,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
 import { appointmentsService } from './appointmentsService';
 
-export type AppointmentStatus = 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show';
+export type AppointmentStatus =
+  | 'scheduled'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled'
+  | 'no_show'
+  // Nobody started it within its window (audit F10).
+  | 'expired';
 
 export interface ApiAppointment {
   id: number;

@@ -8,6 +8,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { doctorsService, ConsultationHistoryItem } from '../../../src/services/api/doctorsService';
 import { DoctorCard } from '../../../src/components/cards/DoctorCard';
+import { apiErrorMessage } from '../../../src/utils/errors';
 import { appointmentsService } from '../../../src/services/api/appointmentsService';
 import { isAwaitingVideoStart } from '../../../src/services/api/consultationsService';
 import { useTranslation } from 'react-i18next';
@@ -60,23 +61,31 @@ export default function ConsultationHistoryScreen(): React.JSX.Element {
     return () => clearInterval(timer);
   }, [awaitingStart, fetchHistory]);
 
-  const handleCancel = useCallback((id: string) => {
-    Alert.alert('Cancel Appointment', 'Are you sure you want to cancel this appointment?', [
-      { text: 'No', style: 'cancel' },
-      {
-        text: 'Yes',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await appointmentsService.cancelAppointment(id);
-            fetchHistory();
-          } catch (error) {
-            Alert.alert('Error', 'Failed to cancel appointment. Please try again.');
-          }
+  const handleCancel = useCallback(
+    (id: string) => {
+      Alert.alert('Cancel Appointment', 'Are you sure you want to cancel this appointment?', [
+        { text: 'No', style: 'cancel' },
+        {
+          text: 'Yes',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await appointmentsService.cancelAppointment(id);
+              fetchHistory();
+            } catch (error) {
+              // e.g. too close to the visit (audit F10): show the API's reason.
+              Alert.alert(
+                'Not cancelled',
+                apiErrorMessage(error, 'Failed to cancel appointment. Please try again.'),
+              );
+              fetchHistory(true);
+            }
+          },
         },
-      },
-    ]);
-  }, []);
+      ]);
+    },
+    [fetchHistory],
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: ConsultationHistoryItem }) => {
@@ -91,6 +100,9 @@ export default function ConsultationHistoryScreen(): React.JSX.Element {
               router.push(`/(app)/doctors/booking/digest?doctorId=${item.doctorId}&type=video`)
             }
             onCancelPress={() => handleCancel(item.id)}
+            onReschedulePress={() =>
+              router.push(`/(app)/doctors/booking?id=${item.doctorId}&rescheduleId=${item.id}`)
+            }
             onAskAiPress={() => router.push(`/(app)/ai-chat/consultation/${item.id}`)}
             onJoinPress={() => router.push(`/(app)/call/${item.id}`)}
           />

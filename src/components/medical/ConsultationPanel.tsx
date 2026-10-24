@@ -22,6 +22,7 @@ import {
 } from '../../services/api/consultationsService';
 import type { TranscriptDraftSummary } from '../../services/api/callsService';
 import { TranscriptCard } from './TranscriptCard';
+import { startOpensAt, startWindow } from '../../utils/appointmentRules';
 
 // 2. TYPES
 export interface ConsultationPanelProps {
@@ -213,7 +214,13 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
     completed: t('consultation.status_completed', 'Completed'),
     cancelled: t('consultation.status_cancelled', 'Cancelled'),
     no_show: t('consultation.status_no_show', 'No-show'),
+    expired: t('consultation.status_expired', 'Expired'),
   };
+
+  // The API refuses a start outside this window; say so before the doctor tries (audit F10).
+  const startsAt = status === 'scheduled' ? appointment.datetime : null;
+  const startState = startsAt ? startWindow(startsAt) : null;
+  const clock = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   return (
     <View style={styles.card}>
@@ -270,6 +277,22 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
         </View>
       )}
 
+      {startState === 'early' && (
+        <Text style={[styles.muted, styles.spaced]}>
+          {t('consultation.starts_from', 'You can start this visit from {{time}}.', {
+            time: startsAt ? clock(startOpensAt(startsAt)) : '',
+          })}
+        </Text>
+      )}
+      {startState === 'late' && (
+        <Text style={[styles.muted, styles.spaced]}>
+          {t(
+            'consultation.start_passed',
+            'The time to start this visit has passed. It will be marked expired.',
+          )}
+        </Text>
+      )}
+
       {status === 'in_progress' && isVideo && (
         <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.primaryBtn} onPress={openCall} accessibilityRole="button">
@@ -280,7 +303,7 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
         </View>
       )}
 
-      {(status === 'cancelled' || status === 'no_show') && (
+      {(status === 'cancelled' || status === 'no_show' || status === 'expired') && (
         <Text style={[styles.muted, styles.spaced]}>
           {t('consultation.closed', 'This appointment is closed; no summary can be written.')}
         </Text>

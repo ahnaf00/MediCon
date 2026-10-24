@@ -106,6 +106,13 @@ class AppointmentsService {
     await axiosClient.patch(`/appointments/${appointmentId}/cancel`);
   }
 
+  /** Patient moves a visit to another free slot with the same doctor (audit F10). */
+  async rescheduleAppointment(appointmentId: string, slotDatetime: string): Promise<void> {
+    await axiosClient.patch(`/appointments/${appointmentId}/reschedule`, {
+      appointment_datetime: slotDatetime,
+    });
+  }
+
   /**
    * Doctor moves a visit through its lifecycle:
    * scheduled → in_progress → completed, or scheduled → no_show.
