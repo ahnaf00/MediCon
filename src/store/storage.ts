@@ -50,8 +50,11 @@ const preloadReady = Promise.all([
   preloadKey('auth-storage'),
   preloadKey('settings-storage'),
   preloadKey('onboarding-state'),
-  preloadKey('medicon-chat-storage'),
 ]);
+
+// Chat text used to be saved here; the chat store is memory-only now, so
+// remove any copy an older version left on the phone.
+SecureStore.deleteItemAsync('medicon-chat-storage').catch(() => {});
 
 // 1. Synchronous state storage adapter for Zustand
 export const mmkvStorage: StateStorage = {
