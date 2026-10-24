@@ -145,6 +145,8 @@
     "view_all_departments": "View all departments"
   },
   "hospitals": {
+    "unverified": "Hospital details are not verified by MediCon. If a life is in danger, call 999.",
+    "emergency_help": "The emergency number on file for this hospital. MediCon has not verified it. If a life is in danger, call 999.",
     "locating_nearby_hospitals": "Locating nearby hospitals...",
     "location_unavailable": "Location Unavailable",
     "we_need_access_to_your_locatio": "We need access to your location to find nearby hospitals and emergency centers. Please enable location services in your device settings.",

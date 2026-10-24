@@ -223,9 +223,8 @@ export interface Hospital {
   address: string;
   latitude: number;
   longitude: number;
-  contactNumber: string;
   emergencyNumber?: string;
-  hasEmergencyRoom: boolean;
+  /** Only set when the server computes it from real coordinates (not yet). */
   distanceKm?: number;
   isOpen24x7: boolean;
   imageUrl?: string;

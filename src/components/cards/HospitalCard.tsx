@@ -70,14 +70,6 @@ export const HospitalCard = ({
               </Text>
             </View>
           )}
-          {hospital.hasEmergencyRoom && (
-            <View style={[styles.tag, styles.emergencyTag]}>
-              <MaterialCommunityIcons name="heart-pulse" size={12} color={Colors.danger} />
-              <Text style={[styles.tagText, styles.emergencyTagText]}>
-                {t('hospitalcard.er') || 'ER'}
-              </Text>
-            </View>
-          )}
           {hospital.isOpen24x7 && (
             <View style={[styles.tag, styles.openTag]}>
               <MaterialCommunityIcons

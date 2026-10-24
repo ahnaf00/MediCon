@@ -14,8 +14,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../../src/theme';
 import { hospitalsService } from '../../../src/services/api/hospitalsService';
 import { Hospital } from '../../../src/types/medical.types';
-import { Doctor } from '../../../src/services/api/doctorsService';
-import { DoctorCard } from '../../../src/components/cards/DoctorCard';
 import { Modal } from '../../../src/components/ui/Modal';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -27,7 +25,6 @@ export default function HospitalDetailScreen() {
   const insets = useSafeAreaInsets();
 
   const [hospital, setHospital] = useState<Hospital | null>(null);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [infoModalConfig, setInfoModalConfig] = useState<{
@@ -47,9 +44,7 @@ export default function HospitalDetailScreen() {
         setLoading(true);
         if (!id) throw new Error('No hospital ID provided');
 
-        const details = await hospitalsService.getHospitalDetails(id);
-        setHospital(details.hospital);
-        setDoctors(details.doctors);
+        setHospital(await hospitalsService.getHospitalDetails(id));
       } catch {
         setError('Failed to load hospital details. Please check your connection.');
       } finally {
@@ -139,14 +134,6 @@ export default function HospitalDetailScreen() {
           ]}
         >
           <View style={styles.tagsContainer}>
-            {hospital.hasEmergencyRoom && (
-              <View style={[styles.imageBadge, styles.imageBadgeDanger]}>
-                <MaterialCommunityIcons name="heart-pulse" size={12} color={Colors.surface} />
-                <Text style={styles.imageBadgeDangerText}>
-                  {t('[id].er_available') || 'Emergency Room Available'}
-                </Text>
-              </View>
-            )}
             {hospital.isOpen24x7 && (
               <View style={styles.imageBadge}>
                 <MaterialCommunityIcons name="clock-outline" size={12} color={Colors.primary} />
@@ -170,36 +157,6 @@ export default function HospitalDetailScreen() {
               </View>
             </View>
 
-            {/* Phone */}
-            <View style={styles.infoTile}>
-              <View style={styles.infoTileIcon}>
-                <MaterialCommunityIcons name="phone" size={16} color={Colors.primary} />
-              </View>
-              <View style={styles.infoTileContent}>
-                <View style={styles.labelRow}>
-                  <Text style={styles.infoTileLabel}>Contact</Text>
-                  <TouchableOpacity
-                    onPress={() =>
-                      setInfoModalConfig({
-                        visible: true,
-                        title: 'Contact',
-                        content:
-                          'The general reception/front-desk number of the hospital. You call this for booking an appointment, asking about visiting hours, inquiring about a department, billing and administrative queries.',
-                      })
-                    }
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <MaterialCommunityIcons
-                      name="help-circle-outline"
-                      size={14}
-                      color={Colors.textTertiary}
-                    />
-                  </TouchableOpacity>
-                </View>
-                <Text style={styles.infoTileValue}>{hospital.contactNumber}</Text>
-              </View>
-            </View>
-
             {/* Emergency */}
             {hospital.emergencyNumber ? (
               <View style={[styles.infoTile, styles.infoTileDanger]}>
@@ -216,8 +173,10 @@ export default function HospitalDetailScreen() {
                         setInfoModalConfig({
                           visible: true,
                           title: 'Emergency',
-                          content:
-                            'A dedicated hotline routed directly to the ER triage desk — bypassing reception entirely. You call this when someone is having a life-threatening situation, you need an ambulance dispatched immediately, or a patient needs to be pre-alerted before arrival so the ER team is ready.',
+                          content: t(
+                            'hospitals.emergency_help',
+                            'The emergency number on file for this hospital. MediCon has not verified it. If a life is in danger, call 999.',
+                          ),
                         })
                       }
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -234,39 +193,8 @@ export default function HospitalDetailScreen() {
                   </Text>
                 </View>
               </View>
-            ) : (
-              <View style={[styles.infoTile, { opacity: 0 }]} />
-            )}
+            ) : null}
           </View>
-
-          <Text style={styles.sectionTitle}>
-            {t('[id].available_doctors') || 'Available Doctors'}
-          </Text>
-
-          {doctors.length > 0 ? (
-            <View style={styles.doctorsGrid}>
-              {doctors.map((item) => (
-                <View key={item.id} style={styles.doctorCardWrapper}>
-                  <DoctorCard
-                    doctor={item}
-                    variant="online"
-                    fullWidth
-                    onPress={() => router.push(`/(app)/doctors/${item.id}`)}
-                    onBookPress={() =>
-                      router.push(`/(app)/doctors/booking/digest?doctorId=${item.id}&type=video`)
-                    }
-                  />
-                </View>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>
-                {t('[id].no_doctors_currently_listed_fo') ||
-                  'No doctors currently listed for this hospital.'}
-              </Text>
-            </View>
-          )}
         </Animated.View>
       </Animated.ScrollView>
 
