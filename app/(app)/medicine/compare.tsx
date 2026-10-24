@@ -34,6 +34,7 @@ export default function CompareScreen() {
     Keyboard.dismiss();
     setLoading(true);
     setResult(null);
+    setError(null);
     try {
       const data = await medicineAiService.compareMedicines(medA.trim(), medB.trim());
       setResult(data);
@@ -51,11 +52,11 @@ export default function CompareScreen() {
           <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {t('compare.medicine_comparator') || 'Medicine Comparator'}
+          {t('compare.medicine_comparator', 'Compare Medicines')}
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.inputSection}>
           <Input
             placeholder={t('compare.medicine_a') || 'Medicine A'}

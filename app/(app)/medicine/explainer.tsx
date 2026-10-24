@@ -13,11 +13,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Input } from '../../../src/components/ui/Input';
 import { Button } from '../../../src/components/ui/Button';
-import { AIDisclaimer } from '../../../src/components/medical/AIDisclaimer';
-import {
-  medicineAiService,
-  MedicineExplainerResult,
-} from '../../../src/services/ai/medicineAiService';
+import { MedicineLabelView } from '../../../src/components/medical/MedicineLabelView';
+import { medicineAiService, MedicineLabel } from '../../../src/services/ai/medicineAiService';
 import { createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../../src/theme';
@@ -28,16 +25,21 @@ export default function ExplainerScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<MedicineExplainerResult | null>(null);
+  // undefined = not searched yet, null = searched and nothing found.
+  const [result, setResult] = useState<MedicineLabel | null | undefined>(undefined);
+  const [searched, setSearched] = useState('');
   const [error, setError] = useState<AppError | null>(null);
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
     Keyboard.dismiss();
     setLoading(true);
-    setResult(null);
+    setResult(undefined);
+    setError(null);
     try {
-      const data = await medicineAiService.getMedicineExplainer(searchQuery.trim());
+      const name = searchQuery.trim();
+      const data = await medicineAiService.getMedicineInfo(name);
+      setSearched(name);
       setResult(data);
     } catch (err) {
       const appError = createAppError('AI_SERVICE_ERROR', String(err));
@@ -54,11 +56,11 @@ export default function ExplainerScreen() {
           <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {t('explainer.medicine_explainer') || 'Medicine Explainer'}
+          {t('explainer.medicine_explainer', 'Medicine Information')}
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.searchSection}>
           <Input
             placeholder={t('explainer.enter_medicine_name') || 'Enter medicine name...'}
@@ -81,56 +83,25 @@ export default function ExplainerScreen() {
 
         {error && !loading && <ErrorState message={error.message} onRetry={handleSearch} />}
 
+        {result === null && !loading && !error && (
+          <View style={styles.card}>
+            <Text style={styles.notFound}>
+              {t('explainer.not_found', { name: searched, defaultValue: 'No FDA label found.' })}
+            </Text>
+          </View>
+        )}
+
         {result && !loading && (
           <View style={styles.resultContainer}>
-            <AIDisclaimer />
-
             <View style={styles.card}>
-              <Text style={styles.cardTitle}>{searchQuery.trim()}</Text>
-
-              <View style={styles.row}>
-                <Text style={styles.label}>{t('explainer.class') || 'Class:'}</Text>
-                <Text style={styles.value}>{result.className}</Text>
-              </View>
-
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  {t('explainer.available_forms') || 'Available Forms'}
-                </Text>
-                {result.forms.map((f, i) => (
-                  <Text key={i} style={styles.listItem}>
-                    • {f}
-                  </Text>
-                ))}
-              </View>
-
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  {t('explainer.common_side_effects') || 'Common Side Effects'}
-                </Text>
-                {result.sideEffects.map((se, i) => (
-                  <Text key={i} style={styles.listItem}>
-                    • {se}
-                  </Text>
-                ))}
-              </View>
-
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  {t('explainer.dietary_conflicts') || 'Dietary Conflicts'}
-                </Text>
-                {result.dietaryConflicts.map((dc, i) => (
-                  <Text key={i} style={styles.listItem}>
-                    • {dc}
-                  </Text>
-                ))}
-              </View>
-
-              <View style={[styles.section, { borderBottomWidth: 0 }]}>
-                <Text style={styles.sectionTitle}>{t('explainer.ai_summary') || 'AI Summary'}</Text>
-                <Text style={styles.summaryText}>{result.summary}</Text>
-              </View>
+              <MedicineLabelView label={result} />
             </View>
+            <Text style={styles.source}>
+              {t(
+                'explainer.source',
+                'Source: US FDA drug label (openFDA). General information, not medical advice.',
+              )}
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -178,51 +149,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.tertiary,
   },
-  cardTitle: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.xl,
-    color: Colors.primary,
-    marginBottom: Spacing.md,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  label: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.md,
-    color: Colors.textPrimary,
-    marginRight: Spacing.sm,
-  },
-  value: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.md,
-    color: Colors.textSecondary,
-  },
-  section: {
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.tertiary,
-    paddingBottom: Spacing.md,
-    marginBottom: Spacing.md,
-  },
-  sectionTitle: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.md,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.sm,
-  },
-  listItem: {
+  notFound: {
     fontFamily: FontFamily.medium,
     fontSize: FontSize.sm,
     color: Colors.textSecondary,
-    marginBottom: 4,
     lineHeight: FontSize.sm * 1.5,
   },
-  summaryText: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.sm,
-    color: Colors.textPrimary,
-    lineHeight: FontSize.sm * 1.5,
+  source: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.xs,
+    color: Colors.textTertiary,
+    lineHeight: FontSize.xs * 1.5,
   },
 });

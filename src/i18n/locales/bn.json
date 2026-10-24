@@ -92,8 +92,10 @@
     "ref": "রেফ:"
   },
   "medicinecomparecard": {
-    "similarities": "মিল",
-    "differences": "পার্থক্য"
+    "no_label": "এই নামে কোনো FDA লেবেল পাওয়া যায়নি।",
+    "uses": "ব্যবহার",
+    "warnings": "সতর্কতা",
+    "together": "একসাথে সেবন"
   },
   "prescriptioncard": {
     "prescription": "প্রেসক্রিপশন",
@@ -200,7 +202,7 @@
     "comparator": "তুলনাকারী"
   },
   "compare": {
-    "medicine_comparator": "ওষুধের তুলনাকারী",
+    "medicine_comparator": "ওষুধ তুলনা",
     "medicine_a": "ওষুধ এ",
     "medicine_b": "ওষুধ বি",
     "compare": "তুলনা করুন"
@@ -209,22 +211,24 @@
     "detail": "বিস্তারিত"
   },
   "explainer": {
-    "medicine_explainer": "ওষুধের ব্যাখ্যাকারী",
-    "class": "শ্রেণী:",
-    "available_forms": "উপলব্ধ ফর্ম",
-    "common_side_effects": "সাধারণ পার্শ্বপ্রতিক্রিয়া",
-    "dietary_conflicts": "খাদ্যতালিকাগত দ্বন্দ্ব",
-    "ai_summary": "এআই সারাংশ",
+    "medicine_explainer": "ওষুধের তথ্য",
+    "generic_name": "জেনেরিক নাম",
+    "manufacturer": "প্রস্তুতকারক",
+    "uses": "ব্যবহার",
+    "warnings": "সতর্কতা",
+    "not_listed": "লেবেলে উল্লেখ নেই।",
+    "not_found": "\"{{name}}\" এর জন্য কোনো মার্কিন FDA লেবেল পাওয়া যায়নি। বাংলাদেশি ব্র্যান্ড নাম প্রায়ই তালিকায় থাকে না; জেনেরিক নাম দিয়ে চেষ্টা করুন (যেমন প্যারাসিটামলের জন্য acetaminophen)।",
+    "source": "সূত্র: মার্কিন FDA ওষুধের লেবেল (openFDA)। এটি সাধারণ তথ্য, চিকিৎসা পরামর্শ নয়। আপনার ডাক্তারের নির্দেশনা মেনে চলুন।",
     "enter_medicine_name": "ওষুধের নাম লিখুন...",
-    "analyze": "বিশ্লেষণ করুন"
+    "analyze": "খুঁজুন"
   },
   "medicine": {
-    "medicine_intelligence": "মেডিসিন ইন্টেলিজেন্স",
-    "explore_aidriven_insights_abou": "আপনার ওষুধ সম্পর্কে এআই-চালিত অন্তর্দৃষ্টি অন্বেষণ করুন। আরও জানতে, তুলনা করতে বা সম্ভাব্য প্রতিক্রিয়া পরীক্ষা করতে নীচের একটি বিকল্প চয়ন করুন।",
-    "medicine_explainer": "ওষুধের ব্যাখ্যাকারী",
-    "learn_about_forms_side_effects": "ফর্ম, পার্শ্ব প্রতিক্রিয়া এবং খাদ্যতালিকাগত দ্বন্দ্ব সম্পর্কে জানুন।",
-    "medicine_comparator": "ওষুধের তুলনাকারী",
-    "sidebyside_comparison_with_ai_": "এআই যুক্তির সাথে পাশাপাশি তুলনা।",
+    "medicine_intelligence": "ওষুধ",
+    "explore_aidriven_insights_abou": "ওষুধের লেবেলের তথ্য দেখুন এবং ওষুধের সংমিশ্রণ পরীক্ষা করুন। শুধুমাত্র সাধারণ তথ্য, চিকিৎসা পরামর্শ নয়।",
+    "medicine_explainer": "ওষুধের তথ্য",
+    "learn_about_forms_side_effects": "মার্কিন FDA লেবেল থেকে ব্যবহার, সতর্কতা ও প্রস্তুতকারক।",
+    "medicine_comparator": "ওষুধ তুলনা",
+    "sidebyside_comparison_with_ai_": "দুটি ওষুধের লেবেল পাশাপাশি, এবং জোড়াটি পরীক্ষা করা হয়েছে কিনা।",
     "interaction_checker": "মিথস্ক্রিয়া পরীক্ষক",
     "crossreference_new_meds_with_y": "আপনার সক্রিয় প্রেসক্রিপশনের সাথে নতুন ওষুধের ক্রস-রেফারেন্স করুন।"
   },
@@ -475,7 +479,11 @@
     "meds": "ওষুধ",
     "pillAi": "পিল এআই",
     "aiChat": "এআই চ্যাট",
-    "askDoctor": "ডাক্তারকে জিজ্ঞাসা করুন"
+    "askDoctor": "ডাক্তারকে জিজ্ঞাসা করুন",
+    "vitals": "ভাইটালস",
+    "notifications": "বিজ্ঞপ্তি",
+    "settings": "সেটিংস",
+    "loading": "লোড হচ্ছে"
   },
   "settings": {
     "title": "সেটিংস",

@@ -108,8 +108,10 @@
     "ref": "Ref:"
   },
   "medicinecomparecard": {
-    "similarities": "Similarities",
-    "differences": "Differences"
+    "no_label": "No FDA label found for this name.",
+    "uses": "Uses",
+    "warnings": "Warnings",
+    "together": "Taken together"
   },
   "prescriptioncard": {
     "prescription": "Prescription",
@@ -216,7 +218,7 @@
     "comparator": "Comparator"
   },
   "compare": {
-    "medicine_comparator": "Medicine Comparator",
+    "medicine_comparator": "Compare Medicines",
     "medicine_a": "Medicine A",
     "medicine_b": "Medicine B",
     "compare": "Compare"
@@ -225,22 +227,24 @@
     "detail": "Detail"
   },
   "explainer": {
-    "medicine_explainer": "Medicine Explainer",
-    "class": "Class:",
-    "available_forms": "Available Forms",
-    "common_side_effects": "Common Side Effects",
-    "dietary_conflicts": "Dietary Conflicts",
-    "ai_summary": "AI Summary",
+    "medicine_explainer": "Medicine Information",
+    "generic_name": "Generic name",
+    "manufacturer": "Manufacturer",
+    "uses": "Uses",
+    "warnings": "Warnings",
+    "not_listed": "Not listed on the label.",
+    "not_found": "No US FDA label was found for \"{{name}}\". Bangladeshi brand names are often not listed; try the generic name (for example acetaminophen for paracetamol).",
+    "source": "Source: US FDA drug label (openFDA). General information, not medical advice. Follow your doctor's instructions.",
     "enter_medicine_name": "Enter medicine name...",
-    "analyze": "Analyze"
+    "analyze": "Look up"
   },
   "medicine": {
-    "medicine_intelligence": "Medicine Intelligence",
-    "explore_aidriven_insights_abou": "Explore AI-driven insights about your medications. Choose an option below to learn more, compare, or check for potential interactions.",
-    "medicine_explainer": "Medicine Explainer",
-    "learn_about_forms_side_effects": "Learn about forms, side effects, and dietary conflicts.",
-    "medicine_comparator": "Medicine Comparator",
-    "sidebyside_comparison_with_ai_": "Side-by-side comparison with AI rationale.",
+    "medicine_intelligence": "Medicines",
+    "explore_aidriven_insights_abou": "Look up drug label information and check medicine combinations. General information only, not medical advice.",
+    "medicine_explainer": "Medicine Information",
+    "learn_about_forms_side_effects": "Uses, warnings and maker from the US FDA drug label.",
+    "medicine_comparator": "Compare Medicines",
+    "sidebyside_comparison_with_ai_": "Two drug labels side by side, and whether the pair was checked.",
     "interaction_checker": "Interaction Checker",
     "crossreference_new_meds_with_y": "Cross-reference new meds with your active prescriptions."
   },
@@ -491,7 +495,11 @@
     "meds": "Meds",
     "pillAi": "Pill AI",
     "aiChat": "AI Chat",
-    "askDoctor": "Ask Doctor"
+    "askDoctor": "Ask Doctor",
+    "vitals": "Vitals",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "loading": "Loading"
   },
   "settings": {
     "title": "Settings",
