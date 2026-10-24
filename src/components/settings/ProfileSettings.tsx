@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, ScrollView, StyleSheet, ActivityIndicator, Text, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '../../utils/errors';
@@ -14,6 +14,8 @@ export function ProfileSettings() {
 
   const [loadingInitial, setLoadingInitial] = useState(true);
   const [saving, setSaving] = useState(false);
+  // Save sits at the bottom and the result message at the top: scroll up so it is seen.
+  const scrollRef = useRef<ScrollView>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -126,6 +128,7 @@ export function ProfileSettings() {
       setErrorMsg(apiErrorMessage(err, 'Failed to update profile.'));
     } finally {
       setSaving(false);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
     }
   };
 
@@ -140,6 +143,7 @@ export function ProfileSettings() {
 
   return (
     <ScrollView
+      ref={scrollRef}
       style={styles.container}
       contentContainerStyle={{ paddingBottom: Spacing.xl }}
       keyboardShouldPersistTaps="handled"
