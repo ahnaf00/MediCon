@@ -18,7 +18,7 @@
   "notifications": {
     "notifications": "Notifications",
     "title": "Notifications",
-    "empty": "You have no notifications."
+    "unavailable": "In-app notifications are not available yet. Medicine reminders you turn on still arrive as phone notifications."
   },
   "appointmentcard": {
     "no_upcoming_appointments": "No upcoming appointments",
