@@ -32,6 +32,8 @@ export interface MedicineLabel {
   /** "Purpose" or "Indications and usage" section of the label. */
   purpose: string | null;
   warnings: string | null;
+  /** The US name the server searched, when it differs from what was typed (e.g. acetaminophen). */
+  searchedAs?: string | null;
 }
 
 export interface InteractionPair {

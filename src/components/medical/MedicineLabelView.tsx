@@ -42,6 +42,11 @@ export const MedicineLabelView = ({ label }: { label: MedicineLabel }): React.JS
   return (
     <View>
       <Text style={styles.title}>{label.brandName}</Text>
+      {label.searchedAs ? (
+        <Text style={styles.searchedAs}>
+          {`${t('explainer.searched_as', 'US label found under its US name:')} ${label.searchedAs}.`}
+        </Text>
+      ) : null}
       {rows.map(([name, value]) => (
         <View key={name} style={styles.row}>
           <Text style={styles.label}>{name}</Text>
@@ -69,6 +74,13 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
     fontSize: FontSize.xl,
     color: Colors.primary,
+    marginBottom: Spacing.md,
+  },
+  searchedAs: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    marginTop: -Spacing.sm,
     marginBottom: Spacing.md,
   },
   row: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: Spacing.xs },
