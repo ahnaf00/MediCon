@@ -18,7 +18,7 @@
   "notifications": {
     "notifications": "Notifications",
     "title": "Notifications",
-    "empty": "You have no notifications."
+    "unavailable": "In-app notifications are not available yet. Medicine reminders you turn on still arrive as phone notifications."
   },
   "appointmentcard": {
     "no_upcoming_appointments": "No upcoming appointments",
@@ -77,8 +77,8 @@
     "patients": "Patients"
   },
   "authotpform": {
-    "enter_the_6digit_code_sent_to": "Enter the 6-digit code sent to",
-    "dev_otp_123456": "(Dev OTP: 123456)",
+    "enter_the_6digit_code_sent_to": "Enter the 6-digit code for",
+    "dev_otp_123456": "(Demo OTP: 123456 — no SMS is sent)",
     "resend_code": "Resend Code"
   },
   "authphoneform": {
@@ -108,8 +108,10 @@
     "ref": "Ref:"
   },
   "medicinecomparecard": {
-    "similarities": "Similarities",
-    "differences": "Differences"
+    "no_label": "No FDA label found for this name.",
+    "uses": "Uses",
+    "warnings": "Warnings",
+    "together": "Taken together"
   },
   "prescriptioncard": {
     "prescription": "Prescription",
@@ -123,7 +125,8 @@
     "attention": "Attention"
   },
   "errorstate": {
-    "retry": "Retry"
+    "retry": "Retry",
+    "crash": "Something went wrong on this screen. Try again, or restart the app if it keeps happening."
   },
   "ai-chat": {
     "select_consultation": "Select Consultation",
@@ -143,6 +146,8 @@
     "view_all_departments": "View all departments"
   },
   "hospitals": {
+    "unverified": "Hospital details are not verified by MediCon. If a life is in danger, call 999.",
+    "emergency_help": "The emergency number on file for this hospital. MediCon has not verified it. If a life is in danger, call 999.",
     "locating_nearby_hospitals": "Locating nearby hospitals...",
     "location_unavailable": "Location Unavailable",
     "we_need_access_to_your_locatio": "We need access to your location to find nearby hospitals and emergency centers. Please enable location services in your device settings.",
@@ -205,6 +210,8 @@
     "standard_protocol_applies_for_": "Standard protocol applies for this age group."
   },
   "emergency": {
+    "dial_failed_title": "Call 999 now",
+    "dial_failed_body": "This device could not open the phone dialer. Dial 999 from any phone, or ask someone nearby to call.",
     "call_emergency": "Call 999",
     "emergency_triage": "Emergency Triage",
     "life_threatening_instruction": "Call 999 for severe emergencies, or\nchoose a situation for offline guidance."
@@ -216,7 +223,7 @@
     "comparator": "Comparator"
   },
   "compare": {
-    "medicine_comparator": "Medicine Comparator",
+    "medicine_comparator": "Compare Medicines",
     "medicine_a": "Medicine A",
     "medicine_b": "Medicine B",
     "compare": "Compare"
@@ -225,22 +232,24 @@
     "detail": "Detail"
   },
   "explainer": {
-    "medicine_explainer": "Medicine Explainer",
-    "class": "Class:",
-    "available_forms": "Available Forms",
-    "common_side_effects": "Common Side Effects",
-    "dietary_conflicts": "Dietary Conflicts",
-    "ai_summary": "AI Summary",
+    "medicine_explainer": "Medicine Information",
+    "generic_name": "Generic name",
+    "manufacturer": "Manufacturer",
+    "uses": "Uses",
+    "warnings": "Warnings",
+    "not_listed": "Not listed on the label.",
+    "not_found": "No US FDA label was found for \"{{name}}\". Bangladeshi brand names are often not listed; try the generic name (for example acetaminophen for paracetamol).",
+    "source": "Source: US FDA drug label (openFDA). General information, not medical advice. Follow your doctor's instructions.",
     "enter_medicine_name": "Enter medicine name...",
-    "analyze": "Analyze"
+    "analyze": "Look up"
   },
   "medicine": {
-    "medicine_intelligence": "Medicine Intelligence",
-    "explore_aidriven_insights_abou": "Explore AI-driven insights about your medications. Choose an option below to learn more, compare, or check for potential interactions.",
-    "medicine_explainer": "Medicine Explainer",
-    "learn_about_forms_side_effects": "Learn about forms, side effects, and dietary conflicts.",
-    "medicine_comparator": "Medicine Comparator",
-    "sidebyside_comparison_with_ai_": "Side-by-side comparison with AI rationale.",
+    "medicine_intelligence": "Medicines",
+    "explore_aidriven_insights_abou": "Look up drug label information and check medicine combinations. General information only, not medical advice.",
+    "medicine_explainer": "Medicine Information",
+    "learn_about_forms_side_effects": "Uses, warnings and maker from the US FDA drug label.",
+    "medicine_comparator": "Compare Medicines",
+    "sidebyside_comparison_with_ai_": "Two drug labels side by side, and whether the pair was checked.",
     "interaction_checker": "Interaction Checker",
     "crossreference_new_meds_with_y": "Cross-reference new meds with your active prescriptions."
   },
@@ -251,7 +260,10 @@
     "results_for": "Results for",
     "no_active_prescriptions_to_che": "No active prescriptions to check against.",
     "enter_new_medicine_to_check": "Enter new medicine to check...",
-    "check_interactions": "Check Interactions"
+    "check_interactions": "Check Interactions",
+    "not_checked": "Not checked",
+    "not_checked_explanation": "Not checked — ask your doctor or pharmacist.",
+    "limited_check_disclaimer": "Only a very small list of known combinations is recognised. \"Not checked\" does not mean a combination is safe. Ask your doctor or pharmacist before combining medicines."
   },
   "interaction": {
     "interaction": "Interaction"
@@ -357,12 +369,14 @@
     "consult_when_safe": "When you are safe, these doctors can help:",
     "red_flag": {
       "chest_pain": "Chest pain can be a sign of a heart attack.",
+      "heart_attack": "A heart attack is an emergency. Every minute matters.",
       "breathing": "Severe difficulty breathing needs urgent care.",
       "stroke": "These can be signs of a stroke. Every minute matters.",
       "bleeding": "Heavy bleeding or bringing up blood needs urgent care.",
       "unresponsive": "Loss of consciousness needs urgent care.",
       "seizure": "A seizure needs urgent care.",
       "anaphylaxis": "Swelling of the throat or tongue can block breathing.",
+      "poisoning": "Poisoning or an overdose needs urgent care, even if the person seems fine.",
       "self_harm": "You do not have to go through this alone. Please reach out for help right now."
     }
   },
@@ -421,7 +435,7 @@
     "title": "Video consultation",
     "with_name": "with {{name}}",
     "consent_title": "Record and transcribe this call",
-    "consent_body": "With your consent, the audio of this call is recorded and transcribed by AI (Google Gemini) to help your doctor write your consultation summary. Recording only happens if both you and your doctor agree. You can join without recording and change your mind during the call.",
+    "consent_body": "With your consent, the audio of this call is recorded and transcribed by AI (Google Gemini) to help your doctor write your consultation summary. Recording only happens if both you and your doctor agree. You can join without recording and change your mind during the call. If either of you turns recording off, it stops within about 2 seconds, and those last seconds may still be transcribed.",
     "camera_off": "Camera is off",
     "preview_unavailable": "Camera preview unavailable",
     "join": "Join call",
@@ -488,13 +502,17 @@
     "meds": "Meds",
     "pillAi": "Pill AI",
     "aiChat": "AI Chat",
-    "askDoctor": "Ask Doctor"
+    "askDoctor": "Ask Doctor",
+    "vitals": "Vitals",
+    "notifications": "Notifications",
+    "settings": "Settings",
+    "loading": "Loading"
   },
   "settings": {
     "title": "Settings",
     "profile": "Profile",
     "dependents": "Dependents",
-    "editDependent": "Dependent",
+    "dependentsUnavailable": "Adding family members is not available yet. Each person needs their own account for now.",
     "language": "Language",
     "languageSelection": "Select Language",
     "logout": "Log out"

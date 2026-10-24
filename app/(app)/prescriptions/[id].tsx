@@ -17,7 +17,6 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 
 import { Colors, Spacing, FontFamily, FontSize, Layout, BorderRadius } from '../../../src/theme';
 import {
@@ -30,9 +29,11 @@ import {
   DownloadOptionsSheet,
   type DownloadFormat,
 } from '../../../src/components/medical/DownloadOptionsSheet';
-import { createAppError, AppError } from '../../../src/utils/errors';
+import { apiErrorMessage, createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
-import { reminderService } from '../../../src/services/notifications/reminderService';
+import { ReminderPanel } from '../../../src/components/medical/ReminderPanel';
+import { ExplanationReview } from '../../../src/components/medical/ExplanationReview';
+import { useAuthStore } from '../../../src/store/authStore';
 import { Prescription, PrescriptionMedicine } from '../../../src/types/medical.types';
 import { getMedicineDescription } from '../../../src/utils/prescriptionFormatters';
 
@@ -47,16 +48,11 @@ type Params = { id: string };
 interface MedicineDetailCardProps {
   med: PrescriptionMedicine;
   issuedAt: string;
-  onSetReminder: (medId: string) => void;
-  reminderTime?: Date;
+  /** Set for the prescribing doctor: shows Edit / Hide for the explanation. */
+  review?: { prescriptionId: string; onUpdated: (p: Prescription) => void };
 }
 
-const MedicineDetailCard = ({
-  med,
-  issuedAt,
-  onSetReminder,
-  reminderTime,
-}: MedicineDetailCardProps) => {
+const MedicineDetailCard = ({ med, issuedAt, review }: MedicineDetailCardProps) => {
   const [expanded, setExpanded] = useState(false);
   const toggleExpanded = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -117,8 +113,17 @@ const MedicineDetailCard = ({
         </View>
       ) : null}
 
+      {/* Prescribing doctor: what the patient reads, with Edit / Hide (audit CLIN-006) */}
+      {review ? (
+        <ExplanationReview
+          prescriptionId={review.prescriptionId}
+          med={med}
+          onUpdated={review.onUpdated}
+        />
+      ) : null}
+
       {/* Collapsible Explanation */}
-      {explanationText && (
+      {!review && explanationText && (
         <>
           <TouchableOpacity
             style={styles.explanationToggle}
@@ -126,7 +131,11 @@ const MedicineDetailCard = ({
             activeOpacity={0.7}
           >
             <Text style={styles.explanationToggleText}>
-              {expanded ? 'Hide details' : 'Why take this medicine?'}
+              {expanded
+                ? 'Hide details'
+                : med.explanationSource === 'doctor'
+                  ? 'Why take this medicine?'
+                  : 'Why take this medicine? (AI explanation)'}
             </Text>
             <MaterialCommunityIcons
               name={expanded ? 'chevron-up' : 'chevron-down'}
@@ -139,7 +148,9 @@ const MedicineDetailCard = ({
             <View style={styles.explanationBox}>
               <Text style={styles.explanationText}>{explanationText}</Text>
               <Text style={styles.explanationDisclaimer}>
-                AI-generated explanation. Always follow your doctor's instructions.
+                {med.explanationSource === 'doctor'
+                  ? 'Written by your doctor.'
+                  : "AI-generated explanation. Always follow your doctor's instructions."}
               </Text>
             </View>
           )}
@@ -153,15 +164,12 @@ export default function PrescriptionDetailsScreen() {
   const { id } = useLocalSearchParams<Params>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const role = useAuthStore((s) => s.role);
+  const userId = useAuthStore((s) => s.userId);
 
   const [prescription, setPrescription] = useState<Prescription | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<AppError | null>(null);
-
-  // Time-picker state
-  const [showPicker, setShowPicker] = useState(false);
-  const [selectedMedId, setSelectedMedId] = useState<string | null>(null);
-  const [reminderTimes, setReminderTimes] = useState<Record<string, Date>>({});
 
   // "Show Original" modal
   const [showOriginalVisible, setShowOriginalVisible] = useState(false);
@@ -201,23 +209,18 @@ export default function PrescriptionDetailsScreen() {
         const data = await prescriptionsService.getPrescriptionById(Number(id));
         if (isMounted) {
           setPrescription(data);
-          const defaults: Record<string, Date> = {};
-          data.medicines.forEach((med) => {
-            const d = new Date();
-            const schedule = (med.dosageSchedule as any) ?? {};
-            const firstTime = schedule.morning ?? schedule.noon ?? schedule.night;
-            if (firstTime) {
-              const [h, m] = (firstTime as string).split(':').map(Number);
-              d.setHours(h, m, 0, 0);
-            } else {
-              d.setHours(8, 0, 0, 0);
-            }
-            defaults[String(med.id)] = d;
-          });
-          setReminderTimes(defaults);
         }
       } catch (err) {
-        if (isMounted) setError(createAppError('NETWORK_ERROR', String(err)));
+        if (isMounted)
+          setError(
+            createAppError(
+              'NETWORK_ERROR',
+              apiErrorMessage(
+                err,
+                'Could not load this prescription. Check your connection and try again.',
+              ),
+            ),
+          );
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -226,47 +229,6 @@ export default function PrescriptionDetailsScreen() {
       isMounted = false;
     };
   }, [id]);
-
-  const handleSetReminder = async (med: PrescriptionMedicine, date: Date): Promise<void> => {
-    try {
-      const hasPermission = await reminderService.requestPermissions();
-      if (!hasPermission) {
-        Alert.alert(
-          'Permission Denied',
-          'Please enable notifications in Settings to set medicine reminders.',
-        );
-        return;
-      }
-      await reminderService.scheduleDailyReminder(
-        String(med.id),
-        'Medicine Reminder',
-        `Time to take ${med.name} (${med.dosage})`,
-        date.getHours(),
-        date.getMinutes(),
-      );
-      setReminderTimes((prev) => ({ ...prev, [String(med.id)]: date }));
-      Alert.alert(
-        'Reminder Set',
-        `Daily reminder set for ${med.name} at ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
-      );
-    } catch (err) {
-      const appError = createAppError('UNKNOWN_ERROR', String(err));
-      Alert.alert('Error', appError.message);
-    }
-  };
-
-  const onChangeTime = (_event: unknown, selectedDate?: Date): void => {
-    setShowPicker(false);
-    if (selectedDate && selectedMedId) {
-      const med = prescription?.medicines.find((m) => m.id === selectedMedId);
-      if (med) handleSetReminder(med, selectedDate);
-    }
-  };
-
-  const onOpenTimePicker = (medId: string) => {
-    setSelectedMedId(medId);
-    setShowPicker(true);
-  };
 
   // ── Loading / Error states ──────────────────────────────────────────────────
 
@@ -300,6 +262,11 @@ export default function PrescriptionDetailsScreen() {
   // ── Derived display values ──────────────────────────────────────────────────
 
   const isDoctor = prescription.source === 'DOCTOR';
+  const isPrescriber =
+    role === 'doctor' && !!userId && String(prescription.doctor?.id) === String(userId);
+  const review = isPrescriber
+    ? { prescriptionId: String(prescription.id), onUpdated: setPrescription }
+    : undefined;
   const sourceLabel = isDoctor
     ? (prescription.doctorName ?? prescription.doctorId ?? 'Doctor')
     : `Uploaded prescription`;
@@ -366,6 +333,8 @@ export default function PrescriptionDetailsScreen() {
           </View>
         </View>
 
+        {role === 'patient' && <ReminderPanel prescription={prescription} />}
+
         {/* Medicines section */}
         <Text style={styles.sectionTitle}>Medicines ({prescription.medicines.length})</Text>
 
@@ -374,8 +343,7 @@ export default function PrescriptionDetailsScreen() {
             key={med.id}
             med={med}
             issuedAt={prescription.issuedAt}
-            onSetReminder={onOpenTimePicker}
-            reminderTime={reminderTimes[med.id]}
+            review={review}
           />
         ))}
       </ScrollView>
@@ -393,21 +361,6 @@ export default function PrescriptionDetailsScreen() {
           <Text style={styles.showOriginalFullBtnText}>Show Original Prescription</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Time picker */}
-      {showPicker && (
-        <DateTimePicker
-          value={
-            selectedMedId && reminderTimes[selectedMedId]
-              ? reminderTimes[selectedMedId]
-              : new Date()
-          }
-          mode="time"
-          is24Hour={false}
-          display="default"
-          onChange={onChangeTime}
-        />
-      )}
 
       {/* "Show Original" full-screen modal */}
       <Modal

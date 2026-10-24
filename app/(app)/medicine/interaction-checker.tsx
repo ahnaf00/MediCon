@@ -16,7 +16,7 @@ import { Button } from '../../../src/components/ui/Button';
 import { InteractionFlag } from '../../../src/components/medical/InteractionFlag';
 import { medicineAiService, InteractionConflict } from '../../../src/services/ai/medicineAiService';
 import { prescriptionsService } from '../../../src/services/api/prescriptionsService';
-import { createAppError, AppError } from '../../../src/utils/errors';
+import { apiErrorMessage, createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { Colors, Spacing, FontFamily, FontSize } from '../../../src/theme';
 import { useTranslation } from 'react-i18next';
@@ -42,7 +42,16 @@ export default function InteractionCheckerScreen() {
           setActiveMedicines(meds);
         }
       } catch (err) {
-        if (isMounted) setError(createAppError('NETWORK_ERROR', String(err)));
+        if (isMounted)
+          setError(
+            createAppError(
+              'NETWORK_ERROR',
+              apiErrorMessage(
+                err,
+                'Could not load your current medicines. Check your connection and try again.',
+              ),
+            ),
+          );
       }
     })();
     return () => {
@@ -57,11 +66,18 @@ export default function InteractionCheckerScreen() {
     setConflicts(null);
     try {
       // Build peer array: the new medicine + all active medicines
-      const allMedicines = [newMedicine.trim(), ...activeMedicines.map((m) => m.name)];
+      const checked = newMedicine.trim();
+      const allMedicines = [checked, ...activeMedicines.map((m) => m.name)];
       const data = await medicineAiService.checkInteractions(allMedicines);
-      setConflicts(data);
+      // Every warning is shown; "not checked" cards only for pairs with the new medicine.
+      setConflicts(data.filter((c) => c.severity !== 'NOT_CHECKED' || c.pair[0] === checked));
     } catch (err) {
-      setError(createAppError('AI_SERVICE_ERROR', String(err)));
+      setError(
+        createAppError(
+          'AI_SERVICE_ERROR',
+          apiErrorMessage(err, 'Could not check interactions right now. Please try again.'),
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -119,6 +135,9 @@ export default function InteractionCheckerScreen() {
           <View style={styles.resultsContainer}>
             <Text style={styles.resultsTitle}>
               {t('interaction-checker.results_for') || 'Results for'} {newMedicine.trim()}
+            </Text>
+            <Text style={styles.disclaimerText}>
+              {t('interaction-checker.limited_check_disclaimer')}
             </Text>
             {conflicts.map((conflict, i) => (
               <InteractionFlag key={i} conflict={conflict} />
@@ -189,6 +208,13 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
     fontSize: FontSize.lg,
     color: Colors.textPrimary,
+    marginBottom: Spacing.md,
+  },
+  disclaimerText: {
+    fontFamily: FontFamily.medium,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    lineHeight: FontSize.sm * 1.5,
     marginBottom: Spacing.md,
   },
   noMedsText: {

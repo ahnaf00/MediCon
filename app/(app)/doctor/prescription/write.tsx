@@ -20,6 +20,11 @@ import { Colors, Spacing, FontFamily, FontSize, BorderRadius, Shadows } from '@t
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { toLocalDateString } from '../../../../src/utils/localDate';
+import {
+  usePatient,
+  ageFromDateOfBirth,
+  splitProfileList,
+} from '../../../../src/services/api/patientsService';
 
 // 2. TYPES
 interface MedicineEntry {
@@ -65,23 +70,6 @@ function makeEmptyTest(index: number): TestEntry {
     reason: '',
   };
 }
-
-// Mock allergies based on patientId for demonstration
-const getMockAllergies = (id?: string) => {
-  if (!id) return '';
-  if (id.includes('101') || id === 'p1') return 'Penicillin';
-  if (id.includes('103') || id === 'p3') return 'Sulfa drugs, Aspirin';
-  if (id === 'p5') return 'NSAIDs';
-  return '';
-};
-
-const getMockAge = (id?: string) => {
-  if (!id) return '35';
-  if (id.includes('101') || id === 'p1') return '45';
-  if (id.includes('102') || id === 'p2') return '32';
-  if (id.includes('103') || id === 'p3') return '58';
-  return '35';
-};
 
 type ActiveTab = 'medicines' | 'tests';
 
@@ -141,8 +129,12 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
     }
   }, [activeTestId, textModal]);
 
-  const allergies = getMockAllergies(patientId);
-  const patientAge = getMockAge(patientId);
+  // The patient's own recorded profile; nothing here is invented.
+  const patientQuery = usePatient(patientId);
+  const profile = patientQuery.data?.patientProfile;
+  const allergies = splitProfileList(profile?.allergies).join(', ');
+  const age = ageFromDateOfBirth(profile?.dateOfBirth);
+  const patientAge = age !== null ? String(age) : '';
 
   // ── MEDICINES HANDLERS ───────────────────────────────────────────────────────
   const addMedicine = () => {
@@ -278,14 +270,22 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
             <View style={styles.patientInfoCard}>
               <View style={styles.patientInfoLeft}>
                 <Text style={styles.patientInfoName}>{decodeURIComponent(patientName)}</Text>
-                <Text style={styles.patientInfoAge}>{patientAge} years old</Text>
+                <Text style={styles.patientInfoAge}>
+                  {patientAge ? `${patientAge} years old` : 'Age not recorded'}
+                </Text>
               </View>
-              {allergies ? (
-                <View style={styles.allergyBox}>
-                  <Text style={styles.allergyBoxTitle}>Allergies</Text>
-                  <Text style={styles.allergyBoxText}>{allergies}</Text>
-                </View>
-              ) : null}
+              {/* Always shown: an empty profile means unknown, not "no allergies". */}
+              <View style={styles.allergyBox}>
+                <Text style={styles.allergyBoxTitle}>Allergies</Text>
+                <Text style={[styles.allergyBoxText, !allergies && styles.allergyBoxUnknown]}>
+                  {allergies ||
+                    (patientQuery.isLoading
+                      ? 'Loading…'
+                      : patientQuery.isError
+                        ? 'Could not load — ask the patient'
+                        : 'None recorded — ask the patient')}
+                </Text>
+              </View>
             </View>
           ) : null}
 
@@ -904,6 +904,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.danger,
     textAlign: 'center',
+  },
+  allergyBoxUnknown: {
+    color: Colors.textSecondary,
   },
   tabBar: {
     flexDirection: 'row',

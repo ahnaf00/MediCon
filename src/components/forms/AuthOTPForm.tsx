@@ -48,9 +48,17 @@ export const AuthOTPForm = ({
 
   const handleChange = (text: string, index: number) => {
     const sanitized = text.replace(/\D/g, '');
-    if (!sanitized) return;
-
     const newDigits = [...digits];
+
+    // Backspace on a filled box: clear it so a mistyped code can be corrected.
+    if (!sanitized) {
+      if (text === '') {
+        newDigits[index] = '';
+        setDigits(newDigits);
+      }
+      return;
+    }
+
     newDigits[index] = sanitized.charAt(0);
     setDigits(newDigits);
 
@@ -97,6 +105,8 @@ export const AuthOTPForm = ({
             style={[styles.otpInput, error ? styles.otpInputError : undefined]}
             keyboardType="number-pad"
             maxLength={1}
+            // Tapping a filled box selects its digit, so typing replaces it.
+            selectTextOnFocus
             value={digit}
             onChangeText={(text) => handleChange(text, index)}
             onKeyPress={(e) => handleKeyPress(e, index)}

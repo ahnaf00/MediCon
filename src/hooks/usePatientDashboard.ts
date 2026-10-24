@@ -7,6 +7,8 @@ import {
   useAppointments,
 } from '../services/api/consultationsService';
 import { getMealTiming } from '../utils/prescriptionFormatters';
+import { toLocalDateString } from '../utils/localDate';
+import { courseLastDay } from '../utils/courseDates';
 import type { Prescription, PrescriptionMedicine } from '../types/medical.types';
 
 // 2. TYPES
@@ -109,8 +111,15 @@ const format12Hour = (timeStr: string) => {
  * The next dose period across all active prescriptions. Expired or cancelled
  * prescriptions never feed the widget; with none active it shows its empty state.
  */
-const pickNextMedicine = (prescriptions: Prescription[]): DashboardMedication | null => {
-  const medicines = prescriptions.filter((p) => p.status === 'active').flatMap((p) => p.medicines);
+export const pickNextMedicine = (
+  prescriptions: Prescription[],
+  today: Date = new Date(),
+): DashboardMedication | null => {
+  // Only medicines whose course is still running (the server does not expire prescriptions).
+  const todayStr = toLocalDateString(today);
+  const medicines = prescriptions
+    .filter((p) => p.status === 'active')
+    .flatMap((p) => p.medicines.filter((m) => courseLastDay(p.issuedAt, m) >= todayStr));
 
   const periods = PERIODS.map(({ name, key }) => {
     const meds = medicines.filter(

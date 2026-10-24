@@ -4,16 +4,25 @@ import { StateStorage } from 'zustand/middleware';
 // Clean, synchronous-compatible, fail-safe in-memory store
 const memoryStore = new Map<string, string>();
 
-let isSecureStoreAvailable = true;
+// Writes to the same key run one after another, so a logout's delete can't land
+// after the next login's save. A failed write affects only itself: the next
+// write to that key tries SecureStore again (audit API-009 — one failure used
+// to stop the session's token from ever being saved).
+const writeQueue = new Map<string, Promise<void>>();
 
-// Pre-test SecureStore availability synchronously if possible or safely handle promises
+const persistWrite = (key: string, write: () => Promise<void>): void => {
+  const next = (writeQueue.get(key) ?? Promise.resolve()).then(write).catch((err) => {
+    if (__DEV__) {
+      // eslint-disable-next-line no-console -- dev-only hint; values are never logged
+      console.warn(`SecureStore write failed for "${key}"`, err);
+    }
+  });
+  writeQueue.set(key, next);
+};
+
 const safeSetItem = (key: string, value: string): void => {
   memoryStore.set(key, value);
-  if (isSecureStoreAvailable) {
-    SecureStore.setItemAsync(key, value).catch(() => {
-      isSecureStoreAvailable = false;
-    });
-  }
+  persistWrite(key, () => SecureStore.setItemAsync(key, value));
 };
 
 // Reads wait for the boot-time preload below; otherwise Zustand would hydrate
@@ -25,12 +34,12 @@ const safeGetItem = async (key: string): Promise<string | null> => {
 
 const safeRemoveItem = (key: string): void => {
   memoryStore.delete(key);
-  if (isSecureStoreAvailable) {
-    SecureStore.deleteItemAsync(key).catch(() => {
-      isSecureStoreAvailable = false;
-    });
-  }
+  persistWrite(key, () => SecureStore.deleteItemAsync(key));
 };
+
+/** Settles once every queued write has finished (tests use it). */
+export const flushSecureWrites = (): Promise<void> =>
+  Promise.all([...writeQueue.values()]).then(() => undefined);
 
 // Populate memory store from SecureStore asynchronously on boot
 const preloadKey = async (key: string) => {
@@ -41,7 +50,7 @@ const preloadKey = async (key: string) => {
       memoryStore.set(key, val);
     }
   } catch {
-    isSecureStoreAvailable = false;
+    // Unreadable this time: start from defaults; writes still go to SecureStore.
   }
 };
 
@@ -50,8 +59,11 @@ const preloadReady = Promise.all([
   preloadKey('auth-storage'),
   preloadKey('settings-storage'),
   preloadKey('onboarding-state'),
-  preloadKey('medicon-chat-storage'),
 ]);
+
+// Chat text used to be saved here; the chat store is memory-only now, so
+// remove any copy an older version left on the phone.
+SecureStore.deleteItemAsync('medicon-chat-storage').catch(() => {});
 
 // 1. Synchronous state storage adapter for Zustand
 export const mmkvStorage: StateStorage = {

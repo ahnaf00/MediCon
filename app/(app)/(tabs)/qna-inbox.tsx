@@ -28,6 +28,7 @@ import { Question } from '../../../src/types/medical.types';
 import { createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { useTranslation } from 'react-i18next';
+import { apiErrorMessage } from '../../../src/services/api/consultationsService';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SHEET_MAX_HEIGHT = SCREEN_HEIGHT * 0.78;
@@ -161,7 +162,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const userId = useAuthStore((s) => s.userId) || 'doctor-1';
+  const userId = useAuthStore((s) => s.userId) ?? '';
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('unanswered');
   const presence = useDoctorPresence();
@@ -200,8 +201,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
     try {
       setLoading(true);
       setError(null);
-      let doc = await doctorsService.getDoctorDetails(userId);
-      if (!doc) doc = await doctorsService.getDoctorDetails('doc-1');
+      const doc = userId ? await doctorsService.getDoctorDetails(userId) : null;
 
       if (doc) {
         const data = await qnaService.getDoctorInbox(doc.department);
@@ -214,7 +214,12 @@ export default function QnaInboxScreen(): React.JSX.Element {
         throw new Error('Doctor not found');
       }
     } catch (err) {
-      setError(createAppError('NETWORK_ERROR', String(err)));
+      setError(
+        createAppError(
+          'NETWORK_ERROR',
+          apiErrorMessage(err, 'Could not load questions. Check your connection and try again.'),
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -285,8 +290,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
     try {
       setSubmitting(true);
       if (isEditing && editingAnswerId) {
-        let doc = await doctorsService.getDoctorDetails(userId);
-        if (!doc) doc = await doctorsService.getDoctorDetails('doc-1');
+        const doc = await doctorsService.getDoctorDetails(userId);
         const updatedAnswer = await qnaService.updateAnswer(
           activeQuestion.id,
           editingAnswerId,
@@ -321,8 +325,9 @@ export default function QnaInboxScreen(): React.JSX.Element {
       }
       closeReplySheet();
     } catch (err) {
-      const e = createAppError('NETWORK_ERROR', String(err));
-      alert(e.message);
+      // e.g. 409 "Another doctor has already taken this question."
+      alert(apiErrorMessage(err, 'Could not send your answer. Please try again.'));
+      loadData();
     } finally {
       setSubmitting(false);
     }

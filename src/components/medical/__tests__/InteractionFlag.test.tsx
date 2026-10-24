@@ -2,25 +2,28 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { InteractionFlag } from '../InteractionFlag';
 import { InteractionConflict } from '../../../services/ai/medicineAiService';
+import '../../../i18n';
 
 describe('InteractionFlag Component', () => {
-  it('renders correctly for a SAFE conflict', async () => {
+  it('renders an unmatched pair as not checked, never as safe', async () => {
     const conflict: InteractionConflict = {
       existingMedicineId: '1',
       existingMedicineName: 'Lisinopril',
-      severity: 'SAFE',
-      explanation: 'No known significant interactions.',
+      severity: 'NOT_CHECKED',
+      explanation: 'server text is not shown for unchecked pairs',
+      pair: ['DrugX', 'Lisinopril'],
     };
 
     await render(<InteractionFlag conflict={conflict} />);
 
-    expect(screen.getByText('Safe')).toBeTruthy();
+    expect(screen.getByText('Not checked')).toBeTruthy();
     expect(screen.getByText('Lisinopril')).toBeTruthy();
-    expect(screen.getByText('No known significant interactions.')).toBeTruthy();
+    expect(screen.getByText('Not checked — ask your doctor or pharmacist.')).toBeTruthy();
+    expect(screen.queryByText(/safe/i)).toBeNull();
 
-    const container = screen.getByTestId('interaction-flag-SAFE');
+    const container = screen.getByTestId('interaction-flag-NOT_CHECKED');
     expect(container.props.style).toEqual(
-      expect.arrayContaining([expect.objectContaining({ backgroundColor: '#F0FDF4' })]),
+      expect.arrayContaining([expect.objectContaining({ backgroundColor: '#F3F4F6' })]),
     );
   });
 
@@ -30,6 +33,7 @@ describe('InteractionFlag Component', () => {
       existingMedicineName: 'Aspirin',
       severity: 'MINOR',
       explanation: 'May increase bleeding risk slightly.',
+      pair: ['DrugX', 'Aspirin'],
     };
 
     await render(<InteractionFlag conflict={conflict} />);
@@ -50,6 +54,7 @@ describe('InteractionFlag Component', () => {
       existingMedicineName: 'Warfarin',
       severity: 'SEVERE',
       explanation: 'Severe risk of major bleeding. Do not mix.',
+      pair: ['Aspirin', 'Warfarin'],
     };
 
     await render(<InteractionFlag conflict={conflict} />);

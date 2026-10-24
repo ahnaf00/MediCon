@@ -24,18 +24,12 @@ export default function MedicineHubScreen() {
           <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {t('medicine.medicine_intelligence') || 'Medicine Intelligence'}
-          </Text>
+          <Text style={styles.headerTitle}>{t('medicine.medicine_intelligence')}</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        <Text style={styles.description}>
-          {t('medicine.explore_aidriven_insights_abou') ||
-            `Explore AI-driven insights about your medications. Choose an option below to learn more,
-                            compare, or check for potential interactions.`}
-        </Text>
+        <Text style={styles.description}>{t('medicine.explore_aidriven_insights_abou')}</Text>
 
         <TouchableOpacity
           style={styles.card}
@@ -46,13 +40,8 @@ export default function MedicineHubScreen() {
             <MaterialCommunityIcons name="pill" size={24} color={Colors.primary} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>
-              {t('medicine.medicine_explainer') || 'Medicine Explainer'}
-            </Text>
-            <Text style={styles.cardDesc}>
-              {t('medicine.learn_about_forms_side_effects') ||
-                'Learn about forms, side effects, and dietary conflicts.'}
-            </Text>
+            <Text style={styles.cardTitle}>{t('medicine.medicine_explainer')}</Text>
+            <Text style={styles.cardDesc}>{t('medicine.learn_about_forms_side_effects')}</Text>
           </View>
           <MaterialCommunityIcons name="chevron-right" size={24} color={Colors.textSecondary} />
         </TouchableOpacity>
@@ -66,13 +55,8 @@ export default function MedicineHubScreen() {
             <MaterialCommunityIcons name="scale-balance" size={24} color={Colors.warning} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>
-              {t('medicine.medicine_comparator') || 'Medicine Comparator'}
-            </Text>
-            <Text style={styles.cardDesc}>
-              {t('medicine.sidebyside_comparison_with_ai_') ||
-                'Side-by-side comparison with AI rationale.'}
-            </Text>
+            <Text style={styles.cardTitle}>{t('medicine.medicine_comparator')}</Text>
+            <Text style={styles.cardDesc}>{t('medicine.sidebyside_comparison_with_ai_')}</Text>
           </View>
           <MaterialCommunityIcons name="chevron-right" size={24} color={Colors.textSecondary} />
         </TouchableOpacity>
@@ -86,13 +70,8 @@ export default function MedicineHubScreen() {
             <MaterialCommunityIcons name="alert-circle-outline" size={24} color={Colors.danger} />
           </View>
           <View style={styles.cardContent}>
-            <Text style={styles.cardTitle}>
-              {t('medicine.interaction_checker') || 'Interaction Checker'}
-            </Text>
-            <Text style={styles.cardDesc}>
-              {t('medicine.crossreference_new_meds_with_y') ||
-                'Cross-reference new meds with your active prescriptions.'}
-            </Text>
+            <Text style={styles.cardTitle}>{t('medicine.interaction_checker')}</Text>
+            <Text style={styles.cardDesc}>{t('medicine.crossreference_new_meds_with_y')}</Text>
           </View>
           <MaterialCommunityIcons name="chevron-right" size={24} color={Colors.textSecondary} />
         </TouchableOpacity>

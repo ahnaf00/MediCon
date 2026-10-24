@@ -9,6 +9,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
+import { getAllPages } from './pagination';
 
 // ─── Types (matching MedicalRecordResource & VitalResource exactly) ───────────
 
@@ -115,13 +116,10 @@ export interface UploadRecordPayload {
 export const reportsService = {
   /**
    * Goal: Retrieve all medical record documents for the authenticated patient.
-   * How: GET /api/v1/medical-records — Sanctum-protected, returns paginated list.
-   * The axiosClient interceptor unwraps the top-level Laravel `.data` wrapper;
-   * a second `.data` is present if pagination is active, so we handle both.
+   * How: GET /api/v1/medical-records — Sanctum-protected; reads every page.
    */
   getRecords: async (): Promise<MedicalRecord[]> => {
-    const res = (await axiosClient.get('/medical-records')) as any;
-    return Array.isArray(res) ? res : (res?.data ?? []);
+    return getAllPages<MedicalRecord>('/medical-records');
   },
 
   /**
@@ -156,6 +154,8 @@ export const reportsService = {
     }
 
     const res = (await axiosClient.post('/medical-records', formData, {
+      // Up to 10 pages of 10 MB on a mobile connection.
+      timeout: 120000,
       // CRITICAL: We must delete the default 'application/json' header.
       // Do NOT set 'Content-Type': 'multipart/form-data' explicitly here, because
       // Axios will strip the boundary string required by the server. React Native

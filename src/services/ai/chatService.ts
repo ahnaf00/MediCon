@@ -5,6 +5,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from '../api/axiosClient';
+import { getAllPages } from '../api/pagination';
+import type { RedFlag } from './redFlag';
 
 // ─── Types (matching AiChatController response shapes exactly) ───────────────
 
@@ -25,6 +27,8 @@ export interface AiChatSession {
 export interface SendMessageResponse {
   sessionId: number;
   message: AiChatMessage;
+  /** Set when the question matched the server's emergency rules. */
+  redFlag?: RedFlag | null;
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -37,31 +41,29 @@ class ChatService {
    * The backend returns { sessionId, message: { id, role, content, createdAt } }.
    */
   async sendMessage(message: string, sessionId?: number): Promise<SendMessageResponse> {
-    const res = (await axiosClient.post('/ai/chat', {
-      message,
-      session_id: sessionId ?? null,
-    })) as any;
+    // The server waits up to 30 s for the AI.
+    const res = (await axiosClient.post(
+      '/ai/chat',
+      { message, session_id: sessionId ?? null },
+      { timeout: 45000 },
+    )) as any;
     return res;
   }
 
   /**
    * Goal: List all AI chat sessions for the authenticated user.
-   * How: GET /api/v1/ai/sessions — returns paginated results; we extract the array.
+   * How: GET /api/v1/ai/sessions — every page, newest session first.
    */
   async getSessions(): Promise<AiChatSession[]> {
-    const res = (await axiosClient.get('/ai/sessions')) as any;
-    // axiosClient unwraps Laravel's top-level .data; Laravel pagination wraps items
-    // in a second .data. Handle both shapes gracefully.
-    return Array.isArray(res) ? res : (res?.data ?? []);
+    return getAllPages<AiChatSession>('/ai/sessions');
   }
 
   /**
    * Goal: Fetch all messages in a specific AI chat session.
-   * How: GET /api/v1/ai/sessions/{id}/messages — oldest-first, page 1 = 50 results.
+   * How: GET /api/v1/ai/sessions/{id}/messages — every page, oldest first.
    */
   async getMessages(sessionId: number): Promise<AiChatMessage[]> {
-    const res = (await axiosClient.get(`/ai/sessions/${sessionId}/messages`)) as any;
-    return Array.isArray(res) ? res : (res?.data ?? []);
+    return getAllPages<AiChatMessage>(`/ai/sessions/${sessionId}/messages`);
   }
 }
 

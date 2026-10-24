@@ -15,7 +15,7 @@ import { Input } from '../../../src/components/ui/Input';
 import { Button } from '../../../src/components/ui/Button';
 import { MedicineCompareCard } from '../../../src/components/medical/MedicineCompareCard';
 import { medicineAiService, ComparisonResult } from '../../../src/services/ai/medicineAiService';
-import { createAppError, AppError } from '../../../src/utils/errors';
+import { apiErrorMessage, createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { Colors, Spacing, FontFamily, FontSize } from '../../../src/theme';
 import { useTranslation } from 'react-i18next';
@@ -34,11 +34,17 @@ export default function CompareScreen() {
     Keyboard.dismiss();
     setLoading(true);
     setResult(null);
+    setError(null);
     try {
       const data = await medicineAiService.compareMedicines(medA.trim(), medB.trim());
       setResult(data);
     } catch (err) {
-      setError(createAppError('AI_SERVICE_ERROR', String(err)));
+      setError(
+        createAppError(
+          'AI_SERVICE_ERROR',
+          apiErrorMessage(err, 'Could not compare these medicines right now. Please try again.'),
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -51,11 +57,11 @@ export default function CompareScreen() {
           <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>
-          {t('compare.medicine_comparator') || 'Medicine Comparator'}
+          {t('compare.medicine_comparator', 'Compare Medicines')}
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
         <View style={styles.inputSection}>
           <Input
             placeholder={t('compare.medicine_a') || 'Medicine A'}

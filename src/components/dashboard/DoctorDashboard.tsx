@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -19,6 +18,11 @@ import { authService } from '../../services/api/authService';
 import { useDoctorPresence } from '../../services/api/presenceService';
 import { useDoctorDashboard } from '../../hooks/useDoctorDashboard';
 import { AppointmentQueueCard } from '../cards/AppointmentQueueCard';
+import { DoctorPhoto } from '../ui/DoctorPhoto';
+
+/** A stored fee such as "700.00" shown as "৳700". */
+const formatTaka = (value?: string | number | null): string =>
+  `৳${Number(value ?? 0).toLocaleString('en-US', { maximumFractionDigits: 2 })}`;
 
 export const DoctorDashboard = (): React.JSX.Element => {
   const { t } = useTranslation();
@@ -32,9 +36,7 @@ export const DoctorDashboard = (): React.JSX.Element => {
     !!doctorUser?.doctorProfile && doctorUser.doctorProfile.verificationStatus !== 'verified';
 
   const fullName = doctorUser?.name || 'Loading...';
-  const profileImage = doctorUser?.avatarUrl
-    ? { uri: doctorUser.avatarUrl }
-    : require('../../assets/images/doctors/doctorPlaceholder1.png');
+  const profileImage = doctorUser?.avatarUrl ? { uri: doctorUser.avatarUrl } : null;
 
   const handleSwitchRole = () => {
     setRole('patient');
@@ -88,7 +90,12 @@ export const DoctorDashboard = (): React.JSX.Element => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile Card */}
         <View style={styles.profileCard}>
-          <Image source={profileImage as any} style={styles.profileImage} resizeMode="cover" />
+          <DoctorPhoto
+            source={profileImage}
+            name={doctorUser?.name}
+            style={styles.profileImage}
+            initialsSize={24}
+          />
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{fullName}</Text>
             <View style={styles.profileSpacing} />
@@ -183,13 +190,13 @@ export const DoctorDashboard = (): React.JSX.Element => {
                   <Text style={styles.detailLabel}>
                     {t('doctordashboard.new_patient', 'New Patient')}
                   </Text>
-                  <Text style={styles.detailValue}>${stats?.fees.consultation_fee || 0}</Text>
+                  <Text style={styles.detailValue}>{formatTaka(stats?.fees.consultation_fee)}</Text>
                 </View>
                 <View style={styles.detailBlock}>
                   <Text style={styles.detailLabel}>
                     {t('doctordashboard.follow_up', 'Follow-up (within 7 days)')}
                   </Text>
-                  <Text style={styles.detailValue}>${stats?.fees.follow_up_fee || 0}</Text>
+                  <Text style={styles.detailValue}>{formatTaka(stats?.fees.follow_up_fee)}</Text>
                 </View>
               </View>
 
@@ -238,31 +245,13 @@ export const DoctorDashboard = (): React.JSX.Element => {
                   {t('doctordashboard.payments_overview', 'Payments Overview')}
                 </Text>
               </View>
-              <View style={styles.detailBlocksRow}>
-                <View style={styles.detailBlock}>
-                  <Text style={styles.detailLabel}>{t('doctordashboard.today', 'Today')}</Text>
-                  <Text style={styles.detailValue}>${stats?.earnings.today || 0}</Text>
-                </View>
-                <View style={styles.detailBlock}>
-                  <Text style={styles.detailLabel}>
-                    {t('doctordashboard.this_month', 'This Month')}
-                  </Text>
-                  <Text style={styles.detailValue}>${stats?.earnings.this_month || 0}</Text>
-                </View>
-                <View style={styles.detailBlock}>
-                  <Text style={styles.detailLabel}>
-                    {t('doctordashboard.previous_month', 'Previous Month')}
-                  </Text>
-                  <Text style={styles.detailValue}>${stats?.earnings.previous_month || 0}</Text>
-                </View>
-                <View style={[styles.detailBlock, { borderStyle: 'dashed' }]}>
-                  <TouchableOpacity activeOpacity={0.7} style={styles.linkButton}>
-                    <Text style={styles.linkText}>
-                      {t('doctordashboard.view_all_earnings', 'View All Earnings')}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              {/* Nothing records payments yet (no billing rows), so show no figures. */}
+              <Text style={styles.detailLabel}>
+                {t(
+                  'doctordashboard.payments_unavailable',
+                  'Payments are not tracked in the app yet, so earnings are not shown.',
+                )}
+              </Text>
             </View>
 
             {/* QUICK ACTIONS */}
@@ -501,17 +490,6 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
     fontSize: FontSize.lg,
     color: Colors.textPrimary,
-  },
-  linkButton: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.md,
-  },
-  linkText: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.sm,
-    color: Colors.primary,
   },
   // Quick-action buttons: icon stacked above the label.
   primaryButton: {

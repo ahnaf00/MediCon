@@ -79,12 +79,8 @@ export interface ConsultationSummaryInput {
   source?: 'doctor_note' | 'transcript';
 }
 
-/** The server's message from an API error (422 bodies arrive unwrapped, others as AxiosError). */
-export const apiErrorMessage = (err: unknown, fallback: string): string => {
-  const e = err as { message?: unknown; response?: { data?: { message?: unknown } } } | null;
-  const message = e?.response?.data?.message ?? (e && !('response' in e) ? e.message : undefined);
-  return typeof message === 'string' && message.trim() !== '' ? message : fallback;
-};
+// Kept here for existing importers; the helper lives in src/utils/errors.ts.
+export { apiErrorMessage } from '../../utils/errors';
 
 export const consultationsService = {
   getAppointments: async (): Promise<ApiAppointment[]> => {

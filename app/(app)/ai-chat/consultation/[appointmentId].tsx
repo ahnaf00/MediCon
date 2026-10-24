@@ -27,6 +27,8 @@ import {
   streamConsultationChat,
 } from '../../../../src/services/ai/consultationChatService';
 import { useConsultation } from '../../../../src/services/api/consultationsService';
+import type { RedFlag } from '../../../../src/services/ai/redFlag';
+import { EmergencyCard } from '../../../../src/components/medical/EmergencyCard';
 
 // 2. HELPERS
 const formatDate = (iso: string | null | undefined): string =>
@@ -65,6 +67,8 @@ export default function ConsultationChatScreen() {
   const [seeded, setSeeded] = useState(false);
   const [streamingId, setStreamingId] = useState<string | null>(null);
   const [inputText, setInputText] = useState('');
+  // Shown until dismissed: the server flagged a question as a possible emergency.
+  const [redFlag, setRedFlag] = useState<RedFlag | null>(null);
   const streamRef = useRef<ConsultationChatStream | null>(null);
   const listRef = useRef<FlashListRef<ChatMessage>>(null);
 
@@ -135,6 +139,7 @@ export default function ConsultationChatScreen() {
     setStreamingId(aiMessage.id);
 
     streamRef.current = streamConsultationChat(appointmentId, trimmed, {
+      onRedFlag: setRedFlag,
       onDelta: (delta) => appendToMessage(aiMessage.id, delta),
       onDone: () => {
         streamRef.current = null;
@@ -304,6 +309,15 @@ export default function ConsultationChatScreen() {
 
         {renderBody()}
 
+        {redFlag ? (
+          <EmergencyCard
+            redFlag={redFlag}
+            onOpenGuide={() => router.push('/(app)/emergency')}
+            onDismiss={() => setRedFlag(null)}
+            style={styles.emergencyCard}
+          />
+        ) : null}
+
         {available && seeded && (
           <View
             style={[
@@ -364,6 +378,10 @@ export default function ConsultationChatScreen() {
 
 // 4. STYLES
 const styles = StyleSheet.create({
+  emergencyCard: {
+    marginHorizontal: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
   flex: {
     flex: 1,
   },

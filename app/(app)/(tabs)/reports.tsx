@@ -30,7 +30,7 @@ import { pickReportImages, pickReportPdfs } from '../../../src/services/files/re
 import { MAX_REPORT_PAGES, useReportDraftStore } from '../../../src/store/reportDraftStore';
 import { Report } from '../../../src/types/medical.types';
 import { ReportCard } from '../../../src/components/medical/ReportCard';
-import { createAppError, AppError } from '../../../src/utils/errors';
+import { apiErrorMessage, createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { useTranslation } from 'react-i18next';
 
@@ -88,7 +88,7 @@ export default function ReportsScreen() {
       draft.addPages(pages);
       router.push('/(app)/report/review');
     } catch (err) {
-      Alert.alert('Error', String(err));
+      Alert.alert('Error', apiErrorMessage(err, 'Could not add the pages. Please try again.'));
     }
   };
 
@@ -147,7 +147,12 @@ export default function ReportsScreen() {
       const data = await reportsService.getRecords();
       setReports(data as any);
     } catch (err) {
-      setError(createAppError('NETWORK_ERROR', String(err)));
+      setError(
+        createAppError(
+          'NETWORK_ERROR',
+          apiErrorMessage(err, 'Could not load your reports. Check your connection and try again.'),
+        ),
+      );
     }
   }, []);
 

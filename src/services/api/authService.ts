@@ -14,6 +14,9 @@ export interface DoctorProfileData {
   id?: number;
   specialty?: string;
   qualification?: string;
+  /** Printed on prescriptions; fixed once the doctor is verified. */
+  bmdcRegistrationNo?: string | null;
+  hospitalName?: string | null;
   experienceYears?: number;
   consultationFee?: number;
   rating?: number;
@@ -48,35 +51,24 @@ export const authService = {
   async verifyOtp(
     phone: string,
     otp: string,
-  ): Promise<{ isNewUser: boolean; token?: string; user?: User }> {
-    try {
-      // Laravel API: POST /auth/verify-otp
-      const response = (await axiosClient.post('/auth/verify-otp', {
-        phone,
-        otp,
-      })) as any;
+  ): Promise<{ isNewUser: boolean; token?: string; user?: User; registrationToken?: string }> {
+    // Laravel API: POST /auth/verify-otp
+    const response = (await axiosClient.post('/auth/verify-otp', {
+      phone,
+      otp,
+    })) as any;
 
-      if (response.isNewUser) {
-        return { isNewUser: true };
-      }
-
-      // Response returns access_token and user object
-      return {
-        isNewUser: false,
-        token: response.access_token,
-        user: response.user,
-      };
-    } catch (error: any) {
-      if (
-        error?.status === 401 ||
-        error?.status === 422 ||
-        error?.status === 400 ||
-        error?.status === 429
-      ) {
-        throw error;
-      }
-      throw error;
+    if (response.isNewUser) {
+      // Single-use proof that this phone passed OTP; register() must send it back.
+      return { isNewUser: true, registrationToken: response.registration_token };
     }
+
+    // Response returns access_token and user object
+    return {
+      isNewUser: false,
+      token: response.access_token,
+      user: response.user,
+    };
   },
 
   /**
@@ -86,16 +78,21 @@ export const authService = {
     phone: string,
     role: UserRole,
     profileData: any,
+    registrationToken: string,
   ): Promise<{ token: string; user: User }> {
     const payload: any = {
       phone,
       role,
+      registration_token: registrationToken,
       name: profileData.fullName,
     };
 
     if (role === 'doctor') {
       payload.specialty = profileData.department;
-      payload.qualification = profileData.licenseNumber;
+      payload.qualification = profileData.qualification;
+      // The licence goes to its own field, printed on prescriptions (audit D2).
+      payload.bmdc_registration_no = profileData.licenseNumber;
+      if (profileData.hospitalName?.trim()) payload.hospital_name = profileData.hospitalName.trim();
     } else {
       payload.date_of_birth = profileData.dateOfBirth;
       payload.blood_group = profileData.bloodGroup;
@@ -144,6 +141,7 @@ export const authService = {
     } as any);
 
     const response = (await axiosClient.post('/user/avatar', formData, {
+      timeout: 60000,
       headers: {
         'Content-Type': 'multipart/form-data',
       },

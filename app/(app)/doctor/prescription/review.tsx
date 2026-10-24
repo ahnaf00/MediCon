@@ -13,6 +13,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { axiosClient } from '../../../../src/services/api/axiosClient';
+import { apiErrorMessage } from '../../../../src/services/api/consultationsService';
 
 export default function ReviewPrescriptionScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
@@ -76,7 +77,7 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
         [{ text: 'Done', onPress: () => router.dismissAll() }],
       );
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to issue prescription.');
+      Alert.alert('Could not issue prescription', apiErrorMessage(err, 'Please try again.'));
     } finally {
       setSubmitting(false);
     }

@@ -8,7 +8,6 @@ import {
   Modal,
   TouchableWithoutFeedback,
   ScrollView,
-  Image,
   Dimensions,
   Alert,
 } from 'react-native';
@@ -21,10 +20,11 @@ import { useAuthStore } from '../../../../src/store/authStore';
 import { qnaService } from '../../../../src/services/api/qnaService';
 import { QuestionCard } from '../../../../src/components/medical/QuestionCard';
 import { Question } from '../../../../src/types/medical.types';
-import { createAppError, AppError } from '../../../../src/utils/errors';
+import { apiErrorMessage, createAppError, AppError } from '../../../../src/utils/errors';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { DraggableBottomSheet } from '../../../../src/components/ui/DraggableBottomSheet';
 import { useTranslation } from 'react-i18next';
+import { DoctorPhoto } from '../../../../src/components/ui/DoctorPhoto';
 
 const getTimeAgo = (dateString: string) => {
   const diff = Date.now() - new Date(dateString).getTime();
@@ -40,7 +40,7 @@ export default function QnaIndexScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const userId = useAuthStore((s) => s.userId) || 'patient-1';
+  const userId = useAuthStore((s) => s.userId) ?? '';
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +79,15 @@ export default function QnaIndexScreen() {
       const data = await qnaService.getPatientQuestions(userId);
       setQuestions(data);
     } catch (err) {
-      setError(createAppError('NETWORK_ERROR', String(err)));
+      setError(
+        createAppError(
+          'NETWORK_ERROR',
+          apiErrorMessage(
+            err,
+            'Could not load your questions. Check your connection and try again.',
+          ),
+        ),
+      );
     } finally {
       setLoading(false);
     }
@@ -242,9 +250,10 @@ export default function QnaIndexScreen() {
                         router.push(`/(app)/doctors/${answer.doctorId}`);
                       }}
                     >
-                      <Image
-                        source={require('../../../../src/assets/images/doctors/doctorPlaceholder1.png')} // fallback
+                      <DoctorPhoto
+                        name={answer.doctorName}
                         style={styles.doctorImage}
+                        initialsSize={18}
                       />
                       <View style={styles.doctorInfo}>
                         <Text style={styles.doctorName}>

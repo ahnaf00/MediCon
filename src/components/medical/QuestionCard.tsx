@@ -38,7 +38,7 @@ export const QuestionCard = ({
   onDelete,
 }: QuestionCardProps): React.JSX.Element => {
   const { t } = useTranslation();
-  const userId = useAuthStore((s) => s.userId) || 'patient-1';
+  const userId = useAuthStore((s) => s.userId) ?? '';
   const isOwner = question.patientId === userId;
   const answerCount = question.answerCount;
   // The server refuses edits and deletion once a doctor has replied, so don't offer them.

@@ -35,7 +35,7 @@ export default function AskQuestionScreen() {
   const router = useRouter();
   const { editId } = useLocalSearchParams();
   const insets = useSafeAreaInsets();
-  const userId = useAuthStore((s) => s.userId) || 'patient-1';
+  const userId = useAuthStore((s) => s.userId) ?? '';
 
   const [symptomId, setSymptomId] = useState('');
   const [content, setContent] = useState('');

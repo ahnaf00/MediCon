@@ -24,7 +24,10 @@ import {
 } from '../../../../src/services/api/appointmentsService';
 import { doctorsService, Doctor } from '../../../../src/services/api/doctorsService';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
+import { authService } from '../../../../src/services/api/authService';
 import { fromLocalDateString, toLocalDateString } from '../../../../src/utils/localDate';
+import { DoctorPhoto } from '../../../../src/components/ui/DoctorPhoto';
 
 const MOBILE_BANKING = ['bKash', 'Rocket', 'Nagad', 'Upay'];
 const MOBILE_BANKING_LOGOS: Record<string, any> = {
@@ -51,8 +54,9 @@ export default function BookingDigestScreen() {
     type: ConsultationType;
   }>();
 
-  // Auth Store Mock
-  const userPhone = '+880 1711-223344';
+  // The signed-in patient, shown as who the booking is for.
+  const { data: me } = useQuery({ queryKey: ['me'], queryFn: authService.me });
+  const userPhone = me?.phone ?? '';
 
   // Data State
   const [doctor, setDoctor] = useState<Doctor | null>(null);
@@ -60,12 +64,13 @@ export default function BookingDigestScreen() {
   const [booking, setBooking] = useState(false);
 
   // Patient Card State
-  const [isForSomeoneElse, setIsForSomeoneElse] = useState(false);
-  const [patientName, setPatientName] = useState('');
+  // Sent as the appointment notes; the doctor sees it as the problem.
+  const [reason, setReason] = useState('');
 
   // Consultation Card State
-  const [mode, setMode] = useState<'schedule' | 'instant'>(
-    initialDate && initialTimeSlotId ? 'schedule' : 'instant',
+  // Only scheduled video appointments exist; 'none' until a slot is picked.
+  const [mode, setMode] = useState<'schedule' | 'none'>(
+    initialDate && initialTimeSlotId ? 'schedule' : 'none',
   );
 
   // Bottom Sheet State for Schedule Selection
@@ -153,22 +158,10 @@ export default function BookingDigestScreen() {
     return d;
   });
 
+  // Payment is a demo: no gateway is called and no money moves. Every method,
+  // card included, simply completes the booking.
   const handleConfirmBooking = async () => {
-    if (paymentCategory === 'card') {
-      router.push('/(app)/payment/card-details');
-      return;
-    }
-
     if (!doctorId) return;
-    if (mode === 'instant') {
-      // There is no instant-consultation flow on the backend; booking needs a real slot.
-      Alert.alert(
-        'Instant consultation unavailable',
-        'Instant consultations are not available yet. Choose "Schedule Video Appointment" and pick the next free time slot. You can join the call from your appointment once the doctor starts it.',
-      );
-      return;
-    }
-
     if (!selectedDate || !selectedSlot) {
       Alert.alert(
         'Selection Required',
@@ -188,6 +181,7 @@ export default function BookingDigestScreen() {
         doctorId,
         slotDatetime: selectedSlot,
         type: 'video',
+        symptoms: reason.trim(),
       });
 
       if (result.success) {
@@ -205,10 +199,6 @@ export default function BookingDigestScreen() {
     } finally {
       setBooking(false);
     }
-  };
-
-  const switchMode = (newMode: 'schedule' | 'instant') => {
-    setMode(newMode);
   };
 
   if (loading || !doctor) {
@@ -233,8 +223,7 @@ export default function BookingDigestScreen() {
   const totalAmount = fee + PLATFORM_FEE + vat;
 
   const renderDoctorCard = () => {
-    const imageSource =
-      doctor?.image || require('../../../../src/assets/images/doctors/doctorPlaceholder1.png');
+    const imageSource = doctor?.image ?? null;
     // Only the doctor's own qualifications — never invent degrees when they are missing.
     const degreesText =
       doctor?.degrees?.filter((d) => d && d.trim()).join(', ') ||
@@ -243,7 +232,12 @@ export default function BookingDigestScreen() {
     return (
       <View style={[styles.card, styles.doctorCardContainer]}>
         <View style={styles.doctorAvatarWrapper}>
-          <Image source={imageSource} style={styles.doctorAvatar} />
+          <DoctorPhoto
+            source={imageSource}
+            name={doctor?.fullName}
+            style={styles.doctorAvatar}
+            initialsSize={20}
+          />
         </View>
         <View style={styles.doctorContent}>
           <Text style={styles.doctorName} numberOfLines={1}>
@@ -288,45 +282,31 @@ export default function BookingDigestScreen() {
 
           {/* Patient Card */}
           <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitleNoMargin}>Who is this consultation for?</Text>
-              {isForSomeoneElse ? (
-                <TouchableOpacity
-                  onPress={() => setIsForSomeoneElse(false)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <MaterialCommunityIcons name="close" size={20} color={Colors.textSecondary} />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity onPress={() => setIsForSomeoneElse(true)}>
-                  <Text style={styles.linkText}>For Someone Else</Text>
-                </TouchableOpacity>
-              )}
+            <Text style={styles.cardTitle}>Who is this consultation for?</Text>
+            <View style={styles.patientInfoRow}>
+              <View style={styles.patientAvatarPlaceholder}>
+                <MaterialCommunityIcons name="account" size={20} color={Colors.primary} />
+              </View>
+              <View style={styles.patientPhoneContainer}>
+                <Text style={styles.patientPhoneText}>{userPhone}</Text>
+                <View style={styles.meBadge}>
+                  <Text style={styles.meBadgeText}>Me</Text>
+                </View>
+              </View>
             </View>
 
-            {isForSomeoneElse ? (
-              <View style={styles.patientInputContainer}>
-                <TextInput
-                  style={styles.patientInput}
-                  placeholder="Enter Patient's Name"
-                  value={patientName}
-                  onChangeText={setPatientName}
-                  placeholderTextColor={Colors.textTertiary}
-                />
-              </View>
-            ) : (
-              <View style={styles.patientInfoRow}>
-                <View style={styles.patientAvatarPlaceholder}>
-                  <MaterialCommunityIcons name="account" size={20} color={Colors.primary} />
-                </View>
-                <View style={styles.patientPhoneContainer}>
-                  <Text style={styles.patientPhoneText}>{userPhone}</Text>
-                  <View style={styles.meBadge}>
-                    <Text style={styles.meBadgeText}>Me</Text>
-                  </View>
-                </View>
-              </View>
-            )}
+            <View style={styles.patientInputContainer}>
+              <TextInput
+                style={styles.patientInput}
+                placeholder="Reason for visit (optional), e.g. fever for 3 days"
+                value={reason}
+                onChangeText={setReason}
+                maxLength={500}
+                multiline
+                placeholderTextColor={Colors.textTertiary}
+                accessibilityLabel="Reason for visit"
+              />
+            </View>
 
             <Text style={styles.instructionText}>
               <Text style={styles.redAsterisk}>* </Text>
@@ -338,49 +318,6 @@ export default function BookingDigestScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>How would you like to consult?</Text>
             <View style={styles.consultOptions}>
-              <TouchableOpacity
-                style={[
-                  styles.consultOption,
-                  mode === 'instant'
-                    ? styles.consultOptionSelected
-                    : styles.consultOptionUnselected,
-                ]}
-                onPress={() => switchMode('instant')}
-                activeOpacity={0.8}
-              >
-                <View style={styles.consultOptionLeft}>
-                  <MaterialCommunityIcons
-                    name="video"
-                    size={24}
-                    color={mode === 'instant' ? Colors.primary : Colors.textTertiary}
-                  />
-                  <View>
-                    <Text
-                      style={[
-                        styles.consultOptionText,
-                        mode === 'instant'
-                          ? styles.consultOptionTextSelected
-                          : styles.consultOptionTextUnselected,
-                      ]}
-                    >
-                      Instant Video Call
-                    </Text>
-                    {mode !== 'instant' && (
-                      <Text style={styles.consultOptionSub}>Talk to the doctor immediately</Text>
-                    )}
-                  </View>
-                </View>
-                {mode === 'instant' && (
-                  <View style={styles.checkCircleBackground}>
-                    <MaterialCommunityIcons
-                      name="check-bold"
-                      size={16}
-                      color={Colors.primary + '80'}
-                    />
-                  </View>
-                )}
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={[
                   styles.consultOption,
@@ -468,7 +405,11 @@ export default function BookingDigestScreen() {
 
           {/* Payment Methods */}
           <View style={styles.card}>
-            <Text style={[styles.cardTitle, { marginBottom: Spacing.lg }]}>Payment Method</Text>
+            <Text style={styles.cardTitle}>Payment Method</Text>
+            <Text style={[styles.cardPaymentText, { flex: 0, marginBottom: Spacing.lg }]}>
+              Demo payment — no money is charged and no payment details are collected. Choosing a
+              method only completes the booking.
+            </Text>
 
             {/* Mobile Banking Option */}
             <TouchableOpacity
@@ -544,7 +485,7 @@ export default function BookingDigestScreen() {
                 color={Colors.textSecondary}
               />
               <Text style={styles.cardPaymentText}>
-                Pay securely using your Visa, MasterCard, or Amex.
+                Demo only — Visa, MasterCard or Amex. No card number is asked for.
               </Text>
             </View>
           </View>
@@ -563,7 +504,7 @@ export default function BookingDigestScreen() {
             {booking ? (
               <ActivityIndicator size="small" color={Colors.surface} />
             ) : (
-              <Text style={styles.proceedButtonText}>Proceed to Pay</Text>
+              <Text style={styles.proceedButtonText}>Confirm Booking (Demo Payment)</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -575,7 +516,7 @@ export default function BookingDigestScreen() {
           animationType="fade"
           onRequestClose={() => {
             setSheetVisible(false);
-            if (!selectedSlot && mode === 'schedule') setMode('instant');
+            if (!selectedSlot && mode === 'schedule') setMode('none');
           }}
           statusBarTranslucent
         >
@@ -584,7 +525,7 @@ export default function BookingDigestScreen() {
               style={styles.modalDismissArea}
               onPress={() => {
                 setSheetVisible(false);
-                if (!selectedSlot && mode === 'schedule') setMode('instant');
+                if (!selectedSlot && mode === 'schedule') setMode('none');
               }}
             />
             <Animated.View
@@ -833,27 +774,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
     lineHeight: FontSize.xs * 1.5,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center', // Vertically aligns the title and buttons
-    justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
-  },
   cardTitle: {
     fontFamily: FontFamily.bold,
     fontSize: FontSize.md,
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
-  },
-  cardTitleNoMargin: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.md,
-    color: Colors.textPrimary,
-  },
-  linkText: {
-    fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.sm,
-    color: Colors.primary,
   },
   patientInfoRow: {
     flexDirection: 'row',
@@ -898,7 +823,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.tertiary,
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
-    height: 48,
+    paddingVertical: Spacing.sm,
+    minHeight: 48,
+    textAlignVertical: 'top',
     fontFamily: FontFamily.medium,
     fontSize: FontSize.base,
     color: Colors.textPrimary,

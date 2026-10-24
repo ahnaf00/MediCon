@@ -13,6 +13,7 @@ import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { apiErrorMessage } from '../../../src/utils/errors';
 
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../../src/theme';
 import {
@@ -55,7 +56,7 @@ export default function ReviewReportScreen() {
         );
       }
     } catch (err) {
-      Alert.alert('Error', String(err));
+      Alert.alert('Error', apiErrorMessage(err, 'Could not add the pages. Please try again.'));
     }
   };
 
@@ -86,7 +87,7 @@ export default function ReviewReportScreen() {
       router.replace(`/(app)/report/${record.id}`);
     } catch (error: any) {
       // The draft is kept so the patient can retry without re-picking pages.
-      const message = error?.message || String(error);
+      const message = apiErrorMessage(error, 'Check your connection and try again.');
       Alert.alert(
         t('report_review.upload_failed', 'Upload Failed'),
         t('report_review.upload_failed_body', 'Your report could not be uploaded. {{message}}', {

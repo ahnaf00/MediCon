@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,16 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius, Layout, Shadows } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { prescriptionsService } from '../../../../src/services/api/prescriptionsService';
 import { Prescription } from '../../../../src/types/medical.types';
-import { patientsService, ApiPatient } from '../../../../src/services/api/patientsService';
+import {
+  patientsService,
+  ApiPatient,
+  splitProfileList,
+} from '../../../../src/services/api/patientsService';
 import { ApiAppointment, useAppointments } from '../../../../src/services/api/consultationsService';
 import { ConsultationPanel } from '../../../../src/components/medical/ConsultationPanel';
 
@@ -65,6 +69,9 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
   const [patient, setPatient] = useState<ApiPatient | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePrescription, setActivePrescription] = useState<Prescription | null>(null);
+  // Every prescription this doctor wrote for the patient, so they can open one and
+  // review the medicine explanations the patient reads (audit G4).
+  const [patientPrescriptions, setPatientPrescriptions] = useState<Prescription[]>([]);
   const [loadingPrescription, setLoadingPrescription] = useState(true);
   const appointments = useAppointments();
   const appointment = pickAppointment(appointments.data, id, appointmentId);
@@ -90,31 +97,33 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
     };
   }, [id]);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchPrescriptions = async () => {
-      try {
-        setLoadingPrescription(true);
-        const data = await prescriptionsService.getPrescriptions();
-        // Since we don't have a specific endpoint for patient's active meds,
-        // we'll try to find the latest prescription for this patient (optional feature)
-        if (isMounted) {
-          const patientPrescriptions = data.filter((p) => p.patient?.id.toString() === id);
-          if (patientPrescriptions.length > 0) {
-            setActivePrescription(patientPrescriptions[0]);
+  // Reload on every return to this screen, so a prescription written for this
+  // visit shows up and the button opens it (one per visit, audit G1).
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      const fetchPrescriptions = async () => {
+        try {
+          const data = await prescriptionsService.getPrescriptions();
+          // Since we don't have a specific endpoint for patient's active meds,
+          // we'll try to find the latest prescription for this patient (optional feature)
+          if (isMounted) {
+            const forPatient = data.filter((p) => p.patient?.id.toString() === id);
+            setPatientPrescriptions(forPatient);
+            setActivePrescription(forPatient[0] ?? null);
           }
+        } catch (err) {
+          // ignore
+        } finally {
+          if (isMounted) setLoadingPrescription(false);
         }
-      } catch (err) {
-        // ignore
-      } finally {
-        if (isMounted) setLoadingPrescription(false);
-      }
-    };
-    fetchPrescriptions();
-    return () => {
-      isMounted = false;
-    };
-  }, [id]);
+      };
+      fetchPrescriptions();
+      return () => {
+        isMounted = false;
+      };
+    }, [id]),
+  );
 
   if (loading) {
     return (
@@ -150,9 +159,13 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
   const patientAge = calculateAge(patient.patientProfile?.dateOfBirth);
   const patientGender = patient.patientProfile?.gender || 'N/A';
   const bloodGroup = patient.patientProfile?.bloodGroup || 'N/A';
-  // Mock fields that don't exist in UserResource yet
-  const allergies: string[] = [];
-  const reason = 'General Consultation';
+  const allergies = splitProfileList(patient.patientProfile?.allergies);
+  // What the patient wrote when booking (appointment notes).
+  const reason = appointment?.notes?.trim() || 'No reason given when booking.';
+  // One prescription per visit (audit G1): if this visit has one, open it instead.
+  const visitPrescription = appointment
+    ? patientPrescriptions.find((p) => String(p.appointmentId) === String(appointment.id))
+    : undefined;
 
   const bottomMargin = Math.max(insets.bottom, Spacing.base);
 
@@ -266,6 +279,48 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
             )}
           </View>
         </View>
+
+        {/* ── YOUR PRESCRIPTIONS: open one to review its medicine explanations ── */}
+        {!loadingPrescription && patientPrescriptions.length > 0 ? (
+          <View style={styles.section}>
+            <View style={styles.infoCard}>
+              <Text style={styles.cardInnerTitle}>Your Prescriptions</Text>
+              {patientPrescriptions.map((p, index) => (
+                <TouchableOpacity
+                  key={p.id}
+                  style={[
+                    styles.medRow,
+                    index < patientPrescriptions.length - 1 && styles.medRowBorder,
+                  ]}
+                  onPress={() => router.push(`/(app)/prescriptions/${p.id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open prescription ${p.diagnosisSummary || ''}`.trim()}
+                >
+                  <MaterialCommunityIcons name="prescription" size={18} color={Colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.medName} numberOfLines={1}>
+                      {p.diagnosisSummary || 'Prescription'}
+                    </Text>
+                    <Text style={styles.medDosage}>
+                      {new Date(p.issuedAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                      {' · '}
+                      {p.medicines.length} {p.medicines.length === 1 ? 'medicine' : 'medicines'}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={20}
+                    color={Colors.textTertiary}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
 
       {/* ── FIXED BOTTOM ACTION BAR ── */}
@@ -274,26 +329,19 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
           style={styles.circleBtn}
           onPress={() =>
             router.push(
-              `/(app)/doctor/prescription/write?patientId=${id}&patientName=${encodeURIComponent(patientName)}`,
+              visitPrescription
+                ? `/(app)/prescriptions/${visitPrescription.id}`
+                : // The visit links the prescription to this consultation (and its AI chat).
+                  `/(app)/doctor/prescription/write?patientId=${id}&patientName=${encodeURIComponent(patientName)}` +
+                    (appointment ? `&appointmentId=${appointment.id}` : ''),
             )
           }
-          accessibilityLabel="Write Prescription"
+          accessibilityLabel={
+            visitPrescription ? "Open this visit's prescription" : 'Write Prescription'
+          }
           accessibilityRole="button"
         >
           <MaterialCommunityIcons name="prescription" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.circleBtn}
-          onPress={() =>
-            router.push({
-              pathname: `/(app)/doctor/consultation/chat/[id]`,
-              params: { id, patientName: patientName },
-            })
-          }
-          accessibilityLabel="Chat with Patient"
-          accessibilityRole="button"
-        >
-          <MaterialCommunityIcons name="message-text-outline" size={24} color={Colors.primary} />
         </TouchableOpacity>
         {/* Only for a video visit that can still be joined; the call screen's Join starts it. */}
         {appointment?.format === 'video' &&

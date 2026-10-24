@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { InteractionConflict } from '../../services/ai/medicineAiService';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../theme';
 
@@ -9,11 +10,18 @@ interface InteractionFlagProps {
 }
 
 export function InteractionFlag({ conflict }: InteractionFlagProps) {
-  let bgColor = '#F0FDF4'; // green light
-  let borderColor = '#DCFCE7';
-  let iconColor = Colors.success;
-  let iconName: any = 'check-circle';
-  let label = 'Safe';
+  const { t } = useTranslation();
+  // Default is "not checked", shown neutral. There is no green/safe state:
+  // a pair no rule covers has not been confirmed safe.
+  let bgColor = '#F3F4F6'; // grey light
+  let borderColor = '#E5E7EB';
+  let iconColor = Colors.textSecondary;
+  let iconName: any = 'help-circle';
+  let label = t('interaction-checker.not_checked');
+  const explanation =
+    conflict.severity === 'NOT_CHECKED'
+      ? t('interaction-checker.not_checked_explanation')
+      : conflict.explanation;
 
   if (conflict.severity === 'MINOR') {
     bgColor = '#FFFBEB'; // yellow light
@@ -41,7 +49,7 @@ export function InteractionFlag({ conflict }: InteractionFlagProps) {
         </View>
         <Text style={styles.medicineName}>{conflict.existingMedicineName}</Text>
       </View>
-      <Text style={styles.explanation}>{conflict.explanation}</Text>
+      <Text style={styles.explanation}>{explanation}</Text>
     </View>
   );
 }

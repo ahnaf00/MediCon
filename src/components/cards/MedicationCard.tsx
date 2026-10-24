@@ -1,12 +1,12 @@
 // 1. IMPORTS
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { Colors, Spacing, BorderRadius, FontFamily, FontSize } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { DashboardMedication } from '../../hooks/usePatientDashboard';
 import { Card } from '../ui/Card';
 import { useTranslation } from 'react-i18next';
-import { useAlarmStore } from '../../store/alarmStore';
+import { useReminderStore } from '../../store/reminderStore';
 
 // 2. TYPES
 export interface MedicationCardProps {
@@ -26,11 +26,16 @@ const statusConfig: Record<
 // 3. COMPONENT
 export const MedicationCard = ({ medication, onPress }: MedicationCardProps): React.JSX.Element => {
   const { t } = useTranslation();
-  const { mutedPeriods, toggleMute } = useAlarmStore();
+  const reminders = useReminderStore((s) => s.reminders);
+  const refreshReminders = useReminderStore((s) => s.refresh);
 
-  const isMuted = medication?.periodName
-    ? mutedPeriods[medication.periodName.toLowerCase()]
-    : false;
+  useEffect(() => {
+    refreshReminders().catch(() => {});
+  }, [refreshReminders]);
+
+  // Reminders are set per prescription on the Prescriptions tab; this only shows the state.
+  const period = medication?.periodName.toLowerCase();
+  const reminderOn = Object.values(reminders).some((r) => r.period === period);
   if (!medication || !medication.medicines || medication.medicines.length === 0) {
     return (
       <Card accessibilityLabel="No active medications">
@@ -67,22 +72,17 @@ export const MedicationCard = ({ medication, onPress }: MedicationCardProps): Re
             <Text style={styles.periodLabel}>{medication.periodName}</Text>
           </View>
         </View>
-        <TouchableOpacity
+        <View
           style={styles.timeBadge}
-          activeOpacity={0.7}
-          onPress={() => {
-            if (medication?.periodName) {
-              toggleMute(medication.periodName.toLowerCase());
-            }
-          }}
+          accessibilityLabel={reminderOn ? 'Reminder on' : 'No reminder set'}
         >
           <MaterialCommunityIcons
-            name={isMuted ? 'alarm-off' : 'alarm'}
+            name={reminderOn ? 'alarm-check' : 'alarm-off'}
             size={14}
-            color={Colors.textPrimary}
+            color={reminderOn ? Colors.primary : Colors.textTertiary}
           />
           <Text style={styles.timeText}>{medication.scheduledTime}</Text>
-        </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.medsList}>

@@ -27,7 +27,7 @@ export default function HospitalsScreen() {
 
   const { data: hospitals = [], isLoading } = useQuery({
     queryKey: ['hospitals', search],
-    queryFn: () => hospitalsService.getNearbyHospitals(undefined, undefined, search),
+    queryFn: () => hospitalsService.getNearbyHospitals(search),
   });
 
   const handleHospitalPress = (hospital: Hospital) => {
@@ -56,6 +56,16 @@ export default function HospitalsScreen() {
           onSubmit={setSearch}
           onClear={() => setSearch('')}
         />
+      </View>
+
+      <View style={styles.notice}>
+        <MaterialCommunityIcons name="information-outline" size={16} color={Colors.textSecondary} />
+        <Text style={styles.noticeText}>
+          {t(
+            'hospitals.unverified',
+            'Hospital details are not verified by MediCon. If a life is in danger, call 999.',
+          )}
+        </Text>
       </View>
 
       {/* List */}
@@ -118,6 +128,21 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: Spacing.base,
     paddingTop: Spacing.sm,
+  },
+  notice: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    marginHorizontal: Spacing.base,
+    marginBottom: Spacing.sm,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.surface,
+  },
+  noticeText: {
+    flex: 1,
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
   },
   emptyText: {
     fontFamily: FontFamily.medium,

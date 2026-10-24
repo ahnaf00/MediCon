@@ -107,6 +107,11 @@ export const PatientDashboard = (): React.JSX.Element => {
             onPress={() => router.push('/(app)/vitals')}
           />
           <QuickAction
+            icon="pill"
+            label={t('dashboard.meds')}
+            onPress={() => router.push('/(app)/medicine')}
+          />
+          <QuickAction
             icon="chat-processing-outline"
             label={t('dashboard.aiChat') || 'AI Chat'}
             onPress={() => router.push('/(app)/ai-chat')}
@@ -142,7 +147,9 @@ export const PatientDashboard = (): React.JSX.Element => {
               )}
               <MedicationCard
                 medication={nextMedicine}
-                onPress={() => router.push('/(app)/(tabs)/prescriptions')}
+                onPress={() =>
+                  router.push('/(app)/(tabs)/prescriptions?openActivePrescription=true')
+                }
               />
             </>
           )}

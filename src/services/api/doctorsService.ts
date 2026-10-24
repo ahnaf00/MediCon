@@ -1,6 +1,6 @@
 import { axiosClient } from './axiosClient';
 import { DoctorProfile } from '../../types/medical.types';
-import { doctorPlaceholders } from '../../constants/images';
+import type { ImageSourcePropType } from 'react-native';
 import { toLocalDateString } from '../../utils/localDate';
 
 export interface DoctorExperienceEntry {
@@ -23,7 +23,7 @@ export interface Doctor extends DoctorProfile {
   avgConsultationMinutes: number;
   services: string[];
   experienceList: DoctorExperienceEntry[];
-  image?: ReturnType<(typeof doctorPlaceholders)[number]>;
+  image?: ImageSourcePropType;
   /** ISO-8601 start of the first free slot; only returned by symptom search. null = none in the next 14 days. */
   nextAvailableAt?: string | null;
   /** Only returned by symptom search. */
@@ -43,30 +43,52 @@ export interface ConsultationHistoryItem {
   format: 'video' | 'in-person';
   /** UTC ISO-8601 start, for the "doctor may start soon" polling window. */
   startsAt: string | null;
-  image?: ReturnType<(typeof doctorPlaceholders)[number]>;
+  image?: ImageSourcePropType;
 }
+
+export interface DoctorCategory {
+  /** The specialty name; also what the doctor list filters on. */
+  id: string;
+  name: string;
+  icon: string;
+  keyword: string;
+  doctorCount: number;
+}
+
+/** Display-only icon and hint per specialty (names come from the server). */
+const CATEGORY_LOOK: Record<string, { icon: string; keyword: string }> = {
+  'General Medicine': { icon: 'stethoscope', keyword: 'Fever, Cold' },
+  Cardiology: { icon: 'heart-pulse', keyword: 'Heart Specialist' },
+  Pediatrics: { icon: 'baby-carriage', keyword: 'Child Specialist' },
+  Neurology: { icon: 'brain', keyword: 'Brain Specialist' },
+  Dermatology: { icon: 'allergy', keyword: 'Skin Specialist' },
+  Psychiatry: { icon: 'head-lightbulb-outline', keyword: 'Mental Health' },
+  Orthopedics: { icon: 'bone', keyword: 'Bone Specialist' },
+  Ophthalmology: { icon: 'eye', keyword: 'Eye Specialist' },
+  Dentistry: { icon: 'tooth', keyword: 'Dental Care' },
+  ENT: { icon: 'ear-hearing', keyword: 'Ear, Nose, Throat' },
+  Gynecology: { icon: 'gender-female', keyword: "Women's Health" },
+  Urology: { icon: 'water', keyword: 'Kidney Specialist' },
+};
 
 export const doctorsService = {
   /**
-   * Retrieves a list of available doctor categories/departments
-   * Since there's no endpoint for this in the provided Laravel routes, we can keep the static categories or derive from doctors.
-   * For now, returning static as the mock did.
+   * The departments patients can browse, from GET /specialties (the same list
+   * symptom search recommends from). The id is the specialty name, which is
+   * what the doctor list filters on. Icons and keywords are display only.
    */
-  getCategories: async () => {
-    return [
-      { id: 'cat-1', name: 'General Medicine', icon: 'stethoscope', keyword: 'Fever, Cold' },
-      { id: 'cat-2', name: 'Cardiology', icon: 'heart-pulse', keyword: 'Heart Specialist' },
-      { id: 'cat-3', name: 'Pediatrics', icon: 'baby-carriage', keyword: 'Child Specialist' },
-      { id: 'cat-4', name: 'Neurology', icon: 'brain', keyword: 'Brain Specialist' },
-      { id: 'cat-5', name: 'Dermatology', icon: 'allergy', keyword: 'Skin Specialist' },
-      { id: 'cat-6', name: 'Psychiatry', icon: 'head-lightbulb-outline', keyword: 'Mental Health' },
-      { id: 'cat-7', name: 'Orthopedics', icon: 'bone', keyword: 'Bone Specialist' },
-      { id: 'cat-8', name: 'Ophthalmology', icon: 'eye', keyword: 'Eye Specialist' },
-      { id: 'cat-9', name: 'Dentistry', icon: 'tooth', keyword: 'Dental Care' },
-      { id: 'cat-10', name: 'ENT', icon: 'ear-hearing', keyword: 'Ear, Nose, Throat' },
-      { id: 'cat-11', name: 'Gynecology', icon: 'gender-female', keyword: "Women's Health" },
-      { id: 'cat-12', name: 'Urology', icon: 'water', keyword: 'Kidney Specialist' },
-    ];
+  getCategories: async (): Promise<DoctorCategory[]> => {
+    const rows = (await axiosClient.get('/specialties')) as {
+      name: string;
+      doctorCount: number;
+    }[];
+    return rows.map((row) => ({
+      id: row.name,
+      name: row.name,
+      icon: CATEGORY_LOOK[row.name]?.icon ?? 'stethoscope',
+      keyword: CATEGORY_LOOK[row.name]?.keyword ?? '',
+      doctorCount: row.doctorCount,
+    }));
   },
 
   /**
@@ -74,13 +96,7 @@ export const doctorsService = {
    */
   getDoctors: async (categoryId?: string): Promise<Doctor[]> => {
     // Laravel API: GET /doctors
-    const params: any = {};
-    if (categoryId) {
-      // Find category name by ID
-      const categories = await doctorsService.getCategories();
-      const cat = categories.find((c) => c.id === categoryId);
-      if (cat) params.department = cat.name;
-    }
+    const params = categoryId ? { specialty: categoryId } : {};
     const doctors = (await axiosClient.get('/doctors', { params })) as any;
     // Map backend UserResource with nested doctorProfile to frontend Doctor interface
     return doctors.map((doc: any, index: number) => ({
@@ -103,9 +119,7 @@ export const doctorsService = {
       experienceList: [],
       // Server-computed: the doctor's toggle is on and their app has checked in recently.
       isOnline: doc.doctorProfile?.isOnline === true,
-      image: doc.avatarUrl
-        ? { uri: doc.avatarUrl }
-        : doctorPlaceholders[index % doctorPlaceholders.length],
+      image: doc.avatarUrl ? { uri: doc.avatarUrl } : undefined,
     }));
   },
 
@@ -137,9 +151,7 @@ export const doctorsService = {
       licenseNumber: 'N/A',
       isOnline: doc.doctorProfile?.isOnline === true,
       about: doc.doctorProfile?.bio || '',
-      image: doc.avatarUrl
-        ? { uri: doc.avatarUrl }
-        : doctorPlaceholders[Number(id) % doctorPlaceholders.length || 0],
+      image: doc.avatarUrl ? { uri: doc.avatarUrl } : undefined,
     };
   },
 

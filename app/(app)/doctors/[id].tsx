@@ -9,13 +9,13 @@ import {
   ActivityIndicator,
   Share,
   Alert,
-  Image,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing, BorderRadius, FontFamily, FontSize, Layout } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { doctorsService, Doctor, DoctorExperienceEntry } from '@services/api/doctorsService';
+import { DoctorPhoto } from '../../../src/components/ui/DoctorPhoto';
 
 // 2. TYPES
 
@@ -113,8 +113,7 @@ export default function DoctorDetailScreen(): React.JSX.Element {
   const degreesLabel = doctor.degrees.join(', ');
   const bottomInset = insets.bottom;
 
-  const imageSource =
-    doctor.image ?? require('../../../src/assets/images/doctors/doctorPlaceholder1.png');
+  const imageSource = doctor.image ?? null;
 
   return (
     <View style={styles.container}>
@@ -152,12 +151,7 @@ export default function DoctorDetailScreen(): React.JSX.Element {
         {/* Left column — photo */}
         <View style={styles.profileAvatarCol}>
           <View style={styles.profileImageWrap}>
-            <Image
-              source={imageSource}
-              style={styles.profileImage}
-              resizeMode="cover"
-              accessibilityLabel={`Photo of ${doctor.fullName}`}
-            />
+            <DoctorPhoto source={imageSource} name={doctor.fullName} style={styles.profileImage} />
             {doctor.isOnline && <View style={styles.onlineDot} />}
           </View>
         </View>

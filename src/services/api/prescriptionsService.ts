@@ -20,7 +20,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
-import { AdherenceRecord, Prescription } from '../../types/medical.types';
+import { Prescription } from '../../types/medical.types';
 import { toDosePattern } from '../../utils/prescriptionFormatters';
 
 // ─── Types (matching PrescriptionResource & StorePrescriptionRequest exactly) ──
@@ -36,8 +36,12 @@ export interface ApiPrescriptionMedicine {
   scheduleFormat: string | null;
   instructions: string | null;
   durationDays: number;
-  /** AI-written "Why take this medicine?" text; null until generated or if generation failed. */
+  /** "Why take this medicine?" text; null until generated, if generation failed, or hidden by the doctor. */
   explanation: string | null;
+  /** Who wrote the explanation: the AI (label it as such) or the prescribing doctor. */
+  explanationSource: 'ai' | 'doctor' | null;
+  /** Only sent to the prescribing doctor: whether the patient is shown it. */
+  explanationHidden?: boolean;
 }
 
 /** GET /prescriptions/{id}/document — everything the letterhead needs (PrescriptionDocumentResource). */
@@ -80,7 +84,7 @@ export interface ApiPrescription {
   id: number;
   appointmentId: number | null;
   diagnosisSummary: string;
-  status: 'active' | 'expired' | 'cancelled';
+  status: 'active' | 'completed' | 'cancelled';
   doctor: {
     id: number;
     name: string;
@@ -112,28 +116,6 @@ export interface StorePrescriptionPayload {
   advice?: string;
 }
 
-// ─── Adherence records (local state only — no backend endpoint yet) ────────────
-
-const MOCK_ADHERENCE: AdherenceRecord[] = [
-  {
-    id: 'adh-1',
-    prescriptionId: '1',
-    medicineId: '1',
-    date: new Date().toISOString().split('T')[0],
-    status: 'TAKEN',
-    scheduledTime: '08:00',
-    takenTime: new Date(new Date().setHours(8, 15)).toISOString(),
-  },
-  {
-    id: 'adh-2',
-    prescriptionId: '1',
-    medicineId: '1',
-    date: new Date().toISOString().split('T')[0],
-    status: 'PENDING',
-    scheduledTime: '14:00',
-  },
-];
-
 // ─── Mapper Function ────────────────────────────────────────────────────────────
 
 const mapApiToPrescription = (api: ApiPrescription): Prescription => {
@@ -158,6 +140,8 @@ const mapApiToPrescription = (api: ApiPrescription): Prescription => {
       instructions: m.instructions,
       dosagePattern: toDosePattern(m.dosageSchedule),
       explanation: m.explanation ?? undefined,
+      explanationSource: m.explanationSource ?? undefined,
+      explanationHidden: m.explanationHidden,
     })),
   };
 };
@@ -188,6 +172,22 @@ export const prescriptionsService = {
   },
 
   /**
+   * The prescribing doctor rewrites a medicine's explanation and/or hides it
+   * from the patient (audit CLIN-006). Returns the updated prescription.
+   */
+  updateExplanation: async (
+    prescriptionId: number | string,
+    itemId: number | string,
+    change: { explanation?: string; hidden?: boolean },
+  ): Promise<Prescription> => {
+    const res = (await axiosClient.patch(
+      `/prescriptions/${prescriptionId}/items/${itemId}/explanation`,
+      change,
+    )) as any;
+    return mapApiToPrescription(res);
+  },
+
+  /**
    * Goal: Issue a new prescription for a patient (doctor-only action).
    * How: POST /api/v1/prescriptions — protected by role:doctor middleware.
    *      Requires patient_user_id, diagnosis_summary, and at least one medicine.
@@ -206,28 +206,6 @@ export const prescriptionsService = {
     return (await axiosClient.get(
       `/prescriptions/${id}/document`,
     )) as unknown as PrescriptionDocumentData;
-  },
-
-  /**
-   * Goal: Retrieve today's adherence records (local state — no backend yet).
-   * How: Filters in-memory MOCK_ADHERENCE by date string.
-   */
-  getDailyAdherence: async (date: string): Promise<AdherenceRecord[]> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const records = MOCK_ADHERENCE.filter((a) => a.date === date);
-        resolve(records);
-      }, 100);
-    });
-  },
-
-  /** Adherence threshold classifier (pure utility, no API call). */
-  calculateAdherenceThreshold: (taken: number, total: number): 'GOOD' | 'FAIR' | 'POOR' => {
-    if (total === 0) return 'GOOD';
-    const percentage = (taken / total) * 100;
-    if (percentage >= 80) return 'GOOD';
-    if (percentage >= 50) return 'FAIR';
-    return 'POOR';
   },
 };
 

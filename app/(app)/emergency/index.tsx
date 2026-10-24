@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image, Linking } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing, BorderRadius, FontFamily, FontSize, Layout } from '@theme';
 import { EMERGENCY_PROTOCOLS } from '../../../src/services/protocols/emergency-protocols.data';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import { callEmergency } from '../../../src/utils/callEmergency';
 
 const IconMap: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   activity: 'heart-pulse',
@@ -99,7 +100,7 @@ export default function EmergencyTriageScreen() {
         </Text>
         <TouchableOpacity
           style={styles.callEmergencyButton}
-          onPress={() => Linking.openURL('tel:999')}
+          onPress={callEmergency}
           accessibilityRole="button"
           accessibilityLabel="Call 999"
           activeOpacity={0.8}

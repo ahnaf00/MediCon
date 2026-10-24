@@ -1,135 +1,23 @@
 // ─── IMPORTS ────────────────────────────────────────────────────────────────
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius, Shadows } from '@theme';
-
-// ─── TYPES ───────────────────────────────────────────────────────────────────
-interface PatientDetail {
-  id: string;
-  name: string;
-  age: number;
-  gender: 'Male' | 'Female' | 'Other';
-  bloodGroup: string;
-  phone: string;
-  lastVisit: string;
-  chronicConditions: string[];
-  allergies: string[];
-  activeCondition: string;
-}
-
-const MOCK_PATIENT_DETAILS: Record<string, PatientDetail> = {
-  'appt-101': {
-    id: 'appt-101',
-    name: 'Rahim Uddin',
-    age: 45,
-    gender: 'Male',
-    bloodGroup: 'B+',
-    phone: '+880 1711-234567',
-    lastVisit: 'Today',
-    chronicConditions: ['Hypertension', 'Type 2 Diabetes'],
-    allergies: ['Penicillin'],
-    activeCondition: 'Follow-up for hypertension',
-  },
-  'appt-102': {
-    id: 'appt-102',
-    name: 'Ayesha Rahman',
-    age: 32,
-    gender: 'Female',
-    bloodGroup: 'O+',
-    phone: '+880 1811-345678',
-    lastVisit: 'Yesterday',
-    chronicConditions: ['Migraine'],
-    allergies: [],
-    activeCondition: 'Migraine consultation',
-  },
-  'appt-103': {
-    id: 'appt-103',
-    name: 'Kamal Hasan',
-    age: 58,
-    gender: 'Male',
-    bloodGroup: 'A+',
-    phone: '+880 1911-456789',
-    lastVisit: '2 days ago',
-    chronicConditions: ['Hypertension', 'High Cholesterol', 'Arthritis'],
-    allergies: ['Sulfa drugs', 'Aspirin'],
-    activeCondition: 'Routine checkup, blood test review',
-  },
-  'appt-104': {
-    id: 'appt-104',
-    name: 'Nusrat Jahan',
-    age: 27,
-    gender: 'Female',
-    bloodGroup: 'AB-',
-    phone: '+880 1611-567890',
-    lastVisit: '1 week ago',
-    chronicConditions: [],
-    allergies: [],
-    activeCondition: 'Fever and throat pain for 3 days',
-  },
-  p1: {
-    id: 'p1',
-    name: 'Rahim Uddin',
-    age: 45,
-    gender: 'Male',
-    bloodGroup: 'B+',
-    phone: '+880 1711-234567',
-    lastVisit: 'Today',
-    chronicConditions: ['Hypertension', 'Type 2 Diabetes'],
-    allergies: ['Penicillin'],
-    activeCondition: 'Follow-up for hypertension',
-  },
-  p2: {
-    id: 'p2',
-    name: 'Ayesha Rahman',
-    age: 32,
-    gender: 'Female',
-    bloodGroup: 'O+',
-    phone: '+880 1811-345678',
-    lastVisit: 'Yesterday',
-    chronicConditions: ['Migraine'],
-    allergies: [],
-    activeCondition: 'Migraine consultation',
-  },
-  p3: {
-    id: 'p3',
-    name: 'Kamal Hasan',
-    age: 58,
-    gender: 'Male',
-    bloodGroup: 'A+',
-    phone: '+880 1911-456789',
-    lastVisit: '2 days ago',
-    chronicConditions: ['Hypertension', 'High Cholesterol', 'Arthritis'],
-    allergies: ['Sulfa drugs', 'Aspirin'],
-    activeCondition: 'Routine checkup',
-  },
-  p4: {
-    id: 'p4',
-    name: 'Nusrat Jahan',
-    age: 27,
-    gender: 'Female',
-    bloodGroup: 'AB-',
-    phone: '+880 1611-567890',
-    lastVisit: '1 week ago',
-    chronicConditions: [],
-    allergies: [],
-    activeCondition: 'Fever and throat pain',
-  },
-  p5: {
-    id: 'p5',
-    name: 'Jamal Bhuyan',
-    age: 39,
-    gender: 'Male',
-    bloodGroup: 'O-',
-    phone: '+880 1511-678901',
-    lastVisit: '2 weeks ago',
-    chronicConditions: ['Asthma'],
-    allergies: ['NSAIDs'],
-    activeCondition: 'Asthma follow-up',
-  },
-};
+import {
+  usePatient,
+  ageFromDateOfBirth,
+  splitProfileList,
+} from '../../../../src/services/api/patientsService';
+import { usePrescriptions } from '../../../../src/services/api/prescriptionsService';
 
 // ─── COMPONENT ───────────────────────────────────────────────────────────────
 export default function PatientDetailScreen() {
@@ -137,7 +25,23 @@ export default function PatientDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const patient = id ? MOCK_PATIENT_DETAILS[id] : undefined;
+  // GET /patients/{id}: the server only answers for a patient who has booked with this doctor.
+  const { data: patient, isLoading } = usePatient(id);
+  // The server returns only prescriptions this doctor wrote; keep this patient's.
+  const prescriptionsQuery = usePrescriptions();
+  const prescriptions = (prescriptionsQuery.data ?? []).filter(
+    (p) => String(p.patient?.id) === String(id),
+  );
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.notFoundContainer}>
+          <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   if (!patient) {
     return (
@@ -159,6 +63,16 @@ export default function PatientDetailScreen() {
   }
 
   const avatarLetter = patient.name.charAt(0).toUpperCase();
+  const profile = patient.patientProfile;
+  const age = ageFromDateOfBirth(profile?.dateOfBirth);
+  const gender = profile?.gender
+    ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1)
+    : null;
+  const meta = [age !== null ? `${age} yrs` : null, gender, profile?.bloodGroup]
+    .filter(Boolean)
+    .join(' · ');
+  const chronicConditions = splitProfileList(profile?.chronicConditions);
+  const allergies = splitProfileList(profile?.allergies);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -192,9 +106,7 @@ export default function PatientDetailScreen() {
           <Text style={styles.patientName}>{patient.name}</Text>
 
           {/* Age · Gender · Blood Group */}
-          <Text style={styles.patientMeta}>
-            {patient.age} yrs · {patient.gender} · {patient.bloodGroup}
-          </Text>
+          {meta ? <Text style={styles.patientMeta}>{meta}</Text> : null}
 
           {/* Phone */}
           <View style={styles.phoneRow}>
@@ -203,18 +115,10 @@ export default function PatientDetailScreen() {
           </View>
         </View>
 
-        {/* ── Current Concern ── */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Current Concern</Text>
-          <View style={styles.concernCard}>
-            <Text style={styles.concernText}>{patient.activeCondition}</Text>
-          </View>
-        </View>
-
         {/* ── Chronic Conditions ── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Chronic Conditions</Text>
-          {patient.chronicConditions.length === 0 ? (
+          {chronicConditions.length === 0 ? (
             <View style={styles.emptyRow}>
               <MaterialCommunityIcons
                 name="information-outline"
@@ -225,7 +129,7 @@ export default function PatientDetailScreen() {
             </View>
           ) : (
             <View style={styles.chipsRow}>
-              {patient.chronicConditions.map((condition) => (
+              {chronicConditions.map((condition) => (
                 <View key={condition} style={styles.conditionChip}>
                   <Text style={styles.conditionChipText}>{condition}</Text>
                 </View>
@@ -237,19 +141,74 @@ export default function PatientDetailScreen() {
         {/* ── Known Allergies ── */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Known Allergies</Text>
-          {patient.allergies.length === 0 ? (
+          {allergies.length === 0 ? (
             <View style={styles.emptyRow}>
-              <MaterialCommunityIcons name="check-circle" size={20} color={Colors.success} />
-              <Text style={[styles.emptyText, { color: Colors.success }]}>No known allergies</Text>
+              <MaterialCommunityIcons
+                name="information-outline"
+                size={20}
+                color={Colors.textSecondary}
+              />
+              <Text style={styles.emptyText}>No allergies recorded</Text>
             </View>
           ) : (
             <View style={styles.chipsRow}>
-              {patient.allergies.map((allergy) => (
+              {allergies.map((allergy) => (
                 <View key={allergy} style={styles.allergyChip}>
                   <Text style={styles.allergyChipText}>{allergy}</Text>
                 </View>
               ))}
             </View>
+          )}
+        </View>
+
+        {/* ── Prescriptions this doctor wrote (review what the patient reads) ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Your Prescriptions</Text>
+          {prescriptionsQuery.isLoading ? (
+            <ActivityIndicator color={Colors.primary} />
+          ) : prescriptions.length === 0 ? (
+            <View style={styles.emptyRow}>
+              <MaterialCommunityIcons
+                name="information-outline"
+                size={20}
+                color={Colors.textSecondary}
+              />
+              <Text style={styles.emptyText}>
+                {prescriptionsQuery.isError
+                  ? 'Could not load prescriptions.'
+                  : 'You have not written a prescription for this patient yet.'}
+              </Text>
+            </View>
+          ) : (
+            prescriptions.map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                style={styles.rxRow}
+                onPress={() => router.push(`/(app)/prescriptions/${p.id}`)}
+                accessibilityRole="button"
+              >
+                <MaterialCommunityIcons name="prescription" size={20} color={Colors.primary} />
+                <View style={styles.rxText}>
+                  <Text style={styles.rxTitle} numberOfLines={1}>
+                    {p.diagnosisSummary || 'Prescription'}
+                  </Text>
+                  <Text style={styles.rxMeta}>
+                    {new Date(p.issuedAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                    {' · '}
+                    {p.medicines.length} {p.medicines.length === 1 ? 'medicine' : 'medicines'}
+                  </Text>
+                </View>
+                <MaterialCommunityIcons
+                  name="chevron-right"
+                  size={20}
+                  color={Colors.textTertiary}
+                />
+              </TouchableOpacity>
+            ))
           )}
         </View>
       </ScrollView>
@@ -363,6 +322,28 @@ const styles = StyleSheet.create({
   },
 
   // ── Section ──
+  rxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.tertiary,
+  },
+  rxText: {
+    flex: 1,
+  },
+  rxTitle: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.base,
+    color: Colors.textPrimary,
+  },
+  rxMeta: {
+    marginTop: 2,
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+  },
   section: {
     marginTop: Spacing.xl,
   },
@@ -371,18 +352,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.lg,
     color: Colors.textPrimary,
     marginBottom: Spacing.md,
-  },
-
-  // ── Current concern card ──
-  concernCard: {
-    backgroundColor: Colors.tertiary,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
-  },
-  concernText: {
-    fontFamily: FontFamily.medium,
-    fontSize: FontSize.base,
-    color: Colors.primary,
   },
 
   // ── Empty state row ──
