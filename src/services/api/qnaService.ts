@@ -11,6 +11,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { Question, QuestionAnswer } from '../../types/medical.types';
 import { axiosClient } from './axiosClient';
+import { getAllPages } from './pagination';
 
 const mapMessageToAnswer = (msg: any): QuestionAnswer => ({
   id: String(msg.id),
@@ -43,8 +44,8 @@ class QnaService {
    * Fetch the caller's own questions (the server scopes by the authenticated patient).
    */
   async getPatientQuestions(_patientId: string): Promise<Question[]> {
-    const response = await axiosClient.get('/conversations');
-    return (response as any).map(mapConversationToQuestion);
+    const conversations = await getAllPages<any>('/conversations');
+    return conversations.map(mapConversationToQuestion);
   }
 
   /**
@@ -52,18 +53,16 @@ class QnaService {
    * and ignores `department`.
    */
   async getDoctorInbox(department: string): Promise<Question[]> {
-    const response = await axiosClient.get('/conversations', { params: { department } });
-    return (response as any).map(mapConversationToQuestion);
+    const conversations = await getAllPages<any>('/conversations', { department });
+    return conversations.map(mapConversationToQuestion);
   }
 
   /**
    * Every reply in a question's thread (excluding the patient's own messages), oldest first.
    */
   async getThread(questionId: string): Promise<QuestionAnswer[]> {
-    const messages = (await axiosClient.get(`/conversations/${questionId}/messages`)) as any;
-    return (Array.isArray(messages) ? messages : [])
-      .filter((m: any) => m.fromPatient === false)
-      .map(mapMessageToAnswer);
+    const messages = await getAllPages<any>(`/conversations/${questionId}/messages`);
+    return messages.filter((m: any) => m.fromPatient === false).map(mapMessageToAnswer);
   }
 
   /**

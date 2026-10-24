@@ -3,6 +3,13 @@ import { Alert } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
 import { Config } from '../../constants/config';
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    /** Return the whole body (e.g. pagination `meta`) instead of unwrapping `data`. */
+    keepEnvelope?: boolean;
+  }
+}
+
 // Base URL comes from EXPO_PUBLIC_API_URL (see src/constants/config.ts).
 export const axiosClient = axios.create({
   baseURL: Config.API.BASE_URL,
@@ -32,6 +39,9 @@ axiosClient.interceptors.request.use(
 axiosClient.interceptors.response.use(
   (response: AxiosResponse) => {
     // Automatically unwrap Laravel's Eloquent API Resource `data` object if present
+    if (response.config.keepEnvelope) {
+      return response.data;
+    }
     if (response.data && response.data.data !== undefined) {
       return response.data.data;
     }

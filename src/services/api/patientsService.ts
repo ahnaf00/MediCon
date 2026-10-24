@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
+import { getAllPages } from './pagination';
 
 export interface ApiPatient {
   id: number;
@@ -40,14 +41,7 @@ export const patientsService = {
    * How: GET /api/v1/patients — backend restricts to role:doctor.
    */
   getPatients: async (): Promise<ApiPatient[]> => {
-    const res = (await axiosClient.get('/patients')) as any;
-    // Handle paginated or direct array response based on backend structure
-    if (res && res.data && Array.isArray(res.data)) {
-      return res.data;
-    } else if (Array.isArray(res)) {
-      return res;
-    }
-    return [];
+    return getAllPages<ApiPatient>('/patients');
   },
 
   /**

@@ -9,6 +9,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
+import { getAllPages } from './pagination';
 
 // ─── Types (matching MedicalRecordResource & VitalResource exactly) ───────────
 
@@ -115,13 +116,10 @@ export interface UploadRecordPayload {
 export const reportsService = {
   /**
    * Goal: Retrieve all medical record documents for the authenticated patient.
-   * How: GET /api/v1/medical-records — Sanctum-protected, returns paginated list.
-   * The axiosClient interceptor unwraps the top-level Laravel `.data` wrapper;
-   * a second `.data` is present if pagination is active, so we handle both.
+   * How: GET /api/v1/medical-records — Sanctum-protected; reads every page.
    */
   getRecords: async (): Promise<MedicalRecord[]> => {
-    const res = (await axiosClient.get('/medical-records')) as any;
-    return Array.isArray(res) ? res : (res?.data ?? []);
+    return getAllPages<MedicalRecord>('/medical-records');
   },
 
   /**
