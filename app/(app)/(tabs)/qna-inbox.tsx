@@ -28,6 +28,7 @@ import { Question } from '../../../src/types/medical.types';
 import { createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { useTranslation } from 'react-i18next';
+import { apiErrorMessage } from '../../../src/services/api/consultationsService';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SHEET_MAX_HEIGHT = SCREEN_HEIGHT * 0.78;
@@ -319,8 +320,9 @@ export default function QnaInboxScreen(): React.JSX.Element {
       }
       closeReplySheet();
     } catch (err) {
-      const e = createAppError('NETWORK_ERROR', String(err));
-      alert(e.message);
+      // e.g. 409 "Another doctor has already taken this question."
+      alert(apiErrorMessage(err, 'Could not send your answer. Please try again.'));
+      loadData();
     } finally {
       setSubmitting(false);
     }
