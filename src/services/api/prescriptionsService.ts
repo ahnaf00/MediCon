@@ -20,7 +20,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
-import { Prescription } from '../../types/medical.types';
+import { AllergyConflict, Prescription } from '../../types/medical.types';
 import { toDosePattern } from '../../utils/prescriptionFormatters';
 
 // ─── Types (matching PrescriptionResource & StorePrescriptionRequest exactly) ──
@@ -34,6 +34,11 @@ export interface ApiPrescriptionMedicine {
   dosageSchedule: Record<string, string> | null;
   /** Human-readable schedule format string from backend, e.g. "1+0+1". */
   scheduleFormat: string | null;
+  /** Units per time of day, e.g. { morning: 2, night: 1 }; null on older prescriptions. */
+  doseQuantities?: { morning?: number; noon?: number; night?: number } | null;
+  route?: string | null;
+  /** Server-built pattern with amounts, e.g. "2+0+1". */
+  dosePattern?: string | null;
   instructions: string | null;
   durationDays: number;
   /** "Why take this medicine?" text; null until generated, if generation failed, or hidden by the doctor. */
@@ -51,6 +56,10 @@ export interface PrescriptionDocumentData {
   /** Already formatted in Asia/Dhaka by the server, e.g. "Sep 3, 2026". */
   issuedDate: string;
   diagnosisSummary: string;
+  /** A cancelled prescription shows a banner and must not pass for a valid one. */
+  status?: 'active' | 'completed' | 'cancelled';
+  voidReason?: string | null;
+  voidedDate?: string | null;
   doctor: {
     name: string | null;
     qualification: string | null;
@@ -70,8 +79,9 @@ export interface PrescriptionDocumentData {
     id: number;
     name: string;
     dosage: string;
-    /** e.g. "1+0+1"; null when no schedule was given. */
+    /** e.g. "1+0+1" or "2+0+½"; null when no schedule was given. */
     pattern: string | null;
+    route?: string | null;
     durationDays: number;
     instructions: string | null;
   }[];
@@ -85,6 +95,11 @@ export interface ApiPrescription {
   appointmentId: number | null;
   diagnosisSummary: string;
   status: 'active' | 'completed' | 'cancelled';
+  voidedAt?: string | null;
+  voidReason?: string | null;
+  replacesPrescriptionId?: number | null;
+  replacedByPrescriptionId?: number | null;
+  allergyConflicts?: AllergyConflict[];
   doctor: {
     id: number;
     name: string;
@@ -130,6 +145,11 @@ const mapApiToPrescription = (api: ApiPrescription): Prescription => {
     doctorName: api.doctor?.name,
     doctorId: api.doctor?.id?.toString(),
     appointmentId: api.appointmentId ?? undefined,
+    voidedAt: api.voidedAt ?? null,
+    voidReason: api.voidReason ?? null,
+    replacesPrescriptionId: api.replacesPrescriptionId ?? null,
+    replacedByPrescriptionId: api.replacedByPrescriptionId ?? null,
+    allergyConflicts: api.allergyConflicts ?? [],
     medicines: api.medicines.map((m) => ({
       id: m.id.toString(),
       name: m.name,
@@ -137,8 +157,10 @@ const mapApiToPrescription = (api: ApiPrescription): Prescription => {
       durationDays: m.durationDays,
       dosageSchedule: m.dosageSchedule || undefined,
       scheduleFormat: m.scheduleFormat,
+      doseQuantities: m.doseQuantities ?? null,
+      route: m.route ?? null,
       instructions: m.instructions,
-      dosagePattern: toDosePattern(m.dosageSchedule),
+      dosagePattern: m.dosePattern ?? toDosePattern(m.dosageSchedule, m.doseQuantities),
       explanation: m.explanation ?? undefined,
       explanationSource: m.explanationSource ?? undefined,
       explanationHidden: m.explanationHidden,
@@ -199,6 +221,15 @@ export const prescriptionsService = {
   },
 
   /**
+   * The prescribing doctor cancels a prescription written in error (audit G1).
+   * It stays in both histories, marked cancelled with the reason.
+   */
+  voidPrescription: async (id: number | string, reason: string): Promise<Prescription> => {
+    const res = (await axiosClient.post(`/prescriptions/${id}/void`, { reason })) as any;
+    return mapApiToPrescription(res?.data ?? res);
+  },
+
+  /**
    * Goal: Letterhead data for the prescription document (view, PDF and image).
    * How: GET /api/v1/prescriptions/{id}/document — patient or prescribing doctor only.
    */
@@ -239,6 +270,19 @@ export const usePrescriptionDocument = (id: number, enabled = true) =>
  * Invalidates the prescriptions cache on success so both the doctor's and
  * the patient's list screens refresh automatically.
  */
+/** Cancel a prescription; refreshes the lists and that prescription's views. */
+export const useVoidPrescription = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: number | string; reason: string }) =>
+      prescriptionsService.voidPrescription(id, reason),
+    onSuccess: (_rx, { id }) => {
+      qc.invalidateQueries({ queryKey: ['prescriptions'] });
+      qc.invalidateQueries({ queryKey: ['prescription-document', Number(id)] });
+    },
+  });
+};
+
 export const useCreatePrescription = () => {
   const qc = useQueryClient();
   return useMutation({

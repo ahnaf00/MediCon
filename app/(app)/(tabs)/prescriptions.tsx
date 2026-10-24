@@ -72,6 +72,12 @@ export default function PrescriptionsScreen(): React.JSX.Element {
         prescriptionsService.getPrescriptions(),
         isPatient ? prescriptionUploadsService.getUploads() : Promise.resolve([]),
       ]);
+      // A prescription the doctor cancelled must not keep reminding (audit G1).
+      if (isPatient)
+        useReminderStore
+          .getState()
+          .dropCancelled(issued)
+          .catch(() => {});
       if (isMountedRef.current) {
         setDoctorRxs(issued);
         setUploadedRxs(uploads.map(uploadToPrescription));

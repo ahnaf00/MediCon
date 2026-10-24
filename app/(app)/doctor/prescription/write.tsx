@@ -21,6 +21,11 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { toLocalDateString } from '../../../../src/utils/localDate';
 import {
+  ROUTE_OPTIONS,
+  RouteValue,
+  formatAmount,
+} from '../../../../src/utils/prescriptionFormatters';
+import {
   usePatient,
   ageFromDateOfBirth,
   splitProfileList,
@@ -34,6 +39,11 @@ interface MedicineEntry {
   freqMorning: boolean;
   freqAfternoon: boolean;
   freqNight: boolean;
+  /** Units per time of day (½ steps), sent as dose_quantities (audit G1). */
+  amtMorning: number;
+  amtNoon: number;
+  amtNight: number;
+  route: RouteValue;
   interval: string;
   duration: string;
   instructions: string;
@@ -46,6 +56,18 @@ interface TestEntry {
 }
 
 const INTERVAL_OPTIONS = ['Daily', 'Every 2 days', 'Weekly', 'As needed'];
+
+/** Each time of day: its checkbox field and its amount field. Keys follow the API (noon, not afternoon). */
+const SLOT_FIELDS = [
+  { label: 'Morning', on: 'freqMorning', amount: 'amtMorning' },
+  { label: 'Afternoon', on: 'freqAfternoon', amount: 'amtNoon' },
+  { label: 'Night', on: 'freqNight', amount: 'amtNight' },
+] as const;
+
+const MIN_AMOUNT = 0.5;
+const MAX_AMOUNT = 10;
+const stepAmount = (value: number, direction: 1 | -1): number =>
+  Math.min(MAX_AMOUNT, Math.max(MIN_AMOUNT, value + direction * 0.5));
 const INSTRUCTION_OPTIONS = ['Before Meals', 'After Meals'];
 const DURATION_OPTIONS = ['7 Days', '14 Days', '21 Days', '30 Days'];
 
@@ -57,6 +79,10 @@ function makeEmptyMedicine(index: number): MedicineEntry {
     freqMorning: false,
     freqAfternoon: false,
     freqNight: false,
+    amtMorning: 1,
+    amtNoon: 1,
+    amtNight: 1,
+    route: 'oral',
     interval: 'Daily',
     duration: '',
     instructions: '',
@@ -77,10 +103,12 @@ type ActiveTab = 'medicines' | 'tests';
 export default function WritePrescriptionScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { patientId, patientName, appointmentId } = useLocalSearchParams<{
+  const { patientId, patientName, appointmentId, replacesPrescriptionId } = useLocalSearchParams<{
     patientId?: string;
     patientName?: string;
     appointmentId?: string;
+    /** Set when reissuing after cancelling a prescription (audit G1). */
+    replacesPrescriptionId?: string;
   }>();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('medicines');
@@ -223,7 +251,9 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
       medicines: JSON.stringify(
         medicines.map((m) => ({
           ...m,
-          frequencyPattern: `${m.freqMorning ? 1 : 0}+${m.freqAfternoon ? 1 : 0}+${m.freqNight ? 1 : 0}`,
+          frequencyPattern: SLOT_FIELDS.map(({ on, amount }) =>
+            m[on] ? formatAmount(m[amount]) : '0',
+          ).join('+'),
         })),
       ),
       tests: JSON.stringify(tests),
@@ -231,6 +261,7 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
       advice,
       followUpDate: followUpDate ? toLocalDateString(followUpDate) : '',
       appointmentId: appointmentId ?? '',
+      replacesPrescriptionId: replacesPrescriptionId ?? '',
     };
 
     router.push({
@@ -376,48 +407,78 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
                   </Text>
                   <View style={styles.frequencyContainer}>
                     <View style={styles.timeOfDayCol}>
-                      <Text style={styles.subLabel}>Time of Day</Text>
-                      <TouchableOpacity
-                        style={styles.checkboxRow}
-                        onPress={() =>
-                          updateMedicine(medicine.id, 'freqMorning', !medicine.freqMorning)
-                        }
-                      >
-                        <MaterialCommunityIcons
-                          name={medicine.freqMorning ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                          size={20}
-                          color={medicine.freqMorning ? Colors.primary : Colors.textTertiary}
-                        />
-                        <Text style={styles.checkboxLabel}>Morning</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.checkboxRow}
-                        onPress={() =>
-                          updateMedicine(medicine.id, 'freqAfternoon', !medicine.freqAfternoon)
-                        }
-                      >
-                        <MaterialCommunityIcons
-                          name={
-                            medicine.freqAfternoon ? 'checkbox-marked' : 'checkbox-blank-outline'
-                          }
-                          size={20}
-                          color={medicine.freqAfternoon ? Colors.primary : Colors.textTertiary}
-                        />
-                        <Text style={styles.checkboxLabel}>Afternoon</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.checkboxRow}
-                        onPress={() =>
-                          updateMedicine(medicine.id, 'freqNight', !medicine.freqNight)
-                        }
-                      >
-                        <MaterialCommunityIcons
-                          name={medicine.freqNight ? 'checkbox-marked' : 'checkbox-blank-outline'}
-                          size={20}
-                          color={medicine.freqNight ? Colors.primary : Colors.textTertiary}
-                        />
-                        <Text style={styles.checkboxLabel}>Night</Text>
-                      </TouchableOpacity>
+                      <Text style={styles.subLabel}>Time of Day · amount</Text>
+                      {SLOT_FIELDS.map(({ label, on, amount }) => (
+                        <View key={on} style={styles.slotRow}>
+                          <TouchableOpacity
+                            style={styles.checkboxRow}
+                            onPress={() => updateMedicine(medicine.id, on, !medicine[on])}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: medicine[on] }}
+                            accessibilityLabel={label}
+                          >
+                            <MaterialCommunityIcons
+                              name={medicine[on] ? 'checkbox-marked' : 'checkbox-blank-outline'}
+                              size={20}
+                              color={medicine[on] ? Colors.primary : Colors.textTertiary}
+                            />
+                            <Text style={styles.checkboxLabel}>{label}</Text>
+                          </TouchableOpacity>
+                          {medicine[on] && (
+                            <View style={styles.stepper}>
+                              <TouchableOpacity
+                                onPress={() =>
+                                  updateMedicine(
+                                    medicine.id,
+                                    amount,
+                                    stepAmount(medicine[amount], -1),
+                                  )
+                                }
+                                disabled={medicine[amount] <= MIN_AMOUNT}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Less ${label.toLowerCase()}`}
+                                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                              >
+                                <MaterialCommunityIcons
+                                  name="minus-circle-outline"
+                                  size={20}
+                                  color={
+                                    medicine[amount] <= MIN_AMOUNT
+                                      ? Colors.textTertiary
+                                      : Colors.primary
+                                  }
+                                />
+                              </TouchableOpacity>
+                              <Text style={styles.stepperValue}>
+                                {formatAmount(medicine[amount])}
+                              </Text>
+                              <TouchableOpacity
+                                onPress={() =>
+                                  updateMedicine(
+                                    medicine.id,
+                                    amount,
+                                    stepAmount(medicine[amount], 1),
+                                  )
+                                }
+                                disabled={medicine[amount] >= MAX_AMOUNT}
+                                accessibilityRole="button"
+                                accessibilityLabel={`More ${label.toLowerCase()}`}
+                                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                              >
+                                <MaterialCommunityIcons
+                                  name="plus-circle-outline"
+                                  size={20}
+                                  color={
+                                    medicine[amount] >= MAX_AMOUNT
+                                      ? Colors.textTertiary
+                                      : Colors.primary
+                                  }
+                                />
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        </View>
+                      ))}
                     </View>
                     <View style={styles.verticalDivider} />
                     <View style={styles.intervalCol}>
@@ -493,6 +554,34 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
                             ]}
                           >
                             {dur}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <Text style={[styles.fieldLabel, { marginTop: Spacing.md }]}>Route</Text>
+                  <View style={styles.chipRow}>
+                    {ROUTE_OPTIONS.map((route) => {
+                      const selected = medicine.route === route.value;
+                      return (
+                        <TouchableOpacity
+                          key={route.value}
+                          style={[
+                            styles.chip,
+                            selected ? styles.chipSelected : styles.chipUnselected,
+                          ]}
+                          onPress={() => updateMedicine(medicine.id, 'route', route.value)}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected }}
+                        >
+                          <Text
+                            style={[
+                              styles.chipText,
+                              selected ? styles.chipTextSelected : styles.chipTextUnselected,
+                            ]}
+                          >
+                            {route.label}
                           </Text>
                         </TouchableOpacity>
                       );
@@ -1066,6 +1155,24 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.textSecondary,
     marginBottom: 2,
+  },
+  slotRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: Spacing.xs,
+  },
+  stepper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stepperValue: {
+    minWidth: 26,
+    textAlign: 'center',
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.sm,
+    color: Colors.textPrimary,
   },
   checkboxRow: {
     flexDirection: 'row',

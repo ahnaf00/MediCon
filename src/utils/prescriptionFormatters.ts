@@ -1,14 +1,46 @@
+export type DoseSlot = 'morning' | 'noon' | 'night';
+export const DOSE_SLOTS: readonly DoseSlot[] = ['morning', 'noon', 'night'];
+
+/** How the medicine is taken; values match the API's StorePrescriptionRequest::ROUTES. */
+export const ROUTE_OPTIONS = [
+  { value: 'oral', label: 'By mouth' },
+  { value: 'sublingual', label: 'Under the tongue' },
+  { value: 'topical', label: 'On the skin' },
+  { value: 'inhaled', label: 'Inhaled' },
+  { value: 'nasal', label: 'In the nose' },
+  { value: 'eye', label: 'In the eye' },
+  { value: 'ear', label: 'In the ear' },
+  { value: 'injection', label: 'Injection' },
+  { value: 'rectal', label: 'Rectal' },
+  { value: 'vaginal', label: 'Vaginal' },
+  { value: 'other', label: 'Other route' },
+] as const;
+export type RouteValue = (typeof ROUTE_OPTIONS)[number]['value'];
+
+export const routeLabel = (route?: string | null): string | undefined =>
+  route ? (ROUTE_OPTIONS.find((r) => r.value === route)?.label ?? route) : undefined;
+
+/** 1 → "1", 0.5 → "½", 1.5 → "1½" (same as the API's formatAmount). */
+export const formatAmount = (amount: number): string => {
+  const whole = Math.floor(amount);
+  const fraction = { 25: '¼', 50: '½', 75: '¾' }[Math.round((amount - whole) * 100)] ?? '';
+  if (!fraction) return String(Number(amount.toFixed(2)));
+  return `${whole > 0 ? whole : ''}${fraction}`;
+};
+
 /**
- * `{ morning: '08:00', night: '20:00' }` → `'1+0+1'`; undefined when no schedule was given.
- * Same rule as the API's PrescriptionDocumentResource::dosePattern() (the letterhead).
+ * `{ morning: '08:00', night: '20:00' }` → `'1+0+1'`, or with amounts `2+0+1`;
+ * undefined when no schedule was given. A scheduled slot without an amount
+ * counts as 1. Same rule as the API's PrescriptionDocumentResource::dosePattern().
  */
 export const toDosePattern = (
   schedule?: Record<string, string | null | undefined> | null,
+  quantities?: Partial<Record<DoseSlot, number | null>> | null,
 ): string | undefined => {
   if (!schedule || Object.keys(schedule).length === 0) return undefined;
-  return (['morning', 'noon', 'night'] as const)
-    .map((slot) => (schedule[slot] ? '1' : '0'))
-    .join('+');
+  return DOSE_SLOTS.map((slot) =>
+    schedule[slot] ? formatAmount(Number(quantities?.[slot] ?? 1)) : '0',
+  ).join('+');
 };
 
 export const getMedicineDescription = (pattern?: string, instructions?: string) => {

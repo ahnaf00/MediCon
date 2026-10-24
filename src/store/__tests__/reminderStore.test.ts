@@ -70,6 +70,22 @@ describe('reminderStore', () => {
     expect(reminderService.schedule).not.toHaveBeenCalled();
   });
 
+  // Audit G1: a prescription the doctor cancelled must stop reminding.
+  it('drops reminders of a cancelled prescription and leaves others alone', async () => {
+    await useReminderStore.getState().enableAll(rx(1, daysAgo(1)));
+
+    await useReminderStore
+      .getState()
+      .dropCancelled([{ ...rx(2, daysAgo(1)), status: 'cancelled' }]);
+    expect(Object.keys(store)).toHaveLength(2);
+
+    await useReminderStore
+      .getState()
+      .dropCancelled([{ ...rx(1, daysAgo(1)), status: 'cancelled' }]);
+    expect(store).toEqual({});
+    expect(selectActivePrescriptionId(useReminderStore.getState())).toBeNull();
+  });
+
   it('keeps one active prescription: turning on another replaces the first', async () => {
     await useReminderStore.getState().enableAll(rx(1, daysAgo(1)));
     await useReminderStore.getState().enableAll(rx(2, daysAgo(0)));

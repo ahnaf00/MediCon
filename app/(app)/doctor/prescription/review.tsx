@@ -14,6 +14,8 @@ import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { axiosClient } from '../../../../src/services/api/axiosClient';
 import { apiErrorMessage } from '../../../../src/services/api/consultationsService';
+import { routeLabel } from '../../../../src/utils/prescriptionFormatters';
+import type { AllergyConflict } from '../../../../src/types/medical.types';
 
 export default function ReviewPrescriptionScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
@@ -29,6 +31,7 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
     advice?: string;
     followUpDate?: string;
     appointmentId?: string;
+    replacesPrescriptionId?: string;
   }>();
 
   const [submitting, setSubmitting] = useState(false);
@@ -43,12 +46,31 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
     // Ignore parse errors on mock data
   }
 
-  const handleSubmit = async () => {
+  /** The allergy check asks first; the doctor confirms and sends again (audit G1). */
+  const confirmAllergy = (conflicts: AllergyConflict[]) => {
+    const lines = conflicts
+      .map((c) => `• ${c.medicine}: recorded allergy "${c.allergy}"`)
+      .join('\n');
+    Alert.alert(
+      'Allergy warning',
+      `${lines}\n\nThis compares medicine names with the allergies on the patient's profile. It does not check drug classes or cross-reactions.`,
+      [
+        { text: 'Go back and change', style: 'cancel' },
+        { text: 'Prescribe anyway', style: 'destructive', onPress: () => handleSubmit(true) },
+      ],
+    );
+  };
+
+  const handleSubmit = async (allergyAcknowledged = false) => {
     setSubmitting(true);
     try {
       const payload = {
         patient_user_id: parseInt(params.patientId || '0', 10),
         appointment_id: params.appointmentId ? parseInt(params.appointmentId, 10) : undefined,
+        replaces_prescription_id: params.replacesPrescriptionId
+          ? parseInt(params.replacesPrescriptionId, 10)
+          : undefined,
+        allergy_acknowledged: allergyAcknowledged || undefined,
         diagnosis_summary: params.notes || 'See prescribed medicines.',
         follow_up_date: params.followUpDate || undefined,
         advice: params.advice || undefined,
@@ -60,23 +82,49 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
           medicine_name: m.name,
           dosage: m.dosage,
           duration_days: parseInt(m.duration, 10) || 1,
-          instructions: m.instructions || undefined,
+          // The interval is part of how to take it, so it travels with the instructions.
+          instructions:
+            [m.instructions, m.interval && m.interval !== 'Daily' ? m.interval : null]
+              .filter(Boolean)
+              .join(' · ') || undefined,
           dosage_schedule: {
             ...(m.freqMorning ? { morning: '08:00' } : {}),
             ...(m.freqAfternoon ? { noon: '14:00' } : {}),
             ...(m.freqNight ? { night: '20:00' } : {}),
           },
+          dose_quantities: {
+            ...(m.freqMorning ? { morning: m.amtMorning ?? 1 } : {}),
+            ...(m.freqAfternoon ? { noon: m.amtNoon ?? 1 } : {}),
+            ...(m.freqNight ? { night: m.amtNight ?? 1 } : {}),
+          },
+          route: m.route || undefined,
         })),
       };
 
-      await axiosClient.post('/prescriptions', payload);
+      // The client unwraps the resource, so this is the saved prescription.
+      const created = (await axiosClient.post('/prescriptions', payload)) as { id?: number };
+
+      const done = () => {
+        router.dismissAll();
+        // A reissue opens from the cancelled prescription, so the writer is the
+        // first screen here: replace it with the new one, not leave it filled in.
+        if (params.replacesPrescriptionId && created?.id) {
+          router.replace(`/(app)/prescriptions/${created.id}`);
+        }
+      };
 
       Alert.alert(
         'Prescription Sent',
         'The prescription has been successfully saved and sent to the patient.',
-        [{ text: 'Done', onPress: () => router.dismissAll() }],
+        [{ text: 'Done', onPress: done }],
       );
     } catch (err: any) {
+      // axiosClient rejects a 422 with the response body itself plus `status`.
+      const conflicts: AllergyConflict[] | undefined = err?.allergyConflicts;
+      if (err?.status === 422 && conflicts?.length) {
+        confirmAllergy(conflicts);
+        return;
+      }
       Alert.alert('Could not issue prescription', apiErrorMessage(err, 'Please try again.'));
     } finally {
       setSubmitting(false);
@@ -155,6 +203,16 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
                         {med.frequencyPattern} ({med.interval})
                       </Text>
                     </View>
+                    {med.route ? (
+                      <View style={styles.medDetailChip}>
+                        <MaterialCommunityIcons
+                          name="needle"
+                          size={14}
+                          color={Colors.textSecondary}
+                        />
+                        <Text style={styles.medDetailText}>{routeLabel(med.route)}</Text>
+                      </View>
+                    ) : null}
                     <View style={styles.medDetailChip}>
                       <MaterialCommunityIcons
                         name="calendar-range"
@@ -257,7 +315,7 @@ export default function ReviewPrescriptionScreen(): React.JSX.Element {
       <View style={[styles.bottomActionBar, { paddingBottom: insets.bottom + Spacing.base }]}>
         <TouchableOpacity
           style={[styles.submitButton, submitting && styles.submitButtonLoading]}
-          onPress={handleSubmit}
+          onPress={() => handleSubmit()}
           disabled={submitting}
           activeOpacity={0.8}
         >

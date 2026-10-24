@@ -1,5 +1,5 @@
 // 1. IMPORTS
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -14,7 +14,7 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
@@ -33,9 +33,10 @@ import { apiErrorMessage, createAppError, AppError } from '../../../src/utils/er
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { ReminderPanel } from '../../../src/components/medical/ReminderPanel';
 import { ExplanationReview } from '../../../src/components/medical/ExplanationReview';
+import { PrescriptionStatusPanel } from '../../../src/components/medical/PrescriptionStatusPanel';
 import { useAuthStore } from '../../../src/store/authStore';
 import { Prescription, PrescriptionMedicine } from '../../../src/types/medical.types';
-import { getMedicineDescription } from '../../../src/utils/prescriptionFormatters';
+import { routeLabel, getMedicineDescription } from '../../../src/utils/prescriptionFormatters';
 
 // LayoutAnimation is enabled by default in the New Architecture
 
@@ -96,7 +97,11 @@ const MedicineDetailCard = ({ med, issuedAt, review }: MedicineDetailCardProps) 
         </View>
         <View style={styles.ddItem}>
           <Text style={styles.ddLabel}>Schedule</Text>
-          <Text style={styles.ddValue}>{med.dosagePattern ?? 'As directed'}</Text>
+          <Text style={styles.ddValue}>
+            {[med.dosagePattern ?? 'As directed', routeLabel(med.route)]
+              .filter(Boolean)
+              .join(' · ')}
+          </Text>
         </View>
       </View>
 
@@ -202,33 +207,36 @@ export default function PrescriptionDetailsScreen() {
     }
   };
 
-  useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        const data = await prescriptionsService.getPrescriptionById(Number(id));
-        if (isMounted) {
-          setPrescription(data);
-        }
-      } catch (err) {
-        if (isMounted)
-          setError(
-            createAppError(
-              'NETWORK_ERROR',
-              apiErrorMessage(
-                err,
-                'Could not load this prescription. Check your connection and try again.',
+  // Reload on focus: after a reissue the cancelled one now links to its correction.
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      (async () => {
+        try {
+          const data = await prescriptionsService.getPrescriptionById(Number(id));
+          if (isMounted) {
+            setPrescription(data);
+          }
+        } catch (err) {
+          if (isMounted)
+            setError(
+              createAppError(
+                'NETWORK_ERROR',
+                apiErrorMessage(
+                  err,
+                  'Could not load this prescription. Check your connection and try again.',
+                ),
               ),
-            ),
-          );
-      } finally {
-        if (isMounted) setLoading(false);
-      }
-    })();
-    return () => {
-      isMounted = false;
-    };
-  }, [id]);
+            );
+        } finally {
+          if (isMounted) setLoading(false);
+        }
+      })();
+      return () => {
+        isMounted = false;
+      };
+    }, [id]),
+  );
 
   // ── Loading / Error states ──────────────────────────────────────────────────
 
@@ -333,7 +341,15 @@ export default function PrescriptionDetailsScreen() {
           </View>
         </View>
 
-        {role === 'patient' && <ReminderPanel prescription={prescription} />}
+        <PrescriptionStatusPanel
+          prescription={prescription}
+          isPrescriber={isPrescriber}
+          onUpdated={setPrescription}
+        />
+
+        {role === 'patient' && prescription.status !== 'cancelled' && (
+          <ReminderPanel prescription={prescription} />
+        )}
 
         {/* Medicines section */}
         <Text style={styles.sectionTitle}>Medicines ({prescription.medicines.length})</Text>

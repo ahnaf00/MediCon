@@ -59,6 +59,19 @@ export interface Prescription {
   source?: 'DOCTOR' | 'UPLOADED';
   /** Uploaded paper prescriptions only: number of original pages. */
   pageCount?: number;
+  /** Set when the prescribing doctor cancelled it (audit G1). */
+  voidedAt?: string | null;
+  voidReason?: string | null;
+  /** The cancelled prescription this one replaces, and the one that replaced it. */
+  replacesPrescriptionId?: number | null;
+  replacedByPrescriptionId?: number | null;
+  /** Medicines that matched the patient's recorded allergies; the doctor confirmed them. */
+  allergyConflicts?: AllergyConflict[];
+}
+
+export interface AllergyConflict {
+  medicine: string;
+  allergy: string;
 }
 
 export interface PrescriptionMedicine {
@@ -70,6 +83,10 @@ export interface PrescriptionMedicine {
   dosageSchedule?: Record<string, string> | { morning?: string; noon?: string; night?: string };
   /** Human-readable schedule format from backend, e.g. "1+0+1". */
   scheduleFormat?: string | null;
+  /** Units per time of day, e.g. { morning: 2, night: 1 }; absent on older prescriptions. */
+  doseQuantities?: { morning?: number; noon?: number; night?: number } | null;
+  /** How it is taken: oral, eye, … (see ROUTE_OPTIONS). */
+  route?: string | null;
   instructions?: string | null;
   // ── Legacy mock-only fields ──
   timesPerDay?: number;

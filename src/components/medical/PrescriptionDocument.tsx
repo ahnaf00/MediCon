@@ -7,6 +7,7 @@ import { View, Text, StyleSheet } from 'react-native';
 
 import { FontFamily, FontSize } from '../../theme';
 import type { PrescriptionDocumentData } from '../../services/api/prescriptionsService';
+import { routeLabel } from '../../utils/prescriptionFormatters';
 
 interface PrescriptionDocumentProps {
   doc: PrescriptionDocumentData;
@@ -32,6 +33,16 @@ export function PrescriptionDocument({ doc, ref }: PrescriptionDocumentProps) {
 
   return (
     <View ref={ref} collapsable={false} style={styles.page}>
+      {/* A cancelled prescription must never pass for a valid one (audit G1). */}
+      {doc.status === 'cancelled' ? (
+        <View style={styles.cancelled}>
+          <Text style={styles.cancelledText}>
+            CANCELLED by the prescribing doctor{doc.voidedDate ? ` on ${doc.voidedDate}` : ''}. Do
+            not use this prescription.
+          </Text>
+          {doc.voidReason ? <Text style={styles.text}>Reason: {doc.voidReason}</Text> : null}
+        </View>
+      ) : null}
       {/* Letterhead */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
@@ -91,6 +102,7 @@ export function PrescriptionDocument({ doc, ref }: PrescriptionDocumentProps) {
               <Text style={styles.text}>
                 {[
                   med.pattern ?? 'As directed',
+                  routeLabel(med.route),
                   `${med.durationDays} ${med.durationDays === 1 ? 'day' : 'days'}`,
                   med.instructions,
                 ]
@@ -140,6 +152,13 @@ const INK = '#1f2937';
 const GREY = '#6b7280';
 
 const styles = StyleSheet.create({
+  cancelled: {
+    borderWidth: 2,
+    borderColor: '#b91c1c',
+    padding: 8,
+    marginBottom: 10,
+  },
+  cancelledText: { color: '#b91c1c', fontFamily: FontFamily.bold, fontSize: FontSize.sm },
   page: {
     backgroundColor: '#ffffff',
     padding: 20,

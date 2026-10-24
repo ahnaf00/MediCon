@@ -41,6 +41,8 @@ interface ReminderState {
   disableAll: (prescriptionId: string | number) => Promise<void>;
   /** Cancels every reminder on this phone (logout). */
   clearAll: () => Promise<void>;
+  /** Stops reminders for any of these prescriptions the doctor has cancelled (audit G1). */
+  dropCancelled: (prescriptions: Prescription[]) => Promise<void>;
 }
 
 export const useReminderStore = create<ReminderState>((set, get) => {
@@ -113,6 +115,19 @@ export const useReminderStore = create<ReminderState>((set, get) => {
     clearAll: async () => {
       await reminderService.cancelAll();
       set({ reminders: {} });
+    },
+
+    dropCancelled: async (prescriptions) => {
+      const cancelled = new Set(
+        prescriptions.filter((p) => p.status === 'cancelled').map((p) => String(p.id)),
+      );
+      if (cancelled.size === 0) return;
+      // Read the OS schedule itself: the in-memory mirror may not be loaded yet.
+      const scheduled = await reminderService.list();
+      const stale = Object.values(scheduled).filter((r) => cancelled.has(r.prescriptionId));
+      if (stale.length === 0) return;
+      await Promise.all(stale.map((r) => reminderService.cancel(r.prescriptionId, r.period)));
+      await get().refresh();
     },
   };
 });
