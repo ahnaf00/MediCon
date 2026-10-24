@@ -234,6 +234,8 @@ export default function AiChatScreen() {
                 ]}
                 onPress={() => handleSend(inputText)}
                 disabled={!inputText.trim() || !!activeStreamingId}
+                accessibilityRole="button"
+                accessibilityLabel={activeStreamingId ? 'Waiting for reply' : 'Send message'}
               >
                 {activeStreamingId ? (
                   <ActivityIndicator size="small" color={Colors.textTertiary} />
