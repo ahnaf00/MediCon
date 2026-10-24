@@ -69,6 +69,9 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
   const [patient, setPatient] = useState<ApiPatient | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePrescription, setActivePrescription] = useState<Prescription | null>(null);
+  // Every prescription this doctor wrote for the patient, so they can open one and
+  // review the medicine explanations the patient reads (audit G4).
+  const [patientPrescriptions, setPatientPrescriptions] = useState<Prescription[]>([]);
   const [loadingPrescription, setLoadingPrescription] = useState(true);
   const appointments = useAppointments();
   const appointment = pickAppointment(appointments.data, id, appointmentId);
@@ -103,9 +106,10 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
         // Since we don't have a specific endpoint for patient's active meds,
         // we'll try to find the latest prescription for this patient (optional feature)
         if (isMounted) {
-          const patientPrescriptions = data.filter((p) => p.patient?.id.toString() === id);
-          if (patientPrescriptions.length > 0) {
-            setActivePrescription(patientPrescriptions[0]);
+          const forPatient = data.filter((p) => p.patient?.id.toString() === id);
+          setPatientPrescriptions(forPatient);
+          if (forPatient.length > 0) {
+            setActivePrescription(forPatient[0]);
           }
         }
       } catch (err) {
@@ -270,6 +274,48 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
             )}
           </View>
         </View>
+
+        {/* ── YOUR PRESCRIPTIONS: open one to review its medicine explanations ── */}
+        {!loadingPrescription && patientPrescriptions.length > 0 ? (
+          <View style={styles.section}>
+            <View style={styles.infoCard}>
+              <Text style={styles.cardInnerTitle}>Your Prescriptions</Text>
+              {patientPrescriptions.map((p, index) => (
+                <TouchableOpacity
+                  key={p.id}
+                  style={[
+                    styles.medRow,
+                    index < patientPrescriptions.length - 1 && styles.medRowBorder,
+                  ]}
+                  onPress={() => router.push(`/(app)/prescriptions/${p.id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Open prescription ${p.diagnosisSummary || ''}`.trim()}
+                >
+                  <MaterialCommunityIcons name="prescription" size={18} color={Colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.medName} numberOfLines={1}>
+                      {p.diagnosisSummary || 'Prescription'}
+                    </Text>
+                    <Text style={styles.medDosage}>
+                      {new Date(p.issuedAt).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                      })}
+                      {' · '}
+                      {p.medicines.length} {p.medicines.length === 1 ? 'medicine' : 'medicines'}
+                    </Text>
+                  </View>
+                  <MaterialCommunityIcons
+                    name="chevron-right"
+                    size={20}
+                    color={Colors.textTertiary}
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : null}
       </ScrollView>
 
       {/* ── FIXED BOTTOM ACTION BAR ── */}
