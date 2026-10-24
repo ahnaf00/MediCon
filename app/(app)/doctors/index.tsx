@@ -67,7 +67,7 @@ export default function DoctorsListScreen(): React.JSX.Element {
           >
             <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{category ? 'Specialists' : 'Online Doctors'}</Text>
+          <Text style={styles.headerTitle}>{category ? category : 'Online Doctors'}</Text>
         </View>
       </View>
 
