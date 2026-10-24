@@ -161,7 +161,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const userId = useAuthStore((s) => s.userId) || 'doctor-1';
+  const userId = useAuthStore((s) => s.userId) ?? '';
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('unanswered');
   const presence = useDoctorPresence();
@@ -200,8 +200,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
     try {
       setLoading(true);
       setError(null);
-      let doc = await doctorsService.getDoctorDetails(userId);
-      if (!doc) doc = await doctorsService.getDoctorDetails('doc-1');
+      const doc = userId ? await doctorsService.getDoctorDetails(userId) : null;
 
       if (doc) {
         const data = await qnaService.getDoctorInbox(doc.department);
@@ -285,8 +284,7 @@ export default function QnaInboxScreen(): React.JSX.Element {
     try {
       setSubmitting(true);
       if (isEditing && editingAnswerId) {
-        let doc = await doctorsService.getDoctorDetails(userId);
-        if (!doc) doc = await doctorsService.getDoctorDetails('doc-1');
+        const doc = await doctorsService.getDoctorDetails(userId);
         const updatedAnswer = await qnaService.updateAnswer(
           activeQuestion.id,
           editingAnswerId,

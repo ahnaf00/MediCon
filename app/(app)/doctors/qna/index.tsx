@@ -40,7 +40,7 @@ export default function QnaIndexScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const userId = useAuthStore((s) => s.userId) || 'patient-1';
+  const userId = useAuthStore((s) => s.userId) ?? '';
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
