@@ -21,7 +21,7 @@ import { useRouter } from 'expo-router';
 import { Colors, Spacing, BorderRadius, FontFamily, FontSize, Layout } from '../../../src/theme';
 import { vitalsService, StoreVitalPayload } from '../../../src/services/api/vitalsService';
 import { ApiVital } from '../../../src/types/medical.types';
-import { createAppError, AppError } from '../../../src/utils/errors';
+import { apiErrorMessage, createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 
 // 2. TYPES
@@ -439,7 +439,7 @@ export default function VitalsScreen(): React.JSX.Element {
         resetForm();
       }
     } catch (err: any) {
-      const msg = err?.message ?? 'Failed to record vitals. Please try again.';
+      const msg = apiErrorMessage(err, 'Failed to record vitals. Please try again.');
       Alert.alert('Error', msg);
     } finally {
       if (isMountedRef.current) setSubmitting(false);

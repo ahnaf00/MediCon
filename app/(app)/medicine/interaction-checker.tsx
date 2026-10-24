@@ -16,7 +16,7 @@ import { Button } from '../../../src/components/ui/Button';
 import { InteractionFlag } from '../../../src/components/medical/InteractionFlag';
 import { medicineAiService, InteractionConflict } from '../../../src/services/ai/medicineAiService';
 import { prescriptionsService } from '../../../src/services/api/prescriptionsService';
-import { createAppError, AppError } from '../../../src/utils/errors';
+import { apiErrorMessage, createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { Colors, Spacing, FontFamily, FontSize } from '../../../src/theme';
 import { useTranslation } from 'react-i18next';
@@ -42,7 +42,16 @@ export default function InteractionCheckerScreen() {
           setActiveMedicines(meds);
         }
       } catch (err) {
-        if (isMounted) setError(createAppError('NETWORK_ERROR', String(err)));
+        if (isMounted)
+          setError(
+            createAppError(
+              'NETWORK_ERROR',
+              apiErrorMessage(
+                err,
+                'Could not load your current medicines. Check your connection and try again.',
+              ),
+            ),
+          );
       }
     })();
     return () => {
@@ -63,7 +72,12 @@ export default function InteractionCheckerScreen() {
       // Every warning is shown; "not checked" cards only for pairs with the new medicine.
       setConflicts(data.filter((c) => c.severity !== 'NOT_CHECKED' || c.pair[0] === checked));
     } catch (err) {
-      setError(createAppError('AI_SERVICE_ERROR', String(err)));
+      setError(
+        createAppError(
+          'AI_SERVICE_ERROR',
+          apiErrorMessage(err, 'Could not check interactions right now. Please try again.'),
+        ),
+      );
     } finally {
       setLoading(false);
     }

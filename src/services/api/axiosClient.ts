@@ -68,9 +68,10 @@ axiosClient.interceptors.response.use(
       }
 
       // 422 Unprocessable Entity: Validation Errors
-      // We pass the error down so useMutation can catch it and map errors to the UI
+      // The body ({ message, errors }) goes down so forms can show field errors;
+      // `status` lets callers tell it apart from other failures (audit API-006).
       if (error.response.status === 422) {
-        return Promise.reject(error.response.data);
+        return Promise.reject({ ...(error.response.data as object), status: 422 });
       }
     }
 

@@ -25,6 +25,7 @@ import { AnalysisProgressModal } from '../../../src/components/medical/AnalysisP
 import { groupLabResults } from '../../../src/utils/labResults';
 import { fromLocalDateString } from '../../../src/utils/localDate';
 import { useTranslation } from 'react-i18next';
+import { apiErrorMessage } from '../../../src/utils/errors';
 
 const DATE_FORMAT: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
 
@@ -54,8 +55,10 @@ export default function ReportDetailScreen() {
       onError: (error: any) => {
         Alert.alert(
           t('report_analysis.analyze_failed_title', 'Could not start analysis'),
-          error?.message ||
+          apiErrorMessage(
+            error,
             t('report_analysis.analyze_failed_body', 'Please try again in a moment.'),
+          ),
         );
       },
     });

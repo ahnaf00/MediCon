@@ -20,7 +20,7 @@ import { useAuthStore } from '../../../../src/store/authStore';
 import { qnaService } from '../../../../src/services/api/qnaService';
 import { QuestionCard } from '../../../../src/components/medical/QuestionCard';
 import { Question } from '../../../../src/types/medical.types';
-import { createAppError, AppError } from '../../../../src/utils/errors';
+import { apiErrorMessage, createAppError, AppError } from '../../../../src/utils/errors';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { DraggableBottomSheet } from '../../../../src/components/ui/DraggableBottomSheet';
 import { useTranslation } from 'react-i18next';
@@ -79,7 +79,15 @@ export default function QnaIndexScreen() {
       const data = await qnaService.getPatientQuestions(userId);
       setQuestions(data);
     } catch (err) {
-      setError(createAppError('NETWORK_ERROR', String(err)));
+      setError(
+        createAppError(
+          'NETWORK_ERROR',
+          apiErrorMessage(
+            err,
+            'Could not load your questions. Check your connection and try again.',
+          ),
+        ),
+      );
     } finally {
       setLoading(false);
     }

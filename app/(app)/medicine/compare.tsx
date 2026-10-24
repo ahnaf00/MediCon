@@ -15,7 +15,7 @@ import { Input } from '../../../src/components/ui/Input';
 import { Button } from '../../../src/components/ui/Button';
 import { MedicineCompareCard } from '../../../src/components/medical/MedicineCompareCard';
 import { medicineAiService, ComparisonResult } from '../../../src/services/ai/medicineAiService';
-import { createAppError, AppError } from '../../../src/utils/errors';
+import { apiErrorMessage, createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { Colors, Spacing, FontFamily, FontSize } from '../../../src/theme';
 import { useTranslation } from 'react-i18next';
@@ -39,7 +39,12 @@ export default function CompareScreen() {
       const data = await medicineAiService.compareMedicines(medA.trim(), medB.trim());
       setResult(data);
     } catch (err) {
-      setError(createAppError('AI_SERVICE_ERROR', String(err)));
+      setError(
+        createAppError(
+          'AI_SERVICE_ERROR',
+          apiErrorMessage(err, 'Could not compare these medicines right now. Please try again.'),
+        ),
+      );
     } finally {
       setLoading(false);
     }

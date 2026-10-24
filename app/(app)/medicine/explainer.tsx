@@ -15,7 +15,7 @@ import { Input } from '../../../src/components/ui/Input';
 import { Button } from '../../../src/components/ui/Button';
 import { MedicineLabelView } from '../../../src/components/medical/MedicineLabelView';
 import { medicineAiService, MedicineLabel } from '../../../src/services/ai/medicineAiService';
-import { createAppError, AppError } from '../../../src/utils/errors';
+import { apiErrorMessage, createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../../src/theme';
 import { useTranslation } from 'react-i18next';
@@ -42,7 +42,10 @@ export default function ExplainerScreen() {
       setSearched(name);
       setResult(data);
     } catch (err) {
-      const appError = createAppError('AI_SERVICE_ERROR', String(err));
+      const appError = createAppError(
+        'AI_SERVICE_ERROR',
+        apiErrorMessage(err, 'Could not look up this medicine right now. Please try again.'),
+      );
       setError(appError);
     } finally {
       setLoading(false);

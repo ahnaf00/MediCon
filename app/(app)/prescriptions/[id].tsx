@@ -29,7 +29,7 @@ import {
   DownloadOptionsSheet,
   type DownloadFormat,
 } from '../../../src/components/medical/DownloadOptionsSheet';
-import { createAppError, AppError } from '../../../src/utils/errors';
+import { apiErrorMessage, createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { ReminderPanel } from '../../../src/components/medical/ReminderPanel';
 import { useAuthStore } from '../../../src/store/authStore';
@@ -192,7 +192,16 @@ export default function PrescriptionDetailsScreen() {
           setPrescription(data);
         }
       } catch (err) {
-        if (isMounted) setError(createAppError('NETWORK_ERROR', String(err)));
+        if (isMounted)
+          setError(
+            createAppError(
+              'NETWORK_ERROR',
+              apiErrorMessage(
+                err,
+                'Could not load this prescription. Check your connection and try again.',
+              ),
+            ),
+          );
       } finally {
         if (isMounted) setLoading(false);
       }

@@ -8,7 +8,7 @@ import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../../sr
 import { UploadRecordPage } from '../../../src/services/api/reportsService';
 import { pickReportImages, pickReportPdfs } from '../../../src/services/files/reportPicker';
 import { MAX_REPORT_PAGES, useReportDraftStore } from '../../../src/store/reportDraftStore';
-import { createAppError } from '../../../src/utils/errors';
+import { apiErrorMessage, createAppError } from '../../../src/utils/errors';
 import { useTranslation } from 'react-i18next';
 
 /**
@@ -30,7 +30,10 @@ export default function UploadReportScreen() {
       draft.addPages(pages);
       router.replace('/(app)/report/review');
     } catch (err) {
-      const appError = createAppError('UNKNOWN_ERROR', String(err));
+      const appError = createAppError(
+        'UNKNOWN_ERROR',
+        apiErrorMessage(err, 'Could not add the pages. Please try again.'),
+      );
       Alert.alert('Error', appError.message);
     }
   };

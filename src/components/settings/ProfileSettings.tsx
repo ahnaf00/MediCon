@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, StyleSheet, ActivityIndicator, Text, Alert } from 'react-native';
 import { useTranslation } from 'react-i18next';
+import { apiErrorMessage } from '../../utils/errors';
 import { Colors, Spacing, FontFamily, FontSize } from '../../theme';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -106,7 +107,7 @@ export function ProfileSettings() {
       await authService.updateProfile(payload);
       setSuccessMsg('Profile updated successfully!');
     } catch (err: any) {
-      setErrorMsg(err?.message || 'Failed to update profile.');
+      setErrorMsg(apiErrorMessage(err, 'Failed to update profile.'));
     } finally {
       setSaving(false);
     }

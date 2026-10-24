@@ -214,7 +214,12 @@ export default function QnaInboxScreen(): React.JSX.Element {
         throw new Error('Doctor not found');
       }
     } catch (err) {
-      setError(createAppError('NETWORK_ERROR', String(err)));
+      setError(
+        createAppError(
+          'NETWORK_ERROR',
+          apiErrorMessage(err, 'Could not load questions. Check your connection and try again.'),
+        ),
+      );
     } finally {
       setLoading(false);
     }

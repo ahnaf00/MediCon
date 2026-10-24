@@ -49,35 +49,23 @@ export const authService = {
     phone: string,
     otp: string,
   ): Promise<{ isNewUser: boolean; token?: string; user?: User; registrationToken?: string }> {
-    try {
-      // Laravel API: POST /auth/verify-otp
-      const response = (await axiosClient.post('/auth/verify-otp', {
-        phone,
-        otp,
-      })) as any;
+    // Laravel API: POST /auth/verify-otp
+    const response = (await axiosClient.post('/auth/verify-otp', {
+      phone,
+      otp,
+    })) as any;
 
-      if (response.isNewUser) {
-        // Single-use proof that this phone passed OTP; register() must send it back.
-        return { isNewUser: true, registrationToken: response.registration_token };
-      }
-
-      // Response returns access_token and user object
-      return {
-        isNewUser: false,
-        token: response.access_token,
-        user: response.user,
-      };
-    } catch (error: any) {
-      if (
-        error?.status === 401 ||
-        error?.status === 422 ||
-        error?.status === 400 ||
-        error?.status === 429
-      ) {
-        throw error;
-      }
-      throw error;
+    if (response.isNewUser) {
+      // Single-use proof that this phone passed OTP; register() must send it back.
+      return { isNewUser: true, registrationToken: response.registration_token };
     }
+
+    // Response returns access_token and user object
+    return {
+      isNewUser: false,
+      token: response.access_token,
+      user: response.user,
+    };
   },
 
   /**
