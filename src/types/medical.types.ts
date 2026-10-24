@@ -43,7 +43,7 @@ export interface Prescription {
   /** ISO 8601 timestamp — maps to backend's createdAt. */
   issuedAt: string;
   diagnosisSummary?: string;
-  status?: 'active' | 'expired' | 'cancelled';
+  status?: 'active' | 'completed' | 'cancelled';
   /** Issuing doctor (from backend UserResource). */
   doctor?: { id: number; name: string; avatarUrl: string | null };
   /** Patient this prescription belongs to (from backend UserResource). */

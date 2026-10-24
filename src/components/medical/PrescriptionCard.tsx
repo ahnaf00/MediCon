@@ -21,7 +21,7 @@ export interface PrescriptionCardProps {
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
   active: { label: 'Active', color: Colors.success, bg: '#e6f9f0' },
-  expired: { label: 'Expired', color: Colors.textTertiary, bg: Colors.tertiary },
+  completed: { label: 'Completed', color: Colors.textTertiary, bg: Colors.tertiary },
   cancelled: { label: 'Cancelled', color: Colors.danger, bg: '#fde8e8' },
 };
 

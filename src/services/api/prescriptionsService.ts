@@ -80,7 +80,7 @@ export interface ApiPrescription {
   id: number;
   appointmentId: number | null;
   diagnosisSummary: string;
-  status: 'active' | 'expired' | 'cancelled';
+  status: 'active' | 'completed' | 'cancelled';
   doctor: {
     id: number;
     name: string;
