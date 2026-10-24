@@ -125,6 +125,17 @@ export const authService = {
     return response.user || response;
   },
 
+  /** Changing the login number: a code goes to the new number first (audit F12). */
+  async sendPhoneChangeCode(phone: string): Promise<void> {
+    await axiosClient.post('/user/me/phone/send-otp', { phone });
+  },
+
+  /** Confirms the code; the server then switches the number and returns the user. */
+  async confirmPhoneChange(phone: string, otp: string): Promise<User> {
+    const response = (await axiosClient.post('/user/me/phone/verify', { phone, otp })) as any;
+    return response.user || response;
+  },
+
   /**
    * Uploads user avatar image
    */

@@ -5,6 +5,7 @@ import { apiErrorMessage } from '../../utils/errors';
 import { Colors, Spacing, FontFamily, FontSize } from '../../theme';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
+import { ChangePhone } from './ChangePhone';
 import { authService, User } from '../../services/api/authService';
 import { useAuthStore } from '../../store/authStore';
 
@@ -102,7 +103,6 @@ export function ProfileSettings() {
 
       const payload: Record<string, any> = {
         name,
-        phone,
       };
 
       if (role === 'patient') {
@@ -162,13 +162,8 @@ export function ProfileSettings() {
           placeholder={t('profile.fullNamePlaceholder') || 'Enter your full name'}
         />
 
-        <Input
-          label={t('profile.phone') || 'Phone Number'}
-          value={phone}
-          onChangeText={setPhone}
-          placeholder={t('profile.phonePlaceholder') || 'Enter your phone number'}
-          keyboardType="phone-pad"
-        />
+        {/* The login number changes only with a code sent to the new number (F12). */}
+        <ChangePhone currentPhone={phone} onChanged={setPhone} />
 
         <Input
           label="Email Address"
