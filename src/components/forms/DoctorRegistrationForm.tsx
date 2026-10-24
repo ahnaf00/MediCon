@@ -18,7 +18,10 @@ import { doctorsService } from '../../services/api/doctorsService';
 export interface DoctorFormData {
   fullName: string;
   department: string;
+  qualification: string;
+  /** BMDC registration number, printed on every prescription. */
   licenseNumber: string;
+  hospitalName: string;
 }
 
 export interface DoctorRegistrationFormProps {
@@ -35,7 +38,9 @@ export const DoctorRegistrationForm = ({
   const [form, setForm] = useState<DoctorFormData>({
     fullName: '',
     department: '',
+    qualification: '',
     licenseNumber: '',
+    hospitalName: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof DoctorFormData, string>>>({});
 
@@ -55,8 +60,11 @@ export const DoctorRegistrationForm = ({
     if (!form.department.trim()) {
       newErrors.department = 'Choose your department';
     }
-    if (!form.licenseNumber.trim()) {
-      newErrors.licenseNumber = 'License number is required';
+    if (!form.qualification.trim()) {
+      newErrors.qualification = 'Enter your qualifications, e.g. MBBS';
+    }
+    if (!/\d/.test(form.licenseNumber)) {
+      newErrors.licenseNumber = 'Enter your BMDC registration number, e.g. A-12345';
     }
 
     setErrors(newErrors);
@@ -135,8 +143,14 @@ export const DoctorRegistrationForm = ({
     >
       {renderField('Full Name', 'fullName')}
       {renderDepartment()}
-      {renderField('License Number', 'licenseNumber', {
-        placeholder: 'e.g. BMDC-12345',
+      {renderField('Qualifications', 'qualification', {
+        placeholder: 'e.g. MBBS, FCPS',
+      })}
+      {renderField('BMDC Registration No.', 'licenseNumber', {
+        placeholder: 'e.g. A-12345',
+      })}
+      {renderField('Hospital / Chamber (optional)', 'hospitalName', {
+        placeholder: 'Printed on your prescriptions',
       })}
 
       <View style={styles.notice}>

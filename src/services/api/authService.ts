@@ -14,6 +14,9 @@ export interface DoctorProfileData {
   id?: number;
   specialty?: string;
   qualification?: string;
+  /** Printed on prescriptions; fixed once the doctor is verified. */
+  bmdcRegistrationNo?: string | null;
+  hospitalName?: string | null;
   experienceYears?: number;
   consultationFee?: number;
   rating?: number;
@@ -86,7 +89,10 @@ export const authService = {
 
     if (role === 'doctor') {
       payload.specialty = profileData.department;
-      payload.qualification = profileData.licenseNumber;
+      payload.qualification = profileData.qualification;
+      // The licence goes to its own field, printed on prescriptions (audit D2).
+      payload.bmdc_registration_no = profileData.licenseNumber;
+      if (profileData.hospitalName?.trim()) payload.hospital_name = profileData.hospitalName.trim();
     } else {
       payload.date_of_birth = profileData.dateOfBirth;
       payload.blood_group = profileData.bloodGroup;

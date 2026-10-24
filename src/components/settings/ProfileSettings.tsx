@@ -32,6 +32,12 @@ export function ProfileSettings() {
   // Doctor profile fields
   const [specialty, setSpecialty] = useState('');
   const [qualification, setQualification] = useState('');
+  const [savedSpecialty, setSavedSpecialty] = useState('');
+  const [bmdcNo, setBmdcNo] = useState('');
+  const [hospitalName, setHospitalName] = useState('');
+  // A verified doctor's BMDC number can't be changed in the app (the server
+  // refuses it); one never entered can still be added once.
+  const [bmdcLocked, setBmdcLocked] = useState(false);
   const [experienceYears, setExperienceYears] = useState('');
   const [consultationFee, setConsultationFee] = useState('');
   const [bio, setBio] = useState('');
@@ -57,7 +63,14 @@ export function ProfileSettings() {
 
           if (user.doctorProfile) {
             setSpecialty(user.doctorProfile.specialty || '');
+            setSavedSpecialty(user.doctorProfile.specialty || '');
             setQualification(user.doctorProfile.qualification || '');
+            setBmdcNo(user.doctorProfile.bmdcRegistrationNo || '');
+            setHospitalName(user.doctorProfile.hospitalName || '');
+            setBmdcLocked(
+              user.doctorProfile.verificationStatus === 'verified' &&
+                !!user.doctorProfile.bmdcRegistrationNo,
+            );
             setExperienceYears(
               user.doctorProfile.experienceYears ? String(user.doctorProfile.experienceYears) : '',
             );
@@ -97,8 +110,11 @@ export function ProfileSettings() {
         if (emergencyContact) payload.emergency_contact = emergencyContact;
         if (address) payload.address = address;
       } else if (role === 'doctor') {
-        if (specialty) payload.specialty = specialty;
+        // Must be one of the listed departments; only sent when it was changed.
+        if (specialty && specialty !== savedSpecialty) payload.specialty = specialty;
         if (qualification) payload.qualification = qualification;
+        if (!bmdcLocked && bmdcNo.trim()) payload.bmdc_registration_no = bmdcNo.trim();
+        payload.hospital_name = hospitalName.trim() || null;
         if (experienceYears) payload.experience_years = Number(experienceYears);
         if (consultationFee) payload.consultation_fee = Number(consultationFee);
         if (bio) payload.bio = bio;
@@ -224,6 +240,26 @@ export function ProfileSettings() {
             />
 
             <Input
+              label="BMDC Registration No."
+              value={bmdcNo}
+              onChangeText={setBmdcNo}
+              placeholder="e.g. A-12345"
+              disabled={bmdcLocked}
+            />
+            <Text style={styles.fieldHint}>
+              {bmdcLocked
+                ? 'Verified. Contact MediCon support to change it.'
+                : 'Printed on your prescriptions.'}
+            </Text>
+
+            <Input
+              label="Hospital / Chamber"
+              value={hospitalName}
+              onChangeText={setHospitalName}
+              placeholder="Printed on your prescriptions"
+            />
+
+            <Input
               label="Experience (Years)"
               value={experienceYears}
               onChangeText={setExperienceYears}
@@ -256,6 +292,12 @@ export function ProfileSettings() {
 }
 
 const styles = StyleSheet.create({
+  fieldHint: {
+    marginTop: -Spacing.sm,
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+  },
   container: {},
   form: {
     paddingHorizontal: Spacing.xl,
