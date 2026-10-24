@@ -78,18 +78,6 @@ export interface PrescriptionMedicine {
   aiDemystifierSummary?: string;
 }
 
-export type AdherenceStatus = 'TAKEN' | 'PENDING' | 'MISSED';
-
-export interface AdherenceRecord {
-  id: string;
-  prescriptionId: string;
-  medicineId: string;
-  date: string; // ISO 8601 (YYYY-MM-DD)
-  status: AdherenceStatus;
-  scheduledTime?: string; // HH:mm format
-  takenTime?: string; // ISO 8601 if taken
-}
-
 export interface Biomarker {
   id: string;
   name: string;

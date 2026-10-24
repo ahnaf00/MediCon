@@ -20,7 +20,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
-import { AdherenceRecord, Prescription } from '../../types/medical.types';
+import { Prescription } from '../../types/medical.types';
 import { toDosePattern } from '../../utils/prescriptionFormatters';
 
 // ─── Types (matching PrescriptionResource & StorePrescriptionRequest exactly) ──
@@ -112,28 +112,6 @@ export interface StorePrescriptionPayload {
   advice?: string;
 }
 
-// ─── Adherence records (local state only — no backend endpoint yet) ────────────
-
-const MOCK_ADHERENCE: AdherenceRecord[] = [
-  {
-    id: 'adh-1',
-    prescriptionId: '1',
-    medicineId: '1',
-    date: new Date().toISOString().split('T')[0],
-    status: 'TAKEN',
-    scheduledTime: '08:00',
-    takenTime: new Date(new Date().setHours(8, 15)).toISOString(),
-  },
-  {
-    id: 'adh-2',
-    prescriptionId: '1',
-    medicineId: '1',
-    date: new Date().toISOString().split('T')[0],
-    status: 'PENDING',
-    scheduledTime: '14:00',
-  },
-];
-
 // ─── Mapper Function ────────────────────────────────────────────────────────────
 
 const mapApiToPrescription = (api: ApiPrescription): Prescription => {
@@ -206,28 +184,6 @@ export const prescriptionsService = {
     return (await axiosClient.get(
       `/prescriptions/${id}/document`,
     )) as unknown as PrescriptionDocumentData;
-  },
-
-  /**
-   * Goal: Retrieve today's adherence records (local state — no backend yet).
-   * How: Filters in-memory MOCK_ADHERENCE by date string.
-   */
-  getDailyAdherence: async (date: string): Promise<AdherenceRecord[]> => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const records = MOCK_ADHERENCE.filter((a) => a.date === date);
-        resolve(records);
-      }, 100);
-    });
-  },
-
-  /** Adherence threshold classifier (pure utility, no API call). */
-  calculateAdherenceThreshold: (taken: number, total: number): 'GOOD' | 'FAIR' | 'POOR' => {
-    if (total === 0) return 'GOOD';
-    const percentage = (taken / total) * 100;
-    if (percentage >= 80) return 'GOOD';
-    if (percentage >= 50) return 'FAIR';
-    return 'POOR';
   },
 };
 

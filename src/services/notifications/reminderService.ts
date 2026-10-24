@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 
 import type { Prescription } from '../../types/medical.types';
 import { toLocalDateString } from '../../utils/localDate';
+import { courseLastDay } from '../../utils/courseDates';
 
 /**
  * Daily medicine reminders, scheduled as local notifications on this phone.
@@ -60,15 +61,12 @@ const parseTime = (time: string): { hour: number; minute: number } | null => {
 
 /** Last day any medicine taken in `period` is due, as local YYYY-MM-DD. */
 export const courseEndFor = (prescription: Prescription, period: DosePeriod): string | null => {
-  const start = new Date(prescription.issuedAt);
-  if (Number.isNaN(start.getTime())) return null;
-  const days = prescription.medicines
+  const ends = prescription.medicines
     .filter((m) => (m.dosageSchedule as Record<string, string> | undefined)?.[period])
-    .map((m) => Math.max(1, m.durationDays || 1));
-  if (days.length === 0) return null;
-  const end = new Date(start);
-  end.setDate(end.getDate() + Math.max(...days) - 1);
-  return toLocalDateString(end);
+    .map((m) => courseLastDay(prescription.issuedAt, m))
+    .filter(Boolean)
+    .sort();
+  return ends.at(-1) ?? null;
 };
 
 const toReminder = (request: Notifications.NotificationRequest): PeriodReminder | null => {

@@ -9,6 +9,8 @@ import { useReminderStore } from '../../store/reminderStore';
 import { reminderId } from '../../services/notifications/reminderService';
 import { reportReminderResult } from '../../services/notifications/reminderMessages';
 import { getMealTiming } from '../../utils/prescriptionFormatters';
+import { toLocalDateString } from '../../utils/localDate';
+import { courseLastDay } from '../../utils/courseDates';
 
 export interface ActivePrescriptionViewProps {
   prescription: Prescription;
@@ -21,7 +23,8 @@ interface PeriodGroup {
   label: string;
   time?: string;
   medicines: PrescriptionMedicine[];
-  isCompleted: boolean;
+  /** Today and the dose time has gone by. Says nothing about whether it was taken. */
+  isPast: boolean;
 }
 
 // ─── Edit Modal ──────────────────────────────────────────────────────────────
@@ -179,26 +182,30 @@ export const ActivePrescriptionView = ({
 
   const getPeriods = (): PeriodGroup[] => {
     const periods: PeriodGroup[] = [
-      { id: 'morning', label: 'Morning', medicines: [], isCompleted: false },
-      { id: 'noon', label: 'Noon', medicines: [], isCompleted: false },
-      { id: 'night', label: 'Night', medicines: [], isCompleted: false },
+      { id: 'morning', label: 'Morning', medicines: [], isPast: false },
+      { id: 'noon', label: 'Noon', medicines: [], isPast: false },
+      { id: 'night', label: 'Night', medicines: [], isPast: false },
     ];
 
-    prescription.medicines.forEach((med) => {
-      const schedule = (med.dosageSchedule as Record<string, string>) || {};
-      if (schedule['morning']) {
-        periods[0].time = periods[0].time || schedule['morning'];
-        periods[0].medicines.push(med);
-      }
-      if (schedule['noon']) {
-        periods[1].time = periods[1].time || schedule['noon'];
-        periods[1].medicines.push(med);
-      }
-      if (schedule['night']) {
-        periods[2].time = periods[2].time || schedule['night'];
-        periods[2].medicines.push(med);
-      }
-    });
+    const selectedDateStr = toLocalDateString(selectedDate);
+    const startDateStr = toLocalDateString(new Date(prescription.issuedAt));
+
+    prescription.medicines
+      // Only medicines whose course covers the selected day.
+      .filter(
+        (med) =>
+          selectedDateStr >= startDateStr &&
+          selectedDateStr <= courseLastDay(prescription.issuedAt, med),
+      )
+      .forEach((med) => {
+        const schedule = (med.dosageSchedule as Record<string, string>) || {};
+        periods.forEach((p) => {
+          if (schedule[p.id]) {
+            p.time = p.time || schedule[p.id];
+            p.medicines.push(med);
+          }
+        });
+      });
 
     // A reminder the patient moved takes the place of the prescribed time.
     periods.forEach((p) => {
@@ -206,38 +213,25 @@ export const ActivePrescriptionView = ({
       if (reminder) p.time = reminder.time;
     });
 
+    // "Past" only means the time has gone by today. Nothing records whether a dose
+    // was taken, so the view never claims it was.
     const now = new Date();
-    const selectedDateStr = selectedDate.toISOString().split('T')[0];
-    const nowDateStr = now.toISOString().split('T')[0];
-
-    // Filter out periods with no medicines, calculate completion status
+    const isToday = selectedDateStr === toLocalDateString(now);
     const activeGroups = periods
       .filter((p) => p.medicines.length > 0)
       .map((p) => {
-        let isCompleted = false;
-        if (selectedDateStr < nowDateStr) {
-          isCompleted = true; // Past day
-        } else if (selectedDateStr === nowDateStr && p.time) {
+        let isPast = false;
+        if (isToday && p.time) {
           const [hours, minutes] = p.time.split(':').map(Number);
           const doseTime = new Date(now);
           doseTime.setHours(hours, minutes, 0, 0);
-          isCompleted = now >= doseTime;
+          isPast = now >= doseTime;
         }
-
-        // Mock data: assume morning dose is done on the 12th
-        if (selectedDate.getDate() === 12 && p.id === 'morning') {
-          isCompleted = true;
-        }
-
-        return { ...p, isCompleted };
+        return { ...p, isPast };
       });
 
-    // Sort: Active periods first, Completed periods last
-    return activeGroups.sort((a, b) => {
-      if (a.isCompleted && !b.isCompleted) return 1;
-      if (!a.isCompleted && b.isCompleted) return -1;
-      return 0; // maintain chronological order if both active or both completed
-    });
+    // Upcoming periods first, ones whose time has passed last.
+    return activeGroups.sort((a, b) => Number(a.isPast) - Number(b.isPast));
   };
 
   const handleEditSave = async (morning: string, noon: string, night: string) => {
@@ -273,16 +267,16 @@ export const ActivePrescriptionView = ({
     return (
       <View
         key={group.id}
-        style={[styles.periodBlock, group.isCompleted && styles.periodBlockCompleted]}
+        style={[styles.periodBlock, group.isPast && styles.periodBlockCompleted]}
       >
         {/* Header */}
         <View style={styles.periodHeader}>
-          <Text style={[styles.periodTitle, group.isCompleted && styles.periodTextCompleted]}>
-            {group.label}
+          <Text style={[styles.periodTitle, group.isPast && styles.periodTextCompleted]}>
+            {group.isPast ? `${group.label} · time passed` : group.label}
           </Text>
           <View style={styles.periodHeaderRight}>
             <TouchableOpacity
-              style={[styles.alarmBadge, group.isCompleted && styles.alarmBadgeCompleted]}
+              style={[styles.alarmBadge, group.isPast && styles.alarmBadgeCompleted]}
               onPress={() => toggleReminder(group)}
               activeOpacity={0.7}
               disabled={busyPeriod !== null}
@@ -295,7 +289,7 @@ export const ActivePrescriptionView = ({
                 size={14}
                 color={isOn ? Colors.primary : Colors.textTertiary}
               />
-              <Text style={[styles.periodTime, group.isCompleted && styles.periodTextCompleted]}>
+              <Text style={[styles.periodTime, group.isPast && styles.periodTextCompleted]}>
                 {format12Hour(group.time)}
               </Text>
             </TouchableOpacity>
@@ -309,21 +303,18 @@ export const ActivePrescriptionView = ({
               <View
                 style={[
                   styles.medIconDot,
-                  group.isCompleted && { backgroundColor: Colors.textTertiary },
+                  group.isPast && { backgroundColor: Colors.textTertiary },
                 ]}
               />
               <View style={styles.medInfo}>
                 <View style={styles.medNameRow}>
-                  <Text style={[styles.medName, group.isCompleted && styles.periodTextCompleted]}>
+                  <Text style={[styles.medName, group.isPast && styles.periodTextCompleted]}>
                     {med.name}
                   </Text>
                   {med.dosage && (
                     <View style={styles.dosageBadge}>
                       <Text
-                        style={[
-                          styles.dosageBadgeText,
-                          group.isCompleted && styles.periodTextCompleted,
-                        ]}
+                        style={[styles.dosageBadgeText, group.isPast && styles.periodTextCompleted]}
                       >
                         {med.dosage}
                       </Text>
@@ -334,13 +325,13 @@ export const ActivePrescriptionView = ({
                       <MaterialCommunityIcons
                         name="circle-small"
                         size={12}
-                        color={group.isCompleted ? Colors.textTertiary : '#000000'}
+                        color={group.isPast ? Colors.textTertiary : '#000000'}
                         style={{ marginHorizontal: -3 }}
                       />
                       <Text
                         style={[
                           styles.medInstructionsInline,
-                          group.isCompleted && styles.periodTextCompleted,
+                          group.isPast && styles.periodTextCompleted,
                         ]}
                       >
                         {getMealTiming(med.instructions)}
@@ -366,8 +357,7 @@ export const ActivePrescriptionView = ({
           contentContainerStyle={styles.dateSelectorContent}
         >
           {dates.map((date, index) => {
-            const isSelected =
-              selectedDate.toISOString().split('T')[0] === date.toISOString().split('T')[0];
+            const isSelected = toLocalDateString(selectedDate) === toLocalDateString(date);
             const isToday = index === 0;
             const dayName = isToday
               ? 'Today'

@@ -8,6 +8,7 @@ import {
 } from '../services/api/consultationsService';
 import { getMealTiming } from '../utils/prescriptionFormatters';
 import { toLocalDateString } from '../utils/localDate';
+import { courseLastDay } from '../utils/courseDates';
 import type { Prescription, PrescriptionMedicine } from '../types/medical.types';
 
 // 2. TYPES
@@ -96,14 +97,6 @@ const mapMed = (m: PrescriptionMedicine): DashboardMedicationItem => {
     scheduleFormat: m.scheduleFormat || m.dosagePattern || '',
     dosage: m.dosage,
   };
-};
-
-/** Last day a medicine is due (local YYYY-MM-DD): issue day + duration - 1. */
-export const courseLastDay = (issuedAt: string, m: PrescriptionMedicine): string => {
-  const end = new Date(issuedAt);
-  if (Number.isNaN(end.getTime())) return '';
-  end.setDate(end.getDate() + Math.max(1, m.durationDays || 1) - 1);
-  return toLocalDateString(end);
 };
 
 const format12Hour = (timeStr: string) => {
