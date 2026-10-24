@@ -155,8 +155,8 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
   const patientGender = patient.patientProfile?.gender || 'N/A';
   const bloodGroup = patient.patientProfile?.bloodGroup || 'N/A';
   const allergies = splitProfileList(patient.patientProfile?.allergies);
-  // Mock field that doesn't exist in UserResource yet
-  const reason = 'General Consultation';
+  // What the patient wrote when booking (appointment notes).
+  const reason = appointment?.notes?.trim() || 'No reason given when booking.';
 
   const bottomMargin = Math.max(insets.bottom, Spacing.base);
 
@@ -285,19 +285,6 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
           accessibilityRole="button"
         >
           <MaterialCommunityIcons name="prescription" size={24} color={Colors.primary} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.circleBtn}
-          onPress={() =>
-            router.push({
-              pathname: `/(app)/doctor/consultation/chat/[id]`,
-              params: { id, patientName: patientName },
-            })
-          }
-          accessibilityLabel="Chat with Patient"
-          accessibilityRole="button"
-        >
-          <MaterialCommunityIcons name="message-text-outline" size={24} color={Colors.primary} />
         </TouchableOpacity>
         {/* Only for a video visit that can still be joined; the call screen's Join starts it. */}
         {appointment?.format === 'video' &&
