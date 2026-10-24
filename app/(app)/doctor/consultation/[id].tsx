@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius, Layout, Shadows } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { prescriptionsService } from '../../../../src/services/api/prescriptionsService';
@@ -97,32 +97,33 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
     };
   }, [id]);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchPrescriptions = async () => {
-      try {
-        setLoadingPrescription(true);
-        const data = await prescriptionsService.getPrescriptions();
-        // Since we don't have a specific endpoint for patient's active meds,
-        // we'll try to find the latest prescription for this patient (optional feature)
-        if (isMounted) {
-          const forPatient = data.filter((p) => p.patient?.id.toString() === id);
-          setPatientPrescriptions(forPatient);
-          if (forPatient.length > 0) {
-            setActivePrescription(forPatient[0]);
+  // Reload on every return to this screen, so a prescription written for this
+  // visit shows up and the button opens it (one per visit, audit G1).
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+      const fetchPrescriptions = async () => {
+        try {
+          const data = await prescriptionsService.getPrescriptions();
+          // Since we don't have a specific endpoint for patient's active meds,
+          // we'll try to find the latest prescription for this patient (optional feature)
+          if (isMounted) {
+            const forPatient = data.filter((p) => p.patient?.id.toString() === id);
+            setPatientPrescriptions(forPatient);
+            setActivePrescription(forPatient[0] ?? null);
           }
+        } catch (err) {
+          // ignore
+        } finally {
+          if (isMounted) setLoadingPrescription(false);
         }
-      } catch (err) {
-        // ignore
-      } finally {
-        if (isMounted) setLoadingPrescription(false);
-      }
-    };
-    fetchPrescriptions();
-    return () => {
-      isMounted = false;
-    };
-  }, [id]);
+      };
+      fetchPrescriptions();
+      return () => {
+        isMounted = false;
+      };
+    }, [id]),
+  );
 
   if (loading) {
     return (
@@ -161,6 +162,10 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
   const allergies = splitProfileList(patient.patientProfile?.allergies);
   // What the patient wrote when booking (appointment notes).
   const reason = appointment?.notes?.trim() || 'No reason given when booking.';
+  // One prescription per visit (audit G1): if this visit has one, open it instead.
+  const visitPrescription = appointment
+    ? patientPrescriptions.find((p) => String(p.appointmentId) === String(appointment.id))
+    : undefined;
 
   const bottomMargin = Math.max(insets.bottom, Spacing.base);
 
@@ -324,12 +329,16 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
           style={styles.circleBtn}
           onPress={() =>
             router.push(
-              // The visit links the prescription to this consultation (and its AI chat).
-              `/(app)/doctor/prescription/write?patientId=${id}&patientName=${encodeURIComponent(patientName)}` +
-                (appointment ? `&appointmentId=${appointment.id}` : ''),
+              visitPrescription
+                ? `/(app)/prescriptions/${visitPrescription.id}`
+                : // The visit links the prescription to this consultation (and its AI chat).
+                  `/(app)/doctor/prescription/write?patientId=${id}&patientName=${encodeURIComponent(patientName)}` +
+                    (appointment ? `&appointmentId=${appointment.id}` : ''),
             )
           }
-          accessibilityLabel="Write Prescription"
+          accessibilityLabel={
+            visitPrescription ? "Open this visit's prescription" : 'Write Prescription'
+          }
           accessibilityRole="button"
         >
           <MaterialCommunityIcons name="prescription" size={24} color={Colors.primary} />
