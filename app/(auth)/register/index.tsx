@@ -24,6 +24,7 @@ import {
   type DoctorFormData,
 } from '../../../src/components/forms/DoctorRegistrationForm';
 import { useTranslation } from 'react-i18next';
+import { apiErrorMessage } from '../../../src/services/api/consultationsService';
 
 // 2. TYPES
 type RegisterStep = 'role_selection' | 'profile_form';
@@ -65,7 +66,10 @@ export default function RegisterScreen(): React.JSX.Element {
         const firstError = Object.values(e.errors)[0] as string[];
         Alert.alert('Registration Failed', firstError[0]);
       } else {
-        Alert.alert('Registration Failed', e.message ?? 'An unknown error occurred.');
+        Alert.alert(
+          'Registration Failed',
+          apiErrorMessage(e, 'Could not register. Check your connection and try again.'),
+        );
       }
     },
   });

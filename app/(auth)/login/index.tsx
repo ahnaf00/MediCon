@@ -19,6 +19,7 @@ import { authService } from '../../../src/services/api/authService';
 import { AuthPhoneForm } from '../../../src/components/forms/AuthPhoneForm';
 import { AuthOTPForm } from '../../../src/components/forms/AuthOTPForm';
 import { useTranslation } from 'react-i18next';
+import { apiErrorMessage } from '../../../src/services/api/consultationsService';
 
 // 2. TYPES
 type LoginStep = 'phone_entry' | 'otp_entry';
@@ -42,7 +43,7 @@ export default function LoginScreen(): React.JSX.Element {
       setStep('otp_entry');
     },
     onError: (e: any) => {
-      setError(e.message ?? 'Failed to send OTP');
+      setError(apiErrorMessage(e, 'Could not send the code. Check your connection and try again.'));
     },
   });
 
@@ -74,7 +75,9 @@ export default function LoginScreen(): React.JSX.Element {
         const firstError = Object.values(e.errors)[0] as string[];
         setError(firstError[0]);
       } else {
-        setError(e.message ?? 'Invalid OTP');
+        setError(
+          apiErrorMessage(e, 'Could not check the code. Check your connection and try again.'),
+        );
       }
     },
   });
