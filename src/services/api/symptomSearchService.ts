@@ -61,7 +61,7 @@ const toDoctor = (doc: any, index: number): Doctor => {
 
 export const symptomSearchService = {
   search: async (query: string): Promise<SymptomSearchResult> => {
-    const res = (await axiosClient.post('/symptom-search', { query })) as any;
+    const res = (await axiosClient.post('/symptom-search', { query }, { timeout: 30000 })) as any;
     return {
       specialty: res.specialty,
       matchedSpecialty: !!res.matchedSpecialty,

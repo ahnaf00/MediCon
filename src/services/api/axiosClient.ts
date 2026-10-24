@@ -5,6 +5,9 @@ import { Config } from '../../constants/config';
 // Base URL comes from EXPO_PUBLIC_API_URL (see src/constants/config.ts).
 export const axiosClient = axios.create({
   baseURL: Config.API.BASE_URL,
+  // Without a limit a request on a dead connection never settles (audit API-002).
+  // Slow calls (AI replies, uploads) pass their own longer timeout.
+  timeout: Config.API.TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',

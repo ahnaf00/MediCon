@@ -147,6 +147,7 @@ export const authService = {
     } as any);
 
     const response = (await axiosClient.post('/user/avatar', formData, {
+      timeout: 60000,
       headers: {
         'Content-Type': 'multipart/form-data',
       },

@@ -156,6 +156,8 @@ export const reportsService = {
     }
 
     const res = (await axiosClient.post('/medical-records', formData, {
+      // Up to 10 pages of 10 MB on a mobile connection.
+      timeout: 120000,
       // CRITICAL: We must delete the default 'application/json' header.
       // Do NOT set 'Content-Type': 'multipart/form-data' explicitly here, because
       // Axios will strip the boundary string required by the server. React Native

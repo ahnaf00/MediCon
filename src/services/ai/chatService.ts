@@ -37,10 +37,12 @@ class ChatService {
    * The backend returns { sessionId, message: { id, role, content, createdAt } }.
    */
   async sendMessage(message: string, sessionId?: number): Promise<SendMessageResponse> {
-    const res = (await axiosClient.post('/ai/chat', {
-      message,
-      session_id: sessionId ?? null,
-    })) as any;
+    // The server waits up to 30 s for the AI.
+    const res = (await axiosClient.post(
+      '/ai/chat',
+      { message, session_id: sessionId ?? null },
+      { timeout: 45000 },
+    )) as any;
     return res;
   }
 
