@@ -278,7 +278,9 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
           style={styles.circleBtn}
           onPress={() =>
             router.push(
-              `/(app)/doctor/prescription/write?patientId=${id}&patientName=${encodeURIComponent(patientName)}`,
+              // The visit links the prescription to this consultation (and its AI chat).
+              `/(app)/doctor/prescription/write?patientId=${id}&patientName=${encodeURIComponent(patientName)}` +
+                (appointment ? `&appointmentId=${appointment.id}` : ''),
             )
           }
           accessibilityLabel="Write Prescription"
