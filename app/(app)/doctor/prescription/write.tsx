@@ -274,14 +274,18 @@ export default function WritePrescriptionScreen(): React.JSX.Element {
                   {patientAge ? `${patientAge} years old` : 'Age not recorded'}
                 </Text>
               </View>
-              {allergies || patientQuery.isError ? (
-                <View style={styles.allergyBox}>
-                  <Text style={styles.allergyBoxTitle}>Allergies</Text>
-                  <Text style={styles.allergyBoxText}>
-                    {allergies || 'Could not load — ask the patient'}
-                  </Text>
-                </View>
-              ) : null}
+              {/* Always shown: an empty profile means unknown, not "no allergies". */}
+              <View style={styles.allergyBox}>
+                <Text style={styles.allergyBoxTitle}>Allergies</Text>
+                <Text style={[styles.allergyBoxText, !allergies && styles.allergyBoxUnknown]}>
+                  {allergies ||
+                    (patientQuery.isLoading
+                      ? 'Loading…'
+                      : patientQuery.isError
+                        ? 'Could not load — ask the patient'
+                        : 'None recorded — ask the patient')}
+                </Text>
+              </View>
             </View>
           ) : null}
 
@@ -900,6 +904,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.sm,
     color: Colors.danger,
     textAlign: 'center',
+  },
+  allergyBoxUnknown: {
+    color: Colors.textSecondary,
   },
   tabBar: {
     flexDirection: 'row',
