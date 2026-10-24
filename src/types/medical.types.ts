@@ -75,6 +75,10 @@ export interface PrescriptionMedicine {
   dosagePattern?: string;
   frequency?: string;
   explanation?: string;
+  /** Who wrote `explanation`: the AI or the prescribing doctor. */
+  explanationSource?: 'ai' | 'doctor';
+  /** Prescribing doctor only: the patient does not see the explanation. */
+  explanationHidden?: boolean;
   aiDemystifierSummary?: string;
 }
 

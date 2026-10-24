@@ -32,6 +32,7 @@ import {
 import { apiErrorMessage, createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { ReminderPanel } from '../../../src/components/medical/ReminderPanel';
+import { ExplanationReview } from '../../../src/components/medical/ExplanationReview';
 import { useAuthStore } from '../../../src/store/authStore';
 import { Prescription, PrescriptionMedicine } from '../../../src/types/medical.types';
 import { getMedicineDescription } from '../../../src/utils/prescriptionFormatters';
@@ -47,9 +48,11 @@ type Params = { id: string };
 interface MedicineDetailCardProps {
   med: PrescriptionMedicine;
   issuedAt: string;
+  /** Set for the prescribing doctor: shows Edit / Hide for the explanation. */
+  review?: { prescriptionId: string; onUpdated: (p: Prescription) => void };
 }
 
-const MedicineDetailCard = ({ med, issuedAt }: MedicineDetailCardProps) => {
+const MedicineDetailCard = ({ med, issuedAt, review }: MedicineDetailCardProps) => {
   const [expanded, setExpanded] = useState(false);
   const toggleExpanded = () => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -110,8 +113,17 @@ const MedicineDetailCard = ({ med, issuedAt }: MedicineDetailCardProps) => {
         </View>
       ) : null}
 
+      {/* Prescribing doctor: what the patient reads, with Edit / Hide (audit CLIN-006) */}
+      {review ? (
+        <ExplanationReview
+          prescriptionId={review.prescriptionId}
+          med={med}
+          onUpdated={review.onUpdated}
+        />
+      ) : null}
+
       {/* Collapsible Explanation */}
-      {explanationText && (
+      {!review && explanationText && (
         <>
           <TouchableOpacity
             style={styles.explanationToggle}
@@ -119,7 +131,11 @@ const MedicineDetailCard = ({ med, issuedAt }: MedicineDetailCardProps) => {
             activeOpacity={0.7}
           >
             <Text style={styles.explanationToggleText}>
-              {expanded ? 'Hide details' : 'Why take this medicine?'}
+              {expanded
+                ? 'Hide details'
+                : med.explanationSource === 'doctor'
+                  ? 'Why take this medicine?'
+                  : 'Why take this medicine? (AI explanation)'}
             </Text>
             <MaterialCommunityIcons
               name={expanded ? 'chevron-up' : 'chevron-down'}
@@ -132,7 +148,9 @@ const MedicineDetailCard = ({ med, issuedAt }: MedicineDetailCardProps) => {
             <View style={styles.explanationBox}>
               <Text style={styles.explanationText}>{explanationText}</Text>
               <Text style={styles.explanationDisclaimer}>
-                AI-generated explanation. Always follow your doctor's instructions.
+                {med.explanationSource === 'doctor'
+                  ? 'Written by your doctor.'
+                  : "AI-generated explanation. Always follow your doctor's instructions."}
               </Text>
             </View>
           )}
@@ -147,6 +165,7 @@ export default function PrescriptionDetailsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const role = useAuthStore((s) => s.role);
+  const userId = useAuthStore((s) => s.userId);
 
   const [prescription, setPrescription] = useState<Prescription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -243,6 +262,11 @@ export default function PrescriptionDetailsScreen() {
   // ── Derived display values ──────────────────────────────────────────────────
 
   const isDoctor = prescription.source === 'DOCTOR';
+  const isPrescriber =
+    role === 'doctor' && !!userId && String(prescription.doctor?.id) === String(userId);
+  const review = isPrescriber
+    ? { prescriptionId: String(prescription.id), onUpdated: setPrescription }
+    : undefined;
   const sourceLabel = isDoctor
     ? (prescription.doctorName ?? prescription.doctorId ?? 'Doctor')
     : `Uploaded prescription`;
@@ -315,7 +339,12 @@ export default function PrescriptionDetailsScreen() {
         <Text style={styles.sectionTitle}>Medicines ({prescription.medicines.length})</Text>
 
         {prescription.medicines.map((med) => (
-          <MedicineDetailCard key={med.id} med={med} issuedAt={prescription.issuedAt} />
+          <MedicineDetailCard
+            key={med.id}
+            med={med}
+            issuedAt={prescription.issuedAt}
+            review={review}
+          />
         ))}
       </ScrollView>
 

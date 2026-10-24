@@ -17,6 +17,7 @@ import {
   ageFromDateOfBirth,
   splitProfileList,
 } from '../../../../src/services/api/patientsService';
+import { usePrescriptions } from '../../../../src/services/api/prescriptionsService';
 
 // ─── COMPONENT ───────────────────────────────────────────────────────────────
 export default function PatientDetailScreen() {
@@ -26,6 +27,11 @@ export default function PatientDetailScreen() {
 
   // GET /patients/{id}: the server only answers for a patient who has booked with this doctor.
   const { data: patient, isLoading } = usePatient(id);
+  // The server returns only prescriptions this doctor wrote; keep this patient's.
+  const prescriptionsQuery = usePrescriptions();
+  const prescriptions = (prescriptionsQuery.data ?? []).filter(
+    (p) => String(p.patient?.id) === String(id),
+  );
 
   if (isLoading) {
     return (
@@ -154,6 +160,57 @@ export default function PatientDetailScreen() {
             </View>
           )}
         </View>
+
+        {/* ── Prescriptions this doctor wrote (review what the patient reads) ── */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Your Prescriptions</Text>
+          {prescriptionsQuery.isLoading ? (
+            <ActivityIndicator color={Colors.primary} />
+          ) : prescriptions.length === 0 ? (
+            <View style={styles.emptyRow}>
+              <MaterialCommunityIcons
+                name="information-outline"
+                size={20}
+                color={Colors.textSecondary}
+              />
+              <Text style={styles.emptyText}>
+                {prescriptionsQuery.isError
+                  ? 'Could not load prescriptions.'
+                  : 'You have not written a prescription for this patient yet.'}
+              </Text>
+            </View>
+          ) : (
+            prescriptions.map((p) => (
+              <TouchableOpacity
+                key={p.id}
+                style={styles.rxRow}
+                onPress={() => router.push(`/(app)/prescriptions/${p.id}`)}
+                accessibilityRole="button"
+              >
+                <MaterialCommunityIcons name="prescription" size={20} color={Colors.primary} />
+                <View style={styles.rxText}>
+                  <Text style={styles.rxTitle} numberOfLines={1}>
+                    {p.diagnosisSummary || 'Prescription'}
+                  </Text>
+                  <Text style={styles.rxMeta}>
+                    {new Date(p.issuedAt).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                    })}
+                    {' · '}
+                    {p.medicines.length} {p.medicines.length === 1 ? 'medicine' : 'medicines'}
+                  </Text>
+                </View>
+                <MaterialCommunityIcons
+                  name="chevron-right"
+                  size={20}
+                  color={Colors.textTertiary}
+                />
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
       </ScrollView>
 
       {/* ── Fixed bottom action ── */}
@@ -265,6 +322,28 @@ const styles = StyleSheet.create({
   },
 
   // ── Section ──
+  rxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.tertiary,
+  },
+  rxText: {
+    flex: 1,
+  },
+  rxTitle: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.base,
+    color: Colors.textPrimary,
+  },
+  rxMeta: {
+    marginTop: 2,
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+  },
   section: {
     marginTop: Spacing.xl,
   },

@@ -36,8 +36,12 @@ export interface ApiPrescriptionMedicine {
   scheduleFormat: string | null;
   instructions: string | null;
   durationDays: number;
-  /** AI-written "Why take this medicine?" text; null until generated or if generation failed. */
+  /** "Why take this medicine?" text; null until generated, if generation failed, or hidden by the doctor. */
   explanation: string | null;
+  /** Who wrote the explanation: the AI (label it as such) or the prescribing doctor. */
+  explanationSource: 'ai' | 'doctor' | null;
+  /** Only sent to the prescribing doctor: whether the patient is shown it. */
+  explanationHidden?: boolean;
 }
 
 /** GET /prescriptions/{id}/document — everything the letterhead needs (PrescriptionDocumentResource). */
@@ -136,6 +140,8 @@ const mapApiToPrescription = (api: ApiPrescription): Prescription => {
       instructions: m.instructions,
       dosagePattern: toDosePattern(m.dosageSchedule),
       explanation: m.explanation ?? undefined,
+      explanationSource: m.explanationSource ?? undefined,
+      explanationHidden: m.explanationHidden,
     })),
   };
 };
@@ -163,6 +169,22 @@ export const prescriptionsService = {
     const res = (await axiosClient.get(`/prescriptions/${id}`)) as any;
     const api = res?.prescription ?? res;
     return mapApiToPrescription(api);
+  },
+
+  /**
+   * The prescribing doctor rewrites a medicine's explanation and/or hides it
+   * from the patient (audit CLIN-006). Returns the updated prescription.
+   */
+  updateExplanation: async (
+    prescriptionId: number | string,
+    itemId: number | string,
+    change: { explanation?: string; hidden?: boolean },
+  ): Promise<Prescription> => {
+    const res = (await axiosClient.patch(
+      `/prescriptions/${prescriptionId}/items/${itemId}/explanation`,
+      change,
+    )) as any;
+    return mapApiToPrescription(res);
   },
 
   /**
