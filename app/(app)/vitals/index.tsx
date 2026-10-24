@@ -38,6 +38,18 @@ interface VitalMetricConfig {
 }
 
 // 3. METRIC CONFIGURATION
+//
+// Colour thresholds (adults, resting) and where they come from (audit CLIN-007).
+// Not yet signed off by a clinician — see PROGRESS.md N2.
+// - Blood pressure: hypertension from 140/90, severe from 180/120 (WHO 2021
+//   guideline on pharmacological treatment of hypertension; ACC/AHA 2017 for the
+//   180/120 crisis level); low under 90/60 (NHS "Low blood pressure").
+// - Pulse: 60 – 100 bpm at rest (American Heart Association).
+// - Glucose (mmol/L): fasting 3.9 – 5.5 and under 7.8 two hours after a meal
+//   (WHO/IDF 2006 diagnostic criteria); under 3.0 is level 2 hypoglycaemia and
+//   over 13.9 needs urgent attention (ADA Standards of Care).
+// - SpO₂: 95 – 100 % normal; under 90 % is hypoxaemia needing urgent care
+//   (WHO pulse oximetry training manual).
 
 const METRIC_CONFIGS: VitalMetricConfig[] = [
   {
@@ -398,6 +410,19 @@ export default function VitalsScreen(): React.JSX.Element {
         Alert.alert('Invalid Format', 'Blood pressure must be in SYS/DIA format, e.g. 120/80');
         return;
       }
+      // Same limits as the server (StoreVitalRequest), so the error shows before sending.
+      const [sys, dia] = form.bloodPressure.trim().split('/').map(Number);
+      if (sys < 60 || sys > 260 || dia < 30 || dia > 160) {
+        Alert.alert('Invalid Value', 'Blood pressure must be between 60/30 and 260/160 mmHg.');
+        return;
+      }
+      if (sys <= dia) {
+        Alert.alert(
+          'Invalid Value',
+          'The first (systolic) number must be higher than the second (diastolic), e.g. 120/80.',
+        );
+        return;
+      }
       payload.blood_pressure = form.bloodPressure.trim();
     }
     if (form.pulseRate.trim()) {
@@ -410,8 +435,11 @@ export default function VitalsScreen(): React.JSX.Element {
     }
     if (form.glucoseLevel.trim()) {
       const val = parseFloat(form.glucoseLevel);
-      if (isNaN(val) || val < 0 || val > 50) {
-        Alert.alert('Invalid Value', 'Glucose level must be between 0 and 50 mmol/L.');
+      if (isNaN(val) || val < 1 || val > 35) {
+        Alert.alert(
+          'Invalid Value',
+          'Enter glucose in mmol/L, between 1 and 35 (100 mg/dL is about 5.6 mmol/L).',
+        );
         return;
       }
       payload.glucose_level = val;
