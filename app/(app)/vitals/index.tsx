@@ -82,12 +82,14 @@ const METRIC_CONFIGS: VitalMetricConfig[] = [
     unit: 'mmol/L',
     icon: 'water-percent',
     color: '#2B6CB0',
-    normalRange: '3.9 – 7.8 mmol/L',
+    normalRange: 'Fasting 3.9 – 5.5 · 2 h after a meal under 7.8 mmol/L',
     formatValue: (v) => (v.glucoseLevel != null ? v.glucoseLevel.toFixed(1) : null),
+    // Readings are not marked fasting or after a meal, so only a value that is
+    // normal either way counts as "Normal"; 5.6 – 7.8 depends on when it was taken.
     getStatus: (v) => {
       if (v.glucoseLevel == null) return 'unknown';
       if (v.glucoseLevel < 3.0 || v.glucoseLevel > 13.9) return 'danger';
-      if (v.glucoseLevel < 3.9 || v.glucoseLevel > 7.8) return 'warning';
+      if (v.glucoseLevel < 3.9 || v.glucoseLevel > 5.5) return 'warning';
       return 'normal';
     },
   },
@@ -608,7 +610,7 @@ export default function VitalsScreen(): React.JSX.Element {
                 icon="water-percent"
                 iconColor="#2B6CB0"
                 unit="mmol/L"
-                hint="Normal: 3.9 – 7.8"
+                hint="Normal: fasting 3.9 – 5.5, 2 h after a meal < 7.8"
               />
               <FormField
                 label="Oxygen Saturation"
