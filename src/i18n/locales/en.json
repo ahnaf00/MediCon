@@ -125,7 +125,8 @@
     "attention": "Attention"
   },
   "errorstate": {
-    "retry": "Retry"
+    "retry": "Retry",
+    "crash": "Something went wrong on this screen. Try again, or restart the app if it keeps happening."
   },
   "ai-chat": {
     "select_consultation": "Select Consultation",

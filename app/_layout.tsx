@@ -1,14 +1,43 @@
 import { useEffect, useState } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { View } from 'react-native';
+import { Stack, useRouter, useSegments, type ErrorBoundaryProps } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { registerGlobals } from '@livekit/react-native';
 import { queryClient } from '../src/services/queryClient';
 import { useOnboardingStore, useAuthStore } from '../src/store';
+import { ErrorState } from '../src/components/ui/ErrorState';
+import { Colors } from '@theme';
 import '../src/i18n';
 
 // WebRTC globals for livekit-client (video consultations). Must run once, before any Room is created.
 registerGlobals();
+
+/**
+ * Shown instead of a blank screen when any screen throws while rendering (audit E5).
+ * "Retry" re-renders the screen; nothing technical is shown to the user.
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  const { t } = useTranslation();
+
+  useEffect(() => {
+    // eslint-disable-next-line no-console -- the crash must reach the device log
+    console.error('Screen crashed:', error);
+  }, [error]);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      <ErrorState
+        message={t(
+          'errorstate.crash',
+          'Something went wrong on this screen. Try again, or restart the app if it keeps happening.',
+        )}
+        onRetry={retry}
+      />
+    </View>
+  );
+}
 
 const storesHydrated = () =>
   useAuthStore.persist.hasHydrated() && useOnboardingStore.persist.hasHydrated();
