@@ -5,18 +5,22 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
   RefreshControl,
   Platform,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { FlashList } from '@shopify/flash-list';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { Colors, Spacing, BorderRadius, FontFamily, FontSize, Layout } from '../../../src/theme';
 import { prescriptionsService } from '../../../src/services/api/prescriptionsService';
+import {
+  prescriptionUploadsService,
+  uploadToPrescription,
+} from '../../../src/services/api/prescriptionUploadsService';
+import { useAuthStore } from '../../../src/store/authStore';
 import { Prescription } from '../../../src/types/medical.types';
 import { PrescriptionCard } from '../../../src/components/medical/PrescriptionCard';
 import { ActivePrescriptionView } from '../../../src/components/medical/ActivePrescriptionView';
@@ -33,6 +37,8 @@ type ActiveTab = 'doctors' | 'uploads';
 
 export default function PrescriptionsScreen(): React.JSX.Element {
   const router = useRouter();
+  // Only patients upload paper prescriptions; the endpoint is patient-only.
+  const isPatient = useAuthStore((s) => s.role) === 'patient';
   const { openActivePrescription } = useLocalSearchParams<{ openActivePrescription?: string }>();
   const insets = useSafeAreaInsets();
 
@@ -60,13 +66,15 @@ export default function PrescriptionsScreen(): React.JSX.Element {
   const loadData = useCallback(async (): Promise<void> => {
     try {
       setError(null);
-      // Single endpoint — backend filters by role automatically
-      const all = await prescriptionsService.getPrescriptions();
-      console.log('Fetched prescriptions:', all);
+      // Doctor-issued prescriptions (role-filtered by the backend) and, for
+      // patients, their uploaded paper prescriptions (task 1.7).
+      const [issued, uploads] = await Promise.all([
+        prescriptionsService.getPrescriptions(),
+        isPatient ? prescriptionUploadsService.getUploads() : Promise.resolve([]),
+      ]);
       if (isMountedRef.current) {
-        // Separate into doctor-issued vs uploaded based on source or doctor presence
-        setDoctorRxs(all.filter((rx) => rx.source === 'DOCTOR'));
-        setUploadedRxs(all.filter((rx) => rx.source === 'UPLOADED'));
+        setDoctorRxs(issued);
+        setUploadedRxs(uploads.map(uploadToPrescription));
       }
     } catch (err) {
       console.error('Error fetching prescriptions:', err);
@@ -76,7 +84,7 @@ export default function PrescriptionsScreen(): React.JSX.Element {
         );
       }
     }
-  }, []);
+  }, [isPatient]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -89,6 +97,16 @@ export default function PrescriptionsScreen(): React.JSX.Element {
       isMountedRef.current = false;
     };
   }, [loadData]);
+
+  // Reload quietly when coming back (e.g. after uploading or deleting); the
+  // first focus is covered by the initial load above.
+  const hasFocusedRef = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (hasFocusedRef.current) loadData();
+      hasFocusedRef.current = true;
+    }, [loadData]),
+  );
 
   const onRefresh = async (): Promise<void> => {
     setRefreshing(true);
@@ -140,7 +158,13 @@ export default function PrescriptionsScreen(): React.JSX.Element {
       <View style={styles.cardWrapper}>
         <PrescriptionCard
           prescription={item}
-          onPress={() => router.push(`/(app)/prescriptions/${item.id}`)}
+          onPress={() =>
+            router.push(
+              item.source === 'UPLOADED'
+                ? `/(app)/prescriptions/uploads/${item.id}`
+                : `/(app)/prescriptions/${item.id}`,
+            )
+          }
         />
       </View>
     ),
@@ -164,15 +188,17 @@ export default function PrescriptionsScreen(): React.JSX.Element {
       <Text style={styles.emptySubtitle}>
         Upload prescriptions from a paper copy or photo to manage them here.
       </Text>
-      <TouchableOpacity
-        style={styles.uploadBtn}
-        onPress={() => Alert.alert('Upload', 'Upload flow coming soon.')}
-        accessibilityRole="button"
-        accessibilityLabel="Upload a prescription"
-      >
-        <MaterialCommunityIcons name="upload" size={16} color={Colors.surface} />
-        <Text style={styles.uploadBtnText}>Upload Prescription</Text>
-      </TouchableOpacity>
+      {isPatient && (
+        <TouchableOpacity
+          style={styles.uploadBtn}
+          onPress={() => router.push('/(app)/prescriptions/upload')}
+          accessibilityRole="button"
+          accessibilityLabel="Upload a prescription"
+        >
+          <MaterialCommunityIcons name="upload" size={16} color={Colors.surface} />
+          <Text style={styles.uploadBtnText}>Upload Prescription</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -276,7 +302,7 @@ export default function PrescriptionsScreen(): React.JSX.Element {
   }
 
   // ── Upload button (floating in "My Uploads" tab when non-empty) ─────────────
-  const showUploadFab = activeTab === 'uploads' && uploadedRxs.length > 0;
+  const showUploadFab = isPatient && activeTab === 'uploads' && uploadedRxs.length > 0;
 
   // ── Main render ─────────────────────────────────────────────────────────────
 
@@ -313,7 +339,7 @@ export default function PrescriptionsScreen(): React.JSX.Element {
       {showUploadFab && (
         <TouchableOpacity
           style={styles.fab}
-          onPress={() => Alert.alert('Upload', 'Upload flow coming soon.')}
+          onPress={() => router.push('/(app)/prescriptions/upload')}
           accessibilityRole="button"
           accessibilityLabel="Upload a new prescription"
         >

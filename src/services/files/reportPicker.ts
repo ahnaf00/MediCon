@@ -37,6 +37,32 @@ export async function pickReportImages(limit: number): Promise<UploadRecordPage[
   });
 }
 
+/** Takes one photo with the camera. Resolves to [] when cancelled or refused. */
+export async function takeReportPhoto(limit: number): Promise<UploadRecordPage[]> {
+  if (limit <= 0) return [];
+
+  const permission = await ImagePicker.requestCameraPermissionsAsync();
+  if (!permission.granted) {
+    Alert.alert('Permission Denied', 'You need to allow camera access to photograph a document.');
+    return [];
+  }
+
+  const result = await ImagePicker.launchCameraAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    quality: 0.8,
+  });
+  if (result.canceled || !result.assets?.[0]) return [];
+
+  const asset = result.assets[0];
+  return [
+    {
+      fileUri: asset.uri,
+      mimeType: 'image/jpeg',
+      fileName: asset.fileName || `photo-${Date.now()}.jpg`,
+    },
+  ];
+}
+
 /** Multi-select PDF documents. Resolves to [] when cancelled. */
 export async function pickReportPdfs(limit: number): Promise<UploadRecordPage[]> {
   if (limit <= 0) return [];

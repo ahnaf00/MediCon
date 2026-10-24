@@ -57,6 +57,8 @@ export interface Prescription {
   notes?: string;
   imageUrl?: string;
   source?: 'DOCTOR' | 'UPLOADED';
+  /** Uploaded paper prescriptions only: number of original pages. */
+  pageCount?: number;
 }
 
 export interface PrescriptionMedicine {

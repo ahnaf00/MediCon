@@ -46,6 +46,7 @@ export function PrescriptionCard({
   const doctorName = prescription.doctorName ?? prescription.doctor?.name ?? 'Doctor';
   const diagnosis = prescription.diagnosisSummary ?? 'Prescription';
   const medCount = prescription.medicines?.length ?? 0;
+  const pageCount = prescription.pageCount ?? 0;
 
   return (
     <TouchableOpacity
@@ -62,12 +63,19 @@ export function PrescriptionCard({
             <MaterialCommunityIcons name="stethoscope" size={14} color={Colors.primary} />
           </View>
           <Text style={styles.doctorChipText} numberOfLines={1}>
-            {isDoctor ? `Dr. ${doctorName.replace(/^Dr\.?\s*/i, '')}` : 'Uploaded'}
+            {isDoctor
+              ? `Dr. ${doctorName.replace(/^Dr\.?\s*/i, '')}`
+              : prescription.doctorName
+                ? `Uploaded · ${prescription.doctorName}`
+                : 'Uploaded'}
           </Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
-          <Text style={[styles.statusText, { color: statusCfg.color }]}>{statusCfg.label}</Text>
-        </View>
+        {/* An upload is only the original document: it has no status to show. */}
+        {isDoctor && (
+          <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
+            <Text style={[styles.statusText, { color: statusCfg.color }]}>{statusCfg.label}</Text>
+          </View>
+        )}
       </View>
 
       {/* ── Diagnosis / Title ── */}
@@ -79,9 +87,15 @@ export function PrescriptionCard({
       <View style={styles.bottomRow}>
         <View style={styles.metaChips}>
           <View style={styles.chip}>
-            <MaterialCommunityIcons name="pill" size={12} color={Colors.primary} />
+            <MaterialCommunityIcons
+              name={isDoctor ? 'pill' : 'file-document-outline'}
+              size={12}
+              color={Colors.primary}
+            />
             <Text style={styles.chipText}>
-              {medCount} {medCount === 1 ? 'Medicine' : 'Medicines'}
+              {isDoctor
+                ? `${medCount} ${medCount === 1 ? 'Medicine' : 'Medicines'}`
+                : `${pageCount} ${pageCount === 1 ? 'Page' : 'Pages'}`}
             </Text>
           </View>
           <View style={styles.chip}>
