@@ -24,6 +24,8 @@ import {
 } from '../../../../src/services/api/appointmentsService';
 import { doctorsService, Doctor } from '../../../../src/services/api/doctorsService';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
+import { authService } from '../../../../src/services/api/authService';
 import { fromLocalDateString, toLocalDateString } from '../../../../src/utils/localDate';
 
 const MOBILE_BANKING = ['bKash', 'Rocket', 'Nagad', 'Upay'];
@@ -51,8 +53,9 @@ export default function BookingDigestScreen() {
     type: ConsultationType;
   }>();
 
-  // Auth Store Mock
-  const userPhone = '+880 1711-223344';
+  // The signed-in patient, shown as who the booking is for.
+  const { data: me } = useQuery({ queryKey: ['me'], queryFn: authService.me });
+  const userPhone = me?.phone ?? '';
 
   // Data State
   const [doctor, setDoctor] = useState<Doctor | null>(null);
@@ -64,8 +67,9 @@ export default function BookingDigestScreen() {
   const [patientName, setPatientName] = useState('');
 
   // Consultation Card State
-  const [mode, setMode] = useState<'schedule' | 'instant'>(
-    initialDate && initialTimeSlotId ? 'schedule' : 'instant',
+  // Only scheduled video appointments exist; 'none' until a slot is picked.
+  const [mode, setMode] = useState<'schedule' | 'none'>(
+    initialDate && initialTimeSlotId ? 'schedule' : 'none',
   );
 
   // Bottom Sheet State for Schedule Selection
@@ -157,15 +161,6 @@ export default function BookingDigestScreen() {
   // card included, simply completes the booking.
   const handleConfirmBooking = async () => {
     if (!doctorId) return;
-    if (mode === 'instant') {
-      // There is no instant-consultation flow on the backend; booking needs a real slot.
-      Alert.alert(
-        'Instant consultation unavailable',
-        'Instant consultations are not available yet. Choose "Schedule Video Appointment" and pick the next free time slot. You can join the call from your appointment once the doctor starts it.',
-      );
-      return;
-    }
-
     if (!selectedDate || !selectedSlot) {
       Alert.alert(
         'Selection Required',
@@ -202,10 +197,6 @@ export default function BookingDigestScreen() {
     } finally {
       setBooking(false);
     }
-  };
-
-  const switchMode = (newMode: 'schedule' | 'instant') => {
-    setMode(newMode);
   };
 
   if (loading || !doctor) {
@@ -335,49 +326,6 @@ export default function BookingDigestScreen() {
           <View style={styles.card}>
             <Text style={styles.cardTitle}>How would you like to consult?</Text>
             <View style={styles.consultOptions}>
-              <TouchableOpacity
-                style={[
-                  styles.consultOption,
-                  mode === 'instant'
-                    ? styles.consultOptionSelected
-                    : styles.consultOptionUnselected,
-                ]}
-                onPress={() => switchMode('instant')}
-                activeOpacity={0.8}
-              >
-                <View style={styles.consultOptionLeft}>
-                  <MaterialCommunityIcons
-                    name="video"
-                    size={24}
-                    color={mode === 'instant' ? Colors.primary : Colors.textTertiary}
-                  />
-                  <View>
-                    <Text
-                      style={[
-                        styles.consultOptionText,
-                        mode === 'instant'
-                          ? styles.consultOptionTextSelected
-                          : styles.consultOptionTextUnselected,
-                      ]}
-                    >
-                      Instant Video Call
-                    </Text>
-                    {mode !== 'instant' && (
-                      <Text style={styles.consultOptionSub}>Talk to the doctor immediately</Text>
-                    )}
-                  </View>
-                </View>
-                {mode === 'instant' && (
-                  <View style={styles.checkCircleBackground}>
-                    <MaterialCommunityIcons
-                      name="check-bold"
-                      size={16}
-                      color={Colors.primary + '80'}
-                    />
-                  </View>
-                )}
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={[
                   styles.consultOption,
@@ -576,7 +524,7 @@ export default function BookingDigestScreen() {
           animationType="fade"
           onRequestClose={() => {
             setSheetVisible(false);
-            if (!selectedSlot && mode === 'schedule') setMode('instant');
+            if (!selectedSlot && mode === 'schedule') setMode('none');
           }}
           statusBarTranslucent
         >
@@ -585,7 +533,7 @@ export default function BookingDigestScreen() {
               style={styles.modalDismissArea}
               onPress={() => {
                 setSheetVisible(false);
-                if (!selectedSlot && mode === 'schedule') setMode('instant');
+                if (!selectedSlot && mode === 'schedule') setMode('none');
               }}
             />
             <Animated.View
