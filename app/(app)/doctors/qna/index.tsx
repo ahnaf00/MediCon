@@ -8,7 +8,6 @@ import {
   Modal,
   TouchableWithoutFeedback,
   ScrollView,
-  Image,
   Dimensions,
   Alert,
 } from 'react-native';
@@ -25,6 +24,7 @@ import { createAppError, AppError } from '../../../../src/utils/errors';
 import { ErrorState } from '../../../../src/components/ui/ErrorState';
 import { DraggableBottomSheet } from '../../../../src/components/ui/DraggableBottomSheet';
 import { useTranslation } from 'react-i18next';
+import { DoctorPhoto } from '../../../../src/components/ui/DoctorPhoto';
 
 const getTimeAgo = (dateString: string) => {
   const diff = Date.now() - new Date(dateString).getTime();
@@ -242,9 +242,10 @@ export default function QnaIndexScreen() {
                         router.push(`/(app)/doctors/${answer.doctorId}`);
                       }}
                     >
-                      <Image
-                        source={require('../../../../src/assets/images/doctors/doctorPlaceholder1.png')} // fallback
+                      <DoctorPhoto
+                        name={answer.doctorName}
                         style={styles.doctorImage}
+                        initialsSize={18}
                       />
                       <View style={styles.doctorInfo}>
                         <Text style={styles.doctorName}>

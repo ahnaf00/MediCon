@@ -1,6 +1,6 @@
 // 1. IMPORTS
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { DashboardDoctor } from '../../hooks/usePatientDashboard';
@@ -8,6 +8,7 @@ import type { Doctor, ConsultationHistoryItem } from '../../services/api/doctors
 import { Card } from '../ui/Card';
 import { Avatar } from '../ui/Avatar';
 import { useTranslation } from 'react-i18next';
+import { DoctorPhoto } from '../ui/DoctorPhoto';
 
 export interface DoctorCardProps {
   doctor: DashboardDoctor | Doctor | ConsultationHistoryItem | null;
@@ -70,10 +71,7 @@ export const DoctorCard = ({
       ? (doctor as Doctor).isOnline
       : false;
 
-  const imageSource =
-    (doctor as ConsultationHistoryItem).image ||
-    (doctor as Doctor).image ||
-    require('../../assets/images/doctors/doctorPlaceholder1.png');
+  const imageSource = (doctor as ConsultationHistoryItem).image || (doctor as Doctor).image || null;
 
   const renderBadge = () => (
     <View style={styles.badgeContainer}>
@@ -101,7 +99,11 @@ export const DoctorCard = ({
         activeOpacity={0.8}
         accessibilityLabel={`Consultation with ${displayName}`}
       >
-        <Image source={imageSource} style={styles.historyAvatarContainer} />
+        <DoctorPhoto
+          source={imageSource}
+          name={displayName}
+          style={styles.historyAvatarContainer}
+        />
         <View style={styles.historyContent}>
           <View>
             <Text style={styles.historyName} numberOfLines={2}>
@@ -192,7 +194,11 @@ export const DoctorCard = ({
         accessibilityLabel={`Doctor: ${displayName}`}
       >
         <View>
-          <Image source={imageSource} style={styles.onlineAvatarContainer} />
+          <DoctorPhoto
+            source={imageSource}
+            name={displayName}
+            style={styles.onlineAvatarContainer}
+          />
           {experienceText && experienceText.includes('years') && (
             <View style={styles.imageTag}>
               <Text style={styles.imageTagText}>{experienceText.replace(' years', '+ yrs')}</Text>

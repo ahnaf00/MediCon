@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { authService } from '../../../../src/services/api/authService';
 import { fromLocalDateString, toLocalDateString } from '../../../../src/utils/localDate';
+import { DoctorPhoto } from '../../../../src/components/ui/DoctorPhoto';
 
 const MOBILE_BANKING = ['bKash', 'Rocket', 'Nagad', 'Upay'];
 const MOBILE_BANKING_LOGOS: Record<string, any> = {
@@ -222,8 +223,7 @@ export default function BookingDigestScreen() {
   const totalAmount = fee + PLATFORM_FEE + vat;
 
   const renderDoctorCard = () => {
-    const imageSource =
-      doctor?.image || require('../../../../src/assets/images/doctors/doctorPlaceholder1.png');
+    const imageSource = doctor?.image ?? null;
     // Only the doctor's own qualifications — never invent degrees when they are missing.
     const degreesText =
       doctor?.degrees?.filter((d) => d && d.trim()).join(', ') ||
@@ -232,7 +232,12 @@ export default function BookingDigestScreen() {
     return (
       <View style={[styles.card, styles.doctorCardContainer]}>
         <View style={styles.doctorAvatarWrapper}>
-          <Image source={imageSource} style={styles.doctorAvatar} />
+          <DoctorPhoto
+            source={imageSource}
+            name={doctor?.fullName}
+            style={styles.doctorAvatar}
+            initialsSize={20}
+          />
         </View>
         <View style={styles.doctorContent}>
           <Text style={styles.doctorName} numberOfLines={1}>

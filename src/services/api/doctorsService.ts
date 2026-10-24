@@ -1,6 +1,6 @@
 import { axiosClient } from './axiosClient';
 import { DoctorProfile } from '../../types/medical.types';
-import { doctorPlaceholders } from '../../constants/images';
+import type { ImageSourcePropType } from 'react-native';
 import { toLocalDateString } from '../../utils/localDate';
 
 export interface DoctorExperienceEntry {
@@ -23,7 +23,7 @@ export interface Doctor extends DoctorProfile {
   avgConsultationMinutes: number;
   services: string[];
   experienceList: DoctorExperienceEntry[];
-  image?: ReturnType<(typeof doctorPlaceholders)[number]>;
+  image?: ImageSourcePropType;
   /** ISO-8601 start of the first free slot; only returned by symptom search. null = none in the next 14 days. */
   nextAvailableAt?: string | null;
   /** Only returned by symptom search. */
@@ -43,7 +43,7 @@ export interface ConsultationHistoryItem {
   format: 'video' | 'in-person';
   /** UTC ISO-8601 start, for the "doctor may start soon" polling window. */
   startsAt: string | null;
-  image?: ReturnType<(typeof doctorPlaceholders)[number]>;
+  image?: ImageSourcePropType;
 }
 
 export interface DoctorCategory {
@@ -119,9 +119,7 @@ export const doctorsService = {
       experienceList: [],
       // Server-computed: the doctor's toggle is on and their app has checked in recently.
       isOnline: doc.doctorProfile?.isOnline === true,
-      image: doc.avatarUrl
-        ? { uri: doc.avatarUrl }
-        : doctorPlaceholders[index % doctorPlaceholders.length],
+      image: doc.avatarUrl ? { uri: doc.avatarUrl } : undefined,
     }));
   },
 
@@ -153,9 +151,7 @@ export const doctorsService = {
       licenseNumber: 'N/A',
       isOnline: doc.doctorProfile?.isOnline === true,
       about: doc.doctorProfile?.bio || '',
-      image: doc.avatarUrl
-        ? { uri: doc.avatarUrl }
-        : doctorPlaceholders[Number(id) % doctorPlaceholders.length || 0],
+      image: doc.avatarUrl ? { uri: doc.avatarUrl } : undefined,
     };
   },
 

@@ -5,7 +5,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -19,6 +18,7 @@ import { authService } from '../../services/api/authService';
 import { useDoctorPresence } from '../../services/api/presenceService';
 import { useDoctorDashboard } from '../../hooks/useDoctorDashboard';
 import { AppointmentQueueCard } from '../cards/AppointmentQueueCard';
+import { DoctorPhoto } from '../ui/DoctorPhoto';
 
 /** A stored fee such as "700.00" shown as "৳700". */
 const formatTaka = (value?: string | number | null): string =>
@@ -36,9 +36,7 @@ export const DoctorDashboard = (): React.JSX.Element => {
     !!doctorUser?.doctorProfile && doctorUser.doctorProfile.verificationStatus !== 'verified';
 
   const fullName = doctorUser?.name || 'Loading...';
-  const profileImage = doctorUser?.avatarUrl
-    ? { uri: doctorUser.avatarUrl }
-    : require('../../assets/images/doctors/doctorPlaceholder1.png');
+  const profileImage = doctorUser?.avatarUrl ? { uri: doctorUser.avatarUrl } : null;
 
   const handleSwitchRole = () => {
     setRole('patient');
@@ -92,7 +90,12 @@ export const DoctorDashboard = (): React.JSX.Element => {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Profile Card */}
         <View style={styles.profileCard}>
-          <Image source={profileImage as any} style={styles.profileImage} resizeMode="cover" />
+          <DoctorPhoto
+            source={profileImage}
+            name={doctorUser?.name}
+            style={styles.profileImage}
+            initialsSize={24}
+          />
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{fullName}</Text>
             <View style={styles.profileSpacing} />

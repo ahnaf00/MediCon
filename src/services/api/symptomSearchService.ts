@@ -8,7 +8,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
 import { Doctor } from './doctorsService';
-import { doctorPlaceholders } from '../../constants/images';
 
 export type SymptomUrgency = 'low' | 'medium' | 'high' | 'emergency';
 
@@ -54,9 +53,7 @@ const toDoctor = (doc: any, index: number): Doctor => {
     licenseNumber: profile.bmdcRegistrationNo || 'N/A',
     isOnline: false,
     about: profile.bio || '',
-    image: doc.avatarUrl
-      ? { uri: doc.avatarUrl }
-      : doctorPlaceholders[index % doctorPlaceholders.length],
+    image: doc.avatarUrl ? { uri: doc.avatarUrl } : undefined,
     nextAvailableAt: profile.nextAvailableAt ?? null,
     completedConsultations: profile.completedConsultations ?? 0,
   };
