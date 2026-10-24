@@ -20,7 +20,6 @@ export default function SettingsLayout() {
         name="index"
         options={{ headerShown: false, title: t('settings.title') || 'Settings' }}
       />
-      <Stack.Screen name="theme" options={{ title: t('settings.theme') || 'Theme' }} />
     </Stack>
   );
 }
