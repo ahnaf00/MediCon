@@ -63,8 +63,8 @@ export default function BookingDigestScreen() {
   const [booking, setBooking] = useState(false);
 
   // Patient Card State
-  const [isForSomeoneElse, setIsForSomeoneElse] = useState(false);
-  const [patientName, setPatientName] = useState('');
+  // Sent as the appointment notes; the doctor sees it as the problem.
+  const [reason, setReason] = useState('');
 
   // Consultation Card State
   // Only scheduled video appointments exist; 'none' until a slot is picked.
@@ -180,6 +180,7 @@ export default function BookingDigestScreen() {
         doctorId,
         slotDatetime: selectedSlot,
         type: 'video',
+        symptoms: reason.trim(),
       });
 
       if (result.success) {
@@ -276,45 +277,31 @@ export default function BookingDigestScreen() {
 
           {/* Patient Card */}
           <View style={styles.card}>
-            <View style={styles.cardHeaderRow}>
-              <Text style={styles.cardTitleNoMargin}>Who is this consultation for?</Text>
-              {isForSomeoneElse ? (
-                <TouchableOpacity
-                  onPress={() => setIsForSomeoneElse(false)}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <MaterialCommunityIcons name="close" size={20} color={Colors.textSecondary} />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity onPress={() => setIsForSomeoneElse(true)}>
-                  <Text style={styles.linkText}>For Someone Else</Text>
-                </TouchableOpacity>
-              )}
+            <Text style={styles.cardTitle}>Who is this consultation for?</Text>
+            <View style={styles.patientInfoRow}>
+              <View style={styles.patientAvatarPlaceholder}>
+                <MaterialCommunityIcons name="account" size={20} color={Colors.primary} />
+              </View>
+              <View style={styles.patientPhoneContainer}>
+                <Text style={styles.patientPhoneText}>{userPhone}</Text>
+                <View style={styles.meBadge}>
+                  <Text style={styles.meBadgeText}>Me</Text>
+                </View>
+              </View>
             </View>
 
-            {isForSomeoneElse ? (
-              <View style={styles.patientInputContainer}>
-                <TextInput
-                  style={styles.patientInput}
-                  placeholder="Enter Patient's Name"
-                  value={patientName}
-                  onChangeText={setPatientName}
-                  placeholderTextColor={Colors.textTertiary}
-                />
-              </View>
-            ) : (
-              <View style={styles.patientInfoRow}>
-                <View style={styles.patientAvatarPlaceholder}>
-                  <MaterialCommunityIcons name="account" size={20} color={Colors.primary} />
-                </View>
-                <View style={styles.patientPhoneContainer}>
-                  <Text style={styles.patientPhoneText}>{userPhone}</Text>
-                  <View style={styles.meBadge}>
-                    <Text style={styles.meBadgeText}>Me</Text>
-                  </View>
-                </View>
-              </View>
-            )}
+            <View style={styles.patientInputContainer}>
+              <TextInput
+                style={styles.patientInput}
+                placeholder="Reason for visit (optional), e.g. fever for 3 days"
+                value={reason}
+                onChangeText={setReason}
+                maxLength={500}
+                multiline
+                placeholderTextColor={Colors.textTertiary}
+                accessibilityLabel="Reason for visit"
+              />
+            </View>
 
             <Text style={styles.instructionText}>
               <Text style={styles.redAsterisk}>* </Text>
@@ -782,27 +769,11 @@ const styles = StyleSheet.create({
     marginTop: 2,
     lineHeight: FontSize.xs * 1.5,
   },
-  cardHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center', // Vertically aligns the title and buttons
-    justifyContent: 'space-between',
-    marginBottom: Spacing.sm,
-  },
   cardTitle: {
     fontFamily: FontFamily.bold,
     fontSize: FontSize.md,
     color: Colors.textPrimary,
     marginBottom: Spacing.sm,
-  },
-  cardTitleNoMargin: {
-    fontFamily: FontFamily.bold,
-    fontSize: FontSize.md,
-    color: Colors.textPrimary,
-  },
-  linkText: {
-    fontFamily: FontFamily.semiBold,
-    fontSize: FontSize.sm,
-    color: Colors.primary,
   },
   patientInfoRow: {
     flexDirection: 'row',
@@ -847,7 +818,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.tertiary,
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
-    height: 48,
+    paddingVertical: Spacing.sm,
+    minHeight: 48,
+    textAlignVertical: 'top',
     fontFamily: FontFamily.medium,
     fontSize: FontSize.base,
     color: Colors.textPrimary,
