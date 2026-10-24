@@ -1,11 +1,16 @@
 import axios from 'axios';
 import { useAuthStore } from '../authStore';
 import { queryClient } from '../../services/queryClient';
+import { reminderService } from '../../services/notifications/reminderService';
 
 jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn(() => Promise.resolve()),
   getItemAsync: jest.fn(() => Promise.resolve(null)),
   deleteItemAsync: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock('../../services/notifications/reminderService', () => ({
+  reminderService: { cancelAll: jest.fn(() => Promise.resolve()) },
 }));
 
 jest.mock('axios', () => {
@@ -33,6 +38,7 @@ describe('authStore logout', () => {
     expect(useAuthStore.getState().token).toBeNull();
     expect(useAuthStore.getState().userId).toBeNull();
     expect(queryClient.getQueryData(['prescriptions'])).toBeUndefined();
+    expect(reminderService.cancelAll).toHaveBeenCalled();
     expect(axios.post).toHaveBeenCalledWith(
       expect.stringMatching(/\/auth\/logout$/),
       null,

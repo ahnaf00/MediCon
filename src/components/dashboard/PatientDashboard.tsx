@@ -142,7 +142,9 @@ export const PatientDashboard = (): React.JSX.Element => {
               )}
               <MedicationCard
                 medication={nextMedicine}
-                onPress={() => router.push('/(app)/(tabs)/prescriptions')}
+                onPress={() =>
+                  router.push('/(app)/(tabs)/prescriptions?openActivePrescription=true')
+                }
               />
             </>
           )}

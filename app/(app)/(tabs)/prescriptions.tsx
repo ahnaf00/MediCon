@@ -1,5 +1,5 @@
 // 1. IMPORTS
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import { ActivePrescriptionView } from '../../../src/components/medical/ActivePr
 import { createAppError, AppError } from '../../../src/utils/errors';
 import { ErrorState } from '../../../src/components/ui/ErrorState';
 import { DraggableBottomSheet } from '../../../src/components/ui/DraggableBottomSheet';
+import { selectActivePrescriptionId, useReminderStore } from '../../../src/store/reminderStore';
 
 // 2. TYPES
 
@@ -45,9 +46,8 @@ export default function PrescriptionsScreen(): React.JSX.Element {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
 
-  // ── Scheduling state ────────────────────────────────────────────────────────
-  const [scheduledId, setScheduledId] = useState<string | null>(null);
-  const [schedulingId, setSchedulingId] = useState<string | null>(null); // which card is loading
+  // The active prescription is the one with medicine reminders on this phone.
+  const refreshReminders = useReminderStore((s) => s.refresh);
 
   // ── Active prescription quick-view ──────────────────────────────────────────
   const [quickViewVisible, setQuickViewVisible] = useState(false);
@@ -96,45 +96,11 @@ export default function PrescriptionsScreen(): React.JSX.Element {
     setRefreshing(false);
   };
 
-  // ── Schedule / unschedule ───────────────────────────────────────────────────
-
-  const handleSchedule = async (rx: Prescription): Promise<void> => {
-    if (scheduledId === String(rx.id)) return;
-    setSchedulingId(String(rx.id));
-    try {
-      // Local scheduling state — backend has no schedule endpoint yet
-      if (isMountedRef.current) {
-        setScheduledId(String(rx.id));
-      }
-    } catch {
-      if (isMountedRef.current) {
-        Alert.alert('Error', 'Failed to schedule prescription. Please try again.');
-      }
-    } finally {
-      if (isMountedRef.current) setSchedulingId(null);
-    }
-  };
-
-  const handleUnschedule = async (): Promise<void> => {
-    setSchedulingId(scheduledId);
-    try {
-      // Clear local scheduling state
-      if (isMountedRef.current) {
-        setScheduledId(null);
-        setActivePrescription(null);
-      }
-    } catch {
-      if (isMountedRef.current) {
-        Alert.alert('Error', 'Failed to unschedule prescription. Please try again.');
-      }
-    } finally {
-      if (isMountedRef.current) setSchedulingId(null);
-    }
-  };
-
   // ── Quick-view ──────────────────────────────────────────────────────────────
 
   const handleOpenQuickView = async (): Promise<void> => {
+    await refreshReminders().catch(() => {});
+    const scheduledId = selectActivePrescriptionId(useReminderStore.getState());
     if (!scheduledId) {
       setQuickViewVisible(true);
       setActivePrescription(null);
@@ -143,9 +109,11 @@ export default function PrescriptionsScreen(): React.JSX.Element {
     setQuickViewLoading(true);
     setQuickViewVisible(true);
     try {
-      // Find the scheduled prescription from the already-loaded list
+      // Use the loaded list when it has it (it may still be loading after a deep link).
       const all = [...doctorRxs, ...uploadedRxs];
-      const rx = all.find((p) => String(p.id) === scheduledId) ?? null;
+      const rx =
+        all.find((p) => String(p.id) === scheduledId) ??
+        (await prescriptionsService.getPrescriptionById(Number(scheduledId)));
       if (isMountedRef.current) setActivePrescription(rx);
     } catch {
       if (isMountedRef.current) setActivePrescription(null);
@@ -167,15 +135,6 @@ export default function PrescriptionsScreen(): React.JSX.Element {
   // ── Render helpers ──────────────────────────────────────────────────────────
 
   const currentList = activeTab === 'doctors' ? doctorRxs : uploadedRxs;
-  const scheduledRx = useMemo(() => {
-    if (!scheduledId) return null;
-    return (
-      doctorRxs.find((rx) => rx.id === scheduledId) ||
-      uploadedRxs.find((rx) => rx.id === scheduledId) ||
-      null
-    );
-  }, [scheduledId, doctorRxs, uploadedRxs]);
-
   const renderItem = useCallback(
     ({ item }: { item: Prescription }): React.JSX.Element => (
       <View style={styles.cardWrapper}>
@@ -258,14 +217,28 @@ export default function PrescriptionsScreen(): React.JSX.Element {
           <Text style={styles.headerTitleBold}>My </Text>
           <Text style={styles.headerTitleBold}>Prescriptions</Text>
         </Text>
-        <TouchableOpacity
-          onPress={() => router.push('/(app)/settings/')}
-          hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-          accessibilityLabel="Settings"
-          accessibilityRole="button"
-        >
-          <MaterialCommunityIcons name="account-outline" size={27.6} color={Colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={handleOpenQuickView}
+            hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+            accessibilityLabel="Medicine schedule and reminders"
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons name="alarm" size={26} color={Colors.textSecondary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/settings/')}
+            hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+            accessibilityLabel="Settings"
+            accessibilityRole="button"
+          >
+            <MaterialCommunityIcons
+              name="account-outline"
+              size={27.6}
+              color={Colors.textSecondary}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -353,7 +326,7 @@ export default function PrescriptionsScreen(): React.JSX.Element {
       <DraggableBottomSheet
         visible={quickViewVisible}
         onClose={() => setQuickViewVisible(false)}
-        title="Active Prescription"
+        title="Medicine Schedule"
         height="75%"
       >
         <View style={{ flex: 1, paddingHorizontal: Spacing.base, paddingBottom: Spacing.md }}>
@@ -377,9 +350,9 @@ export default function PrescriptionsScreen(): React.JSX.Element {
           ) : !activePrescription ? (
             <View style={[styles.quickViewEmpty, { paddingBottom: insets.bottom || Spacing.xl }]}>
               <MaterialCommunityIcons name="clipboard-outline" size={64} color="#CBD5E1" />
-              <Text style={styles.quickViewEmptyTitle}>No prescription scheduled</Text>
+              <Text style={styles.quickViewEmptyTitle}>No medicine reminders set</Text>
               <Text style={styles.quickViewEmptySubtitle}>
-                Set one to view your medicine schedule.
+                Open a prescription and tap "Turn on reminders" to see its daily schedule here.
               </Text>
             </View>
           ) : (
@@ -393,6 +366,11 @@ export default function PrescriptionsScreen(): React.JSX.Element {
 
 // 4. STYLES
 const styles = StyleSheet.create({
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.lg,
+  },
   container: {
     flex: 1,
     backgroundColor: Colors.background,

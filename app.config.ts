@@ -29,6 +29,9 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       monochromeImage: './assets/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
+    // Medicine reminders fire on time only with exact alarms (Android 12+). Where the
+    // system denies it, expo-notifications falls back to an inexact alarm.
+    permissions: ['android.permission.SCHEDULE_EXACT_ALARM'],
     config: {
       googleMaps: {
         apiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || 'dummy_api_key_for_development',
@@ -76,6 +79,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       },
     ],
     'expo-sharing',
+    'expo-notifications',
     '@react-native-community/datetimepicker',
     'expo-image',
     'expo-secure-store',

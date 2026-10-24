@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CustomTimePickerModal } from './CustomTimePickerModal';
 import { Prescription, PrescriptionMedicine } from '../../types/medical.types';
 import { Colors, Spacing, BorderRadius, FontFamily, FontSize } from '../../theme';
-import { useAlarmStore } from '../../store/alarmStore';
+import { useReminderStore } from '../../store/reminderStore';
+import { reminderId } from '../../services/notifications/reminderService';
+import { reportReminderResult } from '../../services/notifications/reminderMessages';
 import { getMealTiming } from '../../utils/prescriptionFormatters';
 
 export interface ActivePrescriptionViewProps {
@@ -63,7 +65,10 @@ const EditSchedulesModal = ({ visible, periods, onClose, onSave }: EditSchedules
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
         <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Change Schedules</Text>
+          <Text style={styles.modalTitle}>Reminder Times</Text>
+          <Text style={styles.modalSubtitle}>
+            Daily reminders on this phone at these times. Your prescription does not change.
+          </Text>
 
           <Text style={styles.inputLabel}>Morning Time</Text>
           <TouchableOpacity
@@ -138,14 +143,23 @@ const EditSchedulesModal = ({ visible, periods, onClose, onSave }: EditSchedules
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export const ActivePrescriptionView = ({
-  prescription: initialPrescription,
+  prescription,
 }: ActivePrescriptionViewProps): React.JSX.Element => {
-  const [prescription, setPrescription] = useState<Prescription>(initialPrescription);
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [editModalVisible, setEditModalVisible] = useState(false);
   const insets = useSafeAreaInsets();
 
-  const { mutedPeriods, toggleMute } = useAlarmStore();
+  const reminders = useReminderStore((s) => s.reminders);
+  const refreshReminders = useReminderStore((s) => s.refresh);
+  const enableReminder = useReminderStore((s) => s.enable);
+  const disableReminder = useReminderStore((s) => s.disable);
+  const [busyPeriod, setBusyPeriod] = useState<Period | null>(null);
+
+  useEffect(() => {
+    refreshReminders().catch(() => {});
+  }, [refreshReminders]);
+
+  const reminderFor = (period: Period) => reminders[reminderId(prescription.id, period)];
 
   const dates = Array.from({ length: 5 }).map((_, i) => {
     const d = new Date();
@@ -186,6 +200,12 @@ export const ActivePrescriptionView = ({
       }
     });
 
+    // A reminder the patient moved takes the place of the prescribed time.
+    periods.forEach((p) => {
+      const reminder = reminderFor(p.id);
+      if (reminder) p.time = reminder.time;
+    });
+
     const now = new Date();
     const selectedDateStr = selectedDate.toISOString().split('T')[0];
     const nowDateStr = now.toISOString().split('T')[0];
@@ -221,23 +241,34 @@ export const ActivePrescriptionView = ({
   };
 
   const handleEditSave = async (morning: string, noon: string, night: string) => {
-    // Update schedule locally. The backend has no PATCH /prescriptions/{id}/medicines/{id}/schedule
-    // endpoint yet, so we apply the time overrides in-memory and update local state.
-    const updatedMedicines = prescription.medicines.map((med) => {
-      const ds = (med.dosageSchedule as Record<string, string>) ?? {};
-      const newSchedule: Record<string, string> = { ...ds };
-      if (ds.morning !== undefined && morning) newSchedule.morning = morning;
-      if (ds.noon !== undefined && noon) newSchedule.noon = noon;
-      if (ds.night !== undefined && night) newSchedule.night = night;
-      return { ...med, dosageSchedule: newSchedule };
-    });
-    setPrescription((prev) => ({ ...prev, medicines: updatedMedicines }));
+    const chosen: Record<Period, string> = { morning, noon, night };
+    for (const group of periodGroups) {
+      const time = chosen[group.id];
+      if (!time) continue;
+      if (!reportReminderResult(await enableReminder(prescription, group.id, time))) return;
+    }
+  };
+
+  const toggleReminder = async (group: PeriodGroup) => {
+    if (!group.time || busyPeriod) return;
+    setBusyPeriod(group.id);
+    try {
+      if (reminderFor(group.id)) {
+        await disableReminder(prescription.id, group.id);
+      } else {
+        reportReminderResult(await enableReminder(prescription, group.id, group.time));
+      }
+    } catch {
+      reportReminderResult('error');
+    } finally {
+      setBusyPeriod(null);
+    }
   };
 
   const periodGroups = getPeriods();
 
   const renderPeriodBlock = (group: PeriodGroup) => {
-    const isMuted = mutedPeriods[group.id];
+    const isOn = !!reminderFor(group.id);
 
     return (
       <View
@@ -252,14 +283,17 @@ export const ActivePrescriptionView = ({
           <View style={styles.periodHeaderRight}>
             <TouchableOpacity
               style={[styles.alarmBadge, group.isCompleted && styles.alarmBadgeCompleted]}
-              onPress={() => toggleMute(group.id)}
+              onPress={() => toggleReminder(group)}
               activeOpacity={0.7}
-              disabled={group.isCompleted}
+              disabled={busyPeriod !== null}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: isOn, busy: busyPeriod === group.id }}
+              accessibilityLabel={`${group.label} reminder at ${format12Hour(group.time)}`}
             >
               <MaterialCommunityIcons
-                name={isMuted ? 'alarm-off' : 'alarm'}
+                name={isOn ? 'alarm-check' : 'alarm-off'}
                 size={14}
-                color={group.isCompleted ? Colors.textTertiary : Colors.textPrimary}
+                color={isOn ? Colors.primary : Colors.textTertiary}
               />
               <Text style={[styles.periodTime, group.isCompleted && styles.periodTextCompleted]}>
                 {format12Hour(group.time)}
@@ -371,6 +405,11 @@ export const ActivePrescriptionView = ({
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 }]}
         showsVerticalScrollIndicator={false}
       >
+        {periodGroups.length > 0 && (
+          <Text style={styles.reminderHint}>
+            Tap the alarm next to a time to get a daily reminder on this phone.
+          </Text>
+        )}
         {periodGroups.map(renderPeriodBlock)}
       </ScrollView>
 
@@ -382,7 +421,7 @@ export const ActivePrescriptionView = ({
             onPress={() => setEditModalVisible(true)}
             activeOpacity={0.8}
           >
-            <Text style={styles.changeSchedulesBtnText}>Change Schedules</Text>
+            <Text style={styles.changeSchedulesBtnText}>Set Reminder Times</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -587,7 +626,19 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
     fontSize: FontSize.lg,
     color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  modalSubtitle: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
     marginBottom: Spacing.lg,
+  },
+  reminderHint: {
+    fontFamily: FontFamily.regular,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
+    marginBottom: Spacing.sm,
   },
   inputLabel: {
     fontFamily: FontFamily.bold,

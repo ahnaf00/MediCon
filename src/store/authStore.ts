@@ -4,6 +4,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { secureStorage } from './storage';
 import { queryClient } from '../services/queryClient';
 import { Config } from '../constants/config';
+import { reminderService } from '../services/notifications/reminderService';
 
 export type UserRole = 'patient' | 'doctor';
 export type UserStatus = 'active' | 'pending' | 'suspended';
@@ -45,6 +46,9 @@ export const useAuthStore = create<AuthState>()(
 
         // Drop every cached server response so the next user on this device sees none of it.
         queryClient.clear();
+
+        // Medicine reminders belong to this user; the next one must not get them.
+        reminderService.cancelAll().catch(() => {});
 
         // Revoke the token server-side. Plain axios (not axiosClient) so a 401 here
         // cannot re-enter the logout interceptor; failure is non-fatal locally.
