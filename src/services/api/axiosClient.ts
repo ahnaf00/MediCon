@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { Alert } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
 import { Config } from '../../constants/config';
 
@@ -43,6 +44,17 @@ axiosClient.interceptors.response.use(
         // Trigger global logout (clears state & secure storage, and _layout.tsx will redirect)
         // The token is already rejected, so don't try to revoke it remotely.
         useAuthStore.getState().logout({ remote: false });
+      }
+
+      // 403 for a suspended account: every request will fail, so sign out and say why.
+      const body = error.response.data as { message?: unknown } | undefined;
+      if (
+        error.response.status === 403 &&
+        body?.message === 'Account is suspended' &&
+        useAuthStore.getState().token
+      ) {
+        useAuthStore.getState().logout({ remote: false });
+        Alert.alert('Account suspended', 'Your account is suspended. Contact MediCon support.');
       }
 
       // 422 Unprocessable Entity: Validation Errors

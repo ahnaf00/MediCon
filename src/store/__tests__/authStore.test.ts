@@ -2,6 +2,7 @@ import axios from 'axios';
 import { useAuthStore } from '../authStore';
 import { queryClient } from '../../services/queryClient';
 import { reminderService } from '../../services/notifications/reminderService';
+import { useChatStore } from '../chatStore';
 
 jest.mock('expo-secure-store', () => ({
   setItemAsync: jest.fn(() => Promise.resolve()),
@@ -46,6 +47,14 @@ describe('authStore logout', () => {
         headers: expect.objectContaining({ Authorization: 'Bearer tok-123' }),
       }),
     );
+  });
+
+  it('clears the chat bubbles of the signed-out user', () => {
+    useChatStore.getState().addMessage('new', 'my symptoms', 'user');
+
+    useAuthStore.getState().logout({ remote: false });
+
+    expect(useChatStore.getState().conversations).toEqual({});
   });
 
   it('skips the server call when remote is false (token already rejected)', () => {
