@@ -9,7 +9,7 @@ import { useAuthStore } from '../../../src/store/authStore';
 export default function TabsLayout() {
   const role = useAuthStore((s) => s.role);
   const isDoctor = role === 'doctor';
-  // Admins get their own tabs (audit L2b): Overview, Doctors, Users, More.
+  // Admins get their own tabs (audit L2b): Overview, Doctors, Users, Visits, More.
   const isAdmin = role === 'admin';
   const isPatient = !isDoctor && !isAdmin;
 
@@ -68,6 +68,16 @@ export default function TabsLayout() {
           href: isAdmin ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="account-multiple-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="admin-visits"
+        options={{
+          title: 'Visits',
+          href: isAdmin ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="calendar-month-outline" size={size} color={color} />
           ),
         }}
       />

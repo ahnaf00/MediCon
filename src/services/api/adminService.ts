@@ -12,6 +12,9 @@
 //   GET  /admin/users/{id}
 //   POST /admin/users/{id}/suspend { reason } · POST /admin/users/{id}/reactivate
 //   GET  /admin/audit-log?target_id=     → every admin action, newest first
+//   GET  /admin/doctors?status=all&q=&online=1 → doctors directory (step 2)
+//   GET  /admin/visits?from=&to=&status= → visits on Dhaka days (view only, step 2)
+//   GET  /admin/visits/{id}
 // ─────────────────────────────────────────────────────────────────────────────
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
@@ -34,6 +37,9 @@ export interface AdminDoctor {
   rejectionReason: string | null;
   reviewedAt: string | null;
   reviewedBy: string | null;
+  isOnline: boolean;
+  accountStatus: 'active' | 'suspended' | 'pending';
+  visits: { completed: number; upcoming: number };
 }
 
 export interface AdminSummary {
@@ -46,6 +52,13 @@ export const adminService = {
 
   doctors: async (status: DoctorReviewStatus): Promise<AdminDoctor[]> =>
     getAllPages<AdminDoctor>('/admin/doctors', { status }),
+
+  directory: async ({ q, online }: { q?: string; online?: boolean }): Promise<AdminDoctor[]> =>
+    getAllPages<AdminDoctor>('/admin/doctors', {
+      status: 'all',
+      q: q?.trim() || undefined,
+      online: online ? 1 : undefined,
+    }),
 
   doctor: async (id: string): Promise<AdminDoctor> =>
     (await axiosClient.get(`/admin/doctors/${id}`)) as unknown as AdminDoctor,
@@ -232,4 +245,107 @@ export const describeAudit = (e: AuditEntry): string => {
     default:
       return `${e.action} ${who}`;
   }
+};
+
+// ── Step 2: doctors directory and visits (audit L2b) ────────────────────────
+
+export const useDoctorDirectory = (filters: { q?: string; online?: boolean }) =>
+  useQuery({
+    queryKey: [...ADMIN_KEY, 'directory', filters],
+    queryFn: () => adminService.directory(filters),
+  });
+
+export interface AdminVisit {
+  id: number;
+  at: string;
+  durationMinutes: number;
+  format: 'video' | 'in_person';
+  status: VisitStatus;
+  patient: { id: number | null; name: string };
+  doctor: { id: number | null; name: string; specialty: string | null };
+}
+
+/** Records only: whether a prescription or transcript exists, never their content. */
+export interface AdminVisitDetail extends AdminVisit {
+  bookedAt: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  hasPrescription: boolean;
+  transcriptStatus: string | null;
+}
+
+/** Clinic-timezone (Asia/Dhaka) calendar days, inclusive, as YYYY-MM-DD. */
+export interface VisitFilters {
+  from: string;
+  to: string;
+  status?: VisitStatus;
+}
+
+export const adminVisitsService = {
+  visits: async ({ from, to, status }: VisitFilters): Promise<AdminVisit[]> =>
+    getAllPages<AdminVisit>('/admin/visits', { from, to, status }),
+
+  visit: async (id: string): Promise<AdminVisitDetail> =>
+    (await axiosClient.get(`/admin/visits/${id}`)) as unknown as AdminVisitDetail,
+};
+
+export const useAdminVisits = (filters: VisitFilters) =>
+  useQuery({
+    queryKey: [...ADMIN_KEY, 'visits', filters],
+    queryFn: () => adminVisitsService.visits(filters),
+  });
+
+export const useAdminVisit = (id: string | undefined) =>
+  useQuery({
+    queryKey: [...ADMIN_KEY, 'visit', id],
+    queryFn: () => adminVisitsService.visit(id as string),
+    enabled: !!id,
+  });
+
+// Bangladesh has no daylight saving, so Dhaka time is always UTC+6.
+const DHAKA_OFFSET_MS = 6 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** The Dhaka calendar day `offsetDays` from now, as YYYY-MM-DD. */
+export const dhakaDay = (offsetDays = 0, now: Date = new Date()): string => {
+  const d = new Date(now.getTime() + DHAKA_OFFSET_MS + offsetDays * DAY_MS);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
+};
+
+/** A visit's clock time in Dhaka, e.g. "9:30 AM", on any phone timezone. */
+export const dhakaTime = (iso: string): string => {
+  const d = new Date(new Date(iso).getTime() + DHAKA_OFFSET_MS);
+  const h = d.getUTCHours();
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(d.getUTCMinutes()).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}`;
+};
+
+/** A visit's Dhaka date, e.g. "Sun 25 Oct". */
+export const dhakaDateLabel = (iso: string): string => {
+  const d = new Date(new Date(iso).getTime() + DHAKA_OFFSET_MS);
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return `${days[d.getUTCDay()]} ${d.getUTCDate()} ${months[d.getUTCMonth()]}`;
+};
+
+export const VISIT_STATUS_LABEL: Record<VisitStatus, string> = {
+  scheduled: 'Booked',
+  in_progress: 'In progress',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  no_show: 'No-show',
+  expired: 'Expired',
 };

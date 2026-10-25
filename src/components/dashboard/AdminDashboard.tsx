@@ -37,7 +37,7 @@ const attentionItems = (o: AdminOverview): Attention[] => {
       icon: 'account-clock-outline',
       color: Colors.warning,
       text: `${plural(o.doctors.pending, 'doctor is', 'doctors are')} waiting for approval`,
-      href: '/(app)/(tabs)/admin-doctors?status=pending',
+      href: '/(app)/admin/doctors?status=pending',
     });
   }
   if (o.transcripts.failed > 0) {
@@ -99,7 +99,7 @@ export const AdminDashboard = (): React.JSX.Element => {
           value: data.doctors.verified,
           label: 'Approved doctors',
           sub: `${data.doctors.onlineNow} online now`,
-          href: '/(app)/(tabs)/admin-doctors?status=verified',
+          href: '/(app)/(tabs)/admin-doctors',
         },
         {
           key: 'visits',
@@ -107,6 +107,7 @@ export const AdminDashboard = (): React.JSX.Element => {
           value: data.visitsToday.total,
           label: 'Visits today',
           sub: `${data.visitsToday.completed} completed`,
+          href: '/(app)/(tabs)/admin-visits',
         },
         {
           key: 'ai',

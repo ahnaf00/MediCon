@@ -90,7 +90,9 @@ export default function AdminDoctorReviewScreen() {
           >
             <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Review registration</Text>
+          <Text style={styles.headerTitle}>
+            {doctor && doctor.verificationStatus !== 'pending' ? 'Doctor' : 'Review registration'}
+          </Text>
         </View>
       </View>
 
@@ -102,7 +104,15 @@ export default function AdminDoctorReviewScreen() {
         </View>
       ) : (
         <>
-          <ScrollView contentContainerStyle={styles.content}>
+          <ScrollView
+            contentContainerStyle={[
+              styles.content,
+              // Approved doctors have no action bar below, so clear the system bar here.
+              doctor.verificationStatus === 'verified' && {
+                paddingBottom: Spacing.xl + insets.bottom,
+              },
+            ]}
+          >
             <View style={styles.card}>
               <Text style={styles.name}>{doctor.name}</Text>
               <View
@@ -132,6 +142,33 @@ export default function AdminDoctorReviewScreen() {
                 />
               )}
               {doctor.rejectionReason && <Row label="Reason" value={doctor.rejectionReason} />}
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.sectionTitle}>Account</Text>
+              <Row
+                label="Account status"
+                value={
+                  doctor.accountStatus === 'suspended'
+                    ? 'Suspended'
+                    : doctor.accountStatus === 'pending'
+                      ? 'Pending'
+                      : 'Active'
+                }
+              />
+              <Row label="Right now" value={doctor.isOnline ? 'Online' : 'Offline'} />
+              <Row
+                label="Visits"
+                value={`${doctor.visits.completed} completed · ${doctor.visits.upcoming} upcoming`}
+              />
+              <TouchableOpacity
+                style={styles.linkRow}
+                onPress={() => router.push(`/(app)/admin/users/${doctor.id}`)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.linkText}>Account and suspension</Text>
+                <MaterialCommunityIcons name="chevron-right" size={22} color={Colors.primary} />
+              </TouchableOpacity>
             </View>
 
             <View style={styles.notice}>
@@ -268,6 +305,16 @@ const styles = StyleSheet.create({
   pillOk: { backgroundColor: Colors.success },
   pillBad: { backgroundColor: Colors.danger },
   statusText: { color: Colors.surface, fontSize: FontSize.sm, fontWeight: '700' },
+  sectionTitle: { fontSize: FontSize.md, fontWeight: '700', color: Colors.textPrimary },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: Colors.tertiary,
+  },
+  linkText: { fontSize: FontSize.md, fontWeight: '600', color: Colors.primary },
   infoRow: { gap: 2 },
   infoLabel: { fontSize: FontSize.sm, color: Colors.textTertiary },
   infoValue: { fontSize: FontSize.md, color: Colors.textPrimary },
