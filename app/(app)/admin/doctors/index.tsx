@@ -29,8 +29,11 @@ const shortDate = (iso: string | null) =>
     ? new Date(iso).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })
     : '';
 
-/** Doctor registrations for an admin to review (audit L2). */
-export default function AdminDoctorsScreen() {
+/**
+ * Doctor registrations for an admin to review (audit L2). Also the admin
+ * Doctors tab (audit L2b), where `embedded` hides the back arrow.
+ */
+export default function AdminDoctorsScreen({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ status?: string }>();
@@ -38,6 +41,12 @@ export default function AdminDoctorsScreen() {
     ? (params.status as DoctorReviewStatus)
     : 'pending';
   const [status, setStatus] = useState<DoctorReviewStatus>(initial);
+  // The Overview links here with ?status=…; follow it when the tab is already open.
+  const [linkedStatus, setLinkedStatus] = useState(params.status);
+  if (params.status !== linkedStatus) {
+    setLinkedStatus(params.status);
+    if (TABS.some((t) => t.key === params.status)) setStatus(params.status as DoctorReviewStatus);
+  }
   const { data: doctors = [], isLoading, isError, refetch, isRefetching } = useAdminDoctors(status);
 
   const renderDoctor = ({ item }: { item: AdminDoctor }) => (
@@ -75,15 +84,17 @@ export default function AdminDoctorsScreen() {
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom }]}>
       <View style={{ backgroundColor: Colors.surface, paddingTop: insets.top }}>
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Back"
-          >
-            <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
-          </TouchableOpacity>
+        <View style={[styles.header, embedded && styles.headerRoot]}>
+          {!embedded && (
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              accessibilityRole="button"
+              accessibilityLabel="Back"
+            >
+              <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
+            </TouchableOpacity>
+          )}
           <Text style={styles.headerTitle}>Doctor approvals</Text>
         </View>
         <View style={styles.tabs}>
@@ -140,6 +151,7 @@ const styles = StyleSheet.create({
     paddingLeft: 5,
     gap: Spacing.xs,
   },
+  headerRoot: { paddingLeft: Spacing.base },
   backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   headerTitle: {
     flex: 1,

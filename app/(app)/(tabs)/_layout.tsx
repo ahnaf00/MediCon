@@ -9,7 +9,7 @@ import { useAuthStore } from '../../../src/store/authStore';
 export default function TabsLayout() {
   const role = useAuthStore((s) => s.role);
   const isDoctor = role === 'doctor';
-  // Admins use their own screens (audit L2), so they get neither set of tabs.
+  // Admins get their own tabs (audit L2b): Overview, Doctors, Users, More.
   const isAdmin = role === 'admin';
   const isPatient = !isDoctor && !isAdmin;
 
@@ -18,7 +18,6 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          display: isAdmin ? 'none' : 'flex',
           height: 109, // 53dp content + 56dp bottom padding
           paddingBottom: 56,
           paddingTop: 5,
@@ -40,9 +39,49 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: isDoctor ? 'Dashboard' : isAdmin ? 'Admin' : 'Home',
+          title: isDoctor ? 'Dashboard' : isAdmin ? 'Overview' : 'Home',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home-outline" size={size + 3} color={color} />
+            <MaterialCommunityIcons
+              name={isAdmin ? 'view-dashboard-outline' : 'home-outline'}
+              size={isAdmin ? size : size + 3}
+              color={color}
+            />
+          ),
+        }}
+      />
+
+      {/* Admin Tabs */}
+      <Tabs.Screen
+        name="admin-doctors"
+        options={{
+          title: 'Doctors',
+          href: isAdmin ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="doctor" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="admin-users"
+        options={{
+          title: 'Users',
+          href: isAdmin ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="account-multiple-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="admin-more"
+        options={{
+          title: 'More',
+          href: isAdmin ? undefined : null,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons
+              name="dots-horizontal-circle-outline"
+              size={size}
+              color={color}
+            />
           ),
         }}
       />
