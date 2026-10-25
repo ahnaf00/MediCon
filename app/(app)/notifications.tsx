@@ -30,6 +30,7 @@ const ICONS: Record<NoticeKind, keyof typeof MaterialCommunityIcons.glyphMap> = 
   report_failed: 'file-alert-outline',
   summary_shared: 'clipboard-text-outline',
   visit_reminder: 'calendar-clock',
+  account_reviewed: 'shield-account-outline',
   other: 'bell-outline',
 };
 

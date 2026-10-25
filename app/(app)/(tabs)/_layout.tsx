@@ -9,12 +9,16 @@ import { useAuthStore } from '../../../src/store/authStore';
 export default function TabsLayout() {
   const role = useAuthStore((s) => s.role);
   const isDoctor = role === 'doctor';
+  // Admins use their own screens (audit L2), so they get neither set of tabs.
+  const isAdmin = role === 'admin';
+  const isPatient = !isDoctor && !isAdmin;
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
+          display: isAdmin ? 'none' : 'flex',
           height: 109, // 53dp content + 56dp bottom padding
           paddingBottom: 56,
           paddingTop: 5,
@@ -36,7 +40,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: isDoctor ? 'Dashboard' : 'Home',
+          title: isDoctor ? 'Dashboard' : isAdmin ? 'Admin' : 'Home',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="home-outline" size={size + 3} color={color} />
           ),
@@ -48,7 +52,7 @@ export default function TabsLayout() {
         name="doctors"
         options={{
           title: 'Doctors',
-          href: isDoctor ? null : undefined,
+          href: isPatient ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="stethoscope" size={size} color={color} />
           ),
@@ -58,7 +62,7 @@ export default function TabsLayout() {
         name="prescriptions"
         options={{
           title: 'Prescription',
-          href: isDoctor ? null : undefined,
+          href: isPatient ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="clipboard-pulse-outline" size={size} color={color} />
           ),
@@ -68,7 +72,7 @@ export default function TabsLayout() {
         name="ask-doctor"
         options={{
           title: 'Ask Doctor',
-          href: isDoctor ? null : undefined,
+          href: isPatient ? undefined : null,
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="chat-question-outline" size={size} color={color} />
           ),

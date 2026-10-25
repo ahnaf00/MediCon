@@ -7,7 +7,7 @@ import { Config } from '../constants/config';
 import { reminderService } from '../services/notifications/reminderService';
 import { useChatStore } from './chatStore';
 
-export type UserRole = 'patient' | 'doctor';
+export type UserRole = 'patient' | 'doctor' | 'admin';
 export type UserStatus = 'active' | 'pending' | 'suspended';
 
 interface AuthState {

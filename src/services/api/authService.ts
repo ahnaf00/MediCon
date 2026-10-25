@@ -22,6 +22,8 @@ export interface DoctorProfileData {
   rating?: number;
   bio?: string;
   verificationStatus?: string;
+  /** Only sent to the doctor themself, when an admin rejected the registration. */
+  rejectionReason?: string | null;
 }
 
 export interface User {

@@ -19,6 +19,7 @@ export type NoticeKind =
   | 'report_failed'
   | 'summary_shared'
   | 'visit_reminder'
+  | 'account_reviewed'
   | 'other';
 
 export interface NoticeTarget {
@@ -27,6 +28,7 @@ export interface NoticeTarget {
   appointment_id?: number;
   patient_user_id?: number;
   for?: 'patient' | 'doctor';
+  status?: string;
 }
 
 export interface AppNotice {
@@ -57,6 +59,8 @@ export const noticeRoute = (n: AppNotice): string | null => {
         return `/(app)/doctor/consultation/${t.patient_user_id}?appointmentId=${t.appointment_id}`;
       }
       return '/(app)/doctors/history';
+    case 'account_reviewed':
+      return '/(app)/(tabs)';
     default:
       return null;
   }

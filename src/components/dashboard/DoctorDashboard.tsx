@@ -35,6 +35,7 @@ export const DoctorDashboard = (): React.JSX.Element => {
   const { stats, todayQueue, isLoading: loading, isError } = useDoctorDashboard();
   const awaitingVerification =
     !!doctorUser?.doctorProfile && doctorUser.doctorProfile.verificationStatus !== 'verified';
+  const rejected = doctorUser?.doctorProfile?.verificationStatus === 'rejected';
 
   const fullName = doctorUser?.name || 'Loading...';
   const profileImage = doctorUser?.avatarUrl ? { uri: doctorUser.avatarUrl } : null;
@@ -165,18 +166,22 @@ export const DoctorDashboard = (): React.JSX.Element => {
           // The server refuses doctor features until an admin verifies the account.
           <View style={styles.loadingContainer}>
             <MaterialCommunityIcons
-              name="shield-account-outline"
+              name={rejected ? 'shield-off-outline' : 'shield-account-outline'}
               size={40}
-              color={Colors.warning}
+              color={rejected ? Colors.danger : Colors.warning}
             />
             <Text style={[styles.loadingText, styles.pendingTitle]}>
-              {t('doctordashboard.pending_title', 'Your account is awaiting verification')}
+              {rejected
+                ? t('doctordashboard.rejected_title', 'Your doctor account was not approved')
+                : t('doctordashboard.pending_title', 'Your account is awaiting verification')}
             </Text>
             <Text style={styles.loadingText}>
-              {t(
-                'doctordashboard.pending_body',
-                'An administrator needs to verify your doctor account. Until then you can’t go online, see appointments or start consultations.',
-              )}
+              {rejected
+                ? `${t('doctordashboard.rejected_reason', 'Reason')}: ${doctorUser?.doctorProfile?.rejectionReason ?? '-'}`
+                : t(
+                    'doctordashboard.pending_body',
+                    'An administrator needs to verify your doctor account. Until then you can’t go online, see appointments or start consultations.',
+                  )}
             </Text>
           </View>
         ) : isError || !stats ? (
