@@ -51,6 +51,8 @@ export interface ConsultationSummary {
   advice: string | null;
   redFlags: string[];
   source: 'doctor_note' | 'transcript';
+  /** When the doctor shared it with the patient; null while it is a draft (audit G7). */
+  publishedAt: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -84,6 +86,8 @@ export interface ConsultationSummaryInput {
    * (needs a ready transcript). Omitted on later edits to keep the saved source.
    */
   source?: 'doctor_note' | 'transcript';
+  /** Share with the patient now; only once the visit is completed. */
+  publish?: boolean;
 }
 
 // Kept here for existing importers; the helper lives in src/utils/errors.ts.

@@ -163,7 +163,7 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
     setRedFlagDraft('');
   };
 
-  const handleSave = async () => {
+  const handleSave = async (publish = false) => {
     if (!chiefComplaint.trim()) {
       Alert.alert(
         t('consultation.required_title', 'Chief complaint required'),
@@ -185,6 +185,7 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
           red_flags: flags.slice(0, MAX_RED_FLAGS),
           // Otherwise omitted, so an edit keeps the saved source.
           ...(usedDraft ? { source: 'transcript' as const } : {}),
+          ...(publish ? { publish: true } : {}),
         },
       });
       setRedFlags(flags.slice(0, MAX_RED_FLAGS));
@@ -193,9 +194,18 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
 
       if (status === 'in_progress') {
         await updateStatus.mutateAsync({ appointmentId: appointment.id, status: 'completed' });
+        // Saved as a draft: the doctor reviews it, then shares it (audit G7).
         Alert.alert(
           t('consultation.completed_title', 'Consultation completed'),
-          t('consultation.completed_body', 'The summary is saved and shared with the patient.'),
+          t(
+            'consultation.completed_draft_body',
+            'The summary is saved as a draft. Check it, then tap "Share with patient".',
+          ),
+        );
+      } else if (publish) {
+        Alert.alert(
+          t('consultation.shared_title', 'Summary shared'),
+          t('consultation.shared_body', 'The patient can now read this summary.'),
         );
       } else {
         Alert.alert(t('consultation.saved_title', 'Summary saved'));
@@ -413,22 +423,61 @@ export const ConsultationPanel = ({ appointment }: ConsultationPanelProps): Reac
             </View>
           )}
 
+          {savedSummary ? (
+            <Text style={[styles.muted, styles.spaced]}>
+              {savedSummary.publishedAt
+                ? t('consultation.shared_on', 'Shared with the patient on {{date}}.', {
+                    date: new Date(savedSummary.publishedAt).toLocaleDateString('en-GB', {
+                      day: 'numeric',
+                      month: 'short',
+                      year: 'numeric',
+                    }),
+                  })
+                : t('consultation.draft_note', 'Draft: the patient cannot see it yet.')}
+            </Text>
+          ) : null}
+
           <TouchableOpacity
-            style={[styles.primaryBtn, styles.saveBtn, busy && styles.disabled]}
-            onPress={handleSave}
+            style={[
+              savedSummary?.publishedAt || status === 'in_progress'
+                ? styles.primaryBtn
+                : styles.secondaryBtn,
+              styles.saveBtn,
+              busy && styles.disabled,
+            ]}
+            onPress={() => handleSave()}
             disabled={busy}
             accessibilityRole="button"
           >
             {busy ? (
               <ActivityIndicator size="small" color={Colors.surface} />
-            ) : (
+            ) : status === 'in_progress' ? (
               <Text style={styles.primaryBtnText}>
-                {status === 'in_progress'
-                  ? t('consultation.save_and_complete', 'Save summary & complete')
-                  : t('consultation.save', 'Save summary')}
+                {t('consultation.save_and_complete', 'Save summary & complete')}
+              </Text>
+            ) : savedSummary?.publishedAt ? (
+              <Text style={styles.primaryBtnText}>
+                {t('consultation.save_changes', 'Save changes')}
+              </Text>
+            ) : (
+              <Text style={styles.secondaryBtnText}>
+                {t('consultation.save_draft', 'Save draft')}
               </Text>
             )}
           </TouchableOpacity>
+
+          {status === 'completed' && !savedSummary?.publishedAt && (
+            <TouchableOpacity
+              style={[styles.primaryBtn, styles.saveBtn, busy && styles.disabled]}
+              onPress={() => handleSave(true)}
+              disabled={busy}
+              accessibilityRole="button"
+            >
+              <Text style={styles.primaryBtnText}>
+                {t('consultation.share', 'Share with patient')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
     </View>
