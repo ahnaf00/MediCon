@@ -10,6 +10,18 @@ type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
 const ITEMS: { icon: IconName; title: string; text: string; href: string }[] = [
   {
+    icon: 'hospital-building',
+    title: 'Hospitals',
+    text: 'Add, edit or hide the hospitals patients see',
+    href: '/(app)/admin/hospitals',
+  },
+  {
+    icon: 'heart-pulse',
+    title: 'System health',
+    text: 'AI usage, failed transcripts and failed jobs',
+    href: '/(app)/admin/system-health',
+  },
+  {
     icon: 'clipboard-text-clock-outline',
     title: 'Audit log',
     text: 'Every admin action: who, what and why',
@@ -23,7 +35,7 @@ const ITEMS: { icon: IconName; title: string; text: string; href: string }[] = [
   },
 ];
 
-/** Admin More tab (audit L2b). Hospitals and System health join in step 3. */
+/** Admin More tab (audit L2b): hospitals, system health, audit log and settings. */
 export default function AdminMoreTab() {
   const role = useAuthStore((s) => s.role);
   const router = useRouter();

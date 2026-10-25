@@ -46,6 +46,16 @@ const attentionItems = (o: AdminOverview): Attention[] => {
       icon: 'text-box-remove-outline',
       color: Colors.danger,
       text: `${plural(o.transcripts.failed, 'call transcript', 'call transcripts')} failed`,
+      href: '/(app)/admin/system-health',
+    });
+  }
+  if (o.jobs.failed > 0) {
+    items.push({
+      key: 'jobs',
+      icon: 'cog-off-outline',
+      color: Colors.danger,
+      text: `${plural(o.jobs.failed, 'background job', 'background jobs')} failed`,
+      href: '/(app)/admin/system-health',
     });
   }
   if (o.users.suspended > 0) {
@@ -113,8 +123,9 @@ export const AdminDashboard = (): React.JSX.Element => {
           key: 'ai',
           icon: 'robot-outline' as IconName,
           value: data.ai.requestsToday,
-          label: 'AI requests today',
-          sub: 'Chats and symptom checks',
+          label: 'AI calls today',
+          sub: 'All AI features',
+          href: '/(app)/admin/system-health',
         },
       ]
     : [];

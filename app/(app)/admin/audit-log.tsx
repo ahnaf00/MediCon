@@ -12,7 +12,12 @@ import { useLocalSearchParams } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { BorderRadius, Colors, FontSize, Spacing } from '@theme';
 import { AdminHeader } from '../../../src/components/admin/AdminHeader';
-import { AuditEntry, describeAudit, useAuditLog } from '../../../src/services/api/adminService';
+import {
+  AuditEntry,
+  AuditTargetType,
+  describeAudit,
+  useAuditLog,
+} from '../../../src/services/api/adminService';
 
 type IconName = React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 
@@ -32,13 +37,27 @@ const when = (iso: string) =>
     minute: '2-digit',
   });
 
-/** Every admin action, newest first (audit L2b). `?target_id=` narrows it to one account. */
+/**
+ * Every admin action, newest first (audit L2b). `?target_id=` narrows it to one
+ * account, or with `&target_type=hospital` to one hospital.
+ */
 export default function AuditLogScreen() {
-  const { target_id: targetId, name } = useLocalSearchParams<{
+  const {
+    target_id: targetId,
+    target_type: targetType,
+    name,
+  } = useLocalSearchParams<{
     target_id?: string;
+    target_type?: AuditTargetType;
     name?: string;
   }>();
-  const { data: entries = [], isLoading, isError, refetch, isRefetching } = useAuditLog(targetId);
+  const {
+    data: entries = [],
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+  } = useAuditLog(targetId, targetType);
 
   const renderEntry = ({ item }: { item: AuditEntry }) => {
     const icon = ICON[item.action] ?? {

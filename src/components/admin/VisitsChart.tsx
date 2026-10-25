@@ -9,11 +9,20 @@ const dayLabel = (date: string, opts: Intl.DateTimeFormatOptions) =>
   new Date(`${date}T12:00:00Z`).toLocaleDateString([], opts);
 
 /**
- * Visits per day for the admin Overview (audit L2b). One series, so one colour
- * and no legend; the title names it. Tap a bar to read its day and count; the
- * last day (today) is selected at first.
+ * A count per day for the admin screens (audit L2b): visits on the Overview,
+ * AI calls on System health. One series, so one colour and no legend; the
+ * title names it. Tap a bar to read its day and count; the last day (today)
+ * is selected at first.
  */
-export const VisitsChart = ({ days }: { days: { date: string; total: number }[] }) => {
+export const VisitsChart = ({
+  days,
+  unit = { one: 'visit', many: 'visits' },
+}: {
+  days: { date: string; total: number }[];
+  /** What is counted, e.g. { one: 'AI call', many: 'AI calls' }. */
+  unit?: { one: string; many: string };
+}) => {
+  const word = (n: number) => (n === 1 ? unit.one : unit.many);
   const [selected, setSelected] = useState(days.length - 1);
   const max = Math.max(1, ...days.map((d) => d.total));
   const sum = days.reduce((n, d) => n + d.total, 0);
@@ -27,13 +36,13 @@ export const VisitsChart = ({ days }: { days: { date: string; total: number }[] 
       <View
         style={styles.readout}
         accessible
-        accessibilityLabel={`${sum} visits in the last ${days.length} days. ${days
+        accessibilityLabel={`${sum} ${word(sum)} in the last ${days.length} days. ${days
           .map((d) => `${dayLabel(d.date, { day: 'numeric', month: 'short' })}: ${d.total}`)
           .join(', ')}.`}
       >
         <Text style={styles.readoutValue}>{current.total}</Text>
         <Text style={styles.readoutLabel}>
-          {`${current.total === 1 ? 'visit' : 'visits'} on ${dayLabel(current.date, {
+          {`${word(current.total)} on ${dayLabel(current.date, {
             weekday: 'short',
             day: 'numeric',
             month: 'short',
@@ -50,9 +59,7 @@ export const VisitsChart = ({ days }: { days: { date: string; total: number }[] 
             style={styles.hit}
             onPress={() => setSelected(i)}
             accessibilityRole="button"
-            accessibilityLabel={`${dayLabel(d.date, { day: 'numeric', month: 'short' })}: ${d.total} ${
-              d.total === 1 ? 'visit' : 'visits'
-            }`}
+            accessibilityLabel={`${dayLabel(d.date, { day: 'numeric', month: 'short' })}: ${d.total} ${word(d.total)}`}
           >
             <View
               style={[

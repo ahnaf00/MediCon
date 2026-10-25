@@ -15,6 +15,7 @@
 //   GET  /admin/doctors?status=all&q=&online=1 → doctors directory (step 2)
 //   GET  /admin/visits?from=&to=&status= → visits on Dhaka days (view only, step 2)
 //   GET  /admin/visits/{id}
+// Step 3 (hospitals, system health) lives in adminSystemService.ts.
 // ─────────────────────────────────────────────────────────────────────────────
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
@@ -72,7 +73,8 @@ export const adminService = {
   },
 };
 
-const ADMIN_KEY = ['admin'];
+/** Every admin query starts with this, so one invalidation refreshes them all. */
+export const ADMIN_KEY = ['admin'];
 
 export const useAdminSummary = () =>
   useQuery({ queryKey: [...ADMIN_KEY, 'summary'], queryFn: adminService.summary });
@@ -90,7 +92,7 @@ export const useAdminDoctor = (id: string | undefined) =>
     enabled: !!id,
   });
 
-const useAdminMutation = <T>(fn: (arg: T) => Promise<void>) => {
+export const useAdminMutation = <T>(fn: (arg: T) => Promise<void>) => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: fn,
@@ -119,6 +121,8 @@ export interface AdminOverview {
   /** Oldest first; `date` is a Dhaka calendar day (YYYY-MM-DD). */
   visitsByDay: { date: string; total: number }[];
   transcripts: { failed: number };
+  jobs: { failed: number };
+  /** Every call to the AI service today, from any feature. */
   ai: { requestsToday: number };
   generatedAt: string;
 }
@@ -147,13 +151,25 @@ export interface AdminUserDetail extends AdminUser {
 }
 
 export type AuditAction =
-  'doctor.approved' | 'doctor.rejected' | 'user.suspended' | 'user.reactivated';
+  | 'doctor.approved'
+  | 'doctor.rejected'
+  | 'user.suspended'
+  | 'user.reactivated'
+  | 'hospital.created'
+  | 'hospital.updated'
+  | 'hospital.deactivated'
+  | 'hospital.reactivated'
+  | 'transcript.retried'
+  | 'job.retried'
+  | 'job.discarded';
+
+export type AuditTargetType = 'user' | 'hospital' | 'visit';
 
 export interface AuditEntry {
   id: number;
   action: AuditAction | string;
   admin: string | null;
-  target: { id: number; name: string } | null;
+  target: { type?: AuditTargetType; id: number; name: string } | null;
   reason: string | null;
   meta: Record<string, unknown> | null;
   at: string;
@@ -187,8 +203,12 @@ export const adminDashboardService = {
     await axiosClient.post(`/admin/users/${id}/reactivate`);
   },
 
-  auditLog: async (targetId?: string): Promise<AuditEntry[]> =>
-    getAllPages<AuditEntry>('/admin/audit-log', { target_id: targetId || undefined }),
+  /** Every action, or those on one target; the type defaults to an account. */
+  auditLog: async (targetId?: string, targetType?: AuditTargetType): Promise<AuditEntry[]> =>
+    getAllPages<AuditEntry>('/admin/audit-log', {
+      target_id: targetId || undefined,
+      target_type: targetId ? targetType : undefined,
+    }),
 };
 
 export const useAdminOverview = () =>
@@ -207,10 +227,10 @@ export const useAdminUser = (id: string | undefined) =>
     enabled: !!id,
   });
 
-export const useAuditLog = (targetId?: string) =>
+export const useAuditLog = (targetId?: string, targetType?: AuditTargetType) =>
   useQuery({
-    queryKey: [...ADMIN_KEY, 'audit-log', targetId ?? 'all'],
-    queryFn: () => adminDashboardService.auditLog(targetId),
+    queryKey: [...ADMIN_KEY, 'audit-log', targetType ?? 'user', targetId ?? 'all'],
+    queryFn: () => adminDashboardService.auditLog(targetId, targetType),
   });
 
 export const useSuspendUser = () => useAdminMutation(adminDashboardService.suspend);
@@ -242,6 +262,20 @@ export const describeAudit = (e: AuditEntry): string => {
       return `Suspended ${who}`;
     case 'user.reactivated':
       return `Reactivated ${who}`;
+    case 'hospital.created':
+      return `Added hospital ${who}`;
+    case 'hospital.updated':
+      return `Edited hospital ${who}`;
+    case 'hospital.deactivated':
+      return `Hid hospital ${who} from patients`;
+    case 'hospital.reactivated':
+      return `Showed hospital ${who} to patients again`;
+    case 'transcript.retried':
+      return `Retried the call transcript of ${e.target?.name ?? 'a visit'}`;
+    case 'job.retried':
+      return `Retried failed job ${String(e.meta?.job ?? '')}`.trim();
+    case 'job.discarded':
+      return `Discarded failed job ${String(e.meta?.job ?? '')}`.trim();
     default:
       return `${e.action} ${who}`;
   }
