@@ -37,6 +37,18 @@ export const PatientDashboard = (): React.JSX.Element => {
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity
+            onPress={() => router.push('/(app)/chat')}
+            hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.title', 'Messages')}
+          >
+            <MaterialCommunityIcons
+              name="message-text-outline"
+              size={24}
+              color={Colors.textSecondary}
+            />
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => router.push('/(app)/notifications')}
             hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
             accessibilityLabel={t('dashboard.notifications') || 'Notifications'}

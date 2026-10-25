@@ -72,6 +72,19 @@ export const DoctorDashboard = (): React.JSX.Element => {
           </View>
 
           <TouchableOpacity
+            onPress={() => router.push('/(app)/chat')}
+            hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.title', 'Messages')}
+          >
+            <MaterialCommunityIcons
+              name="message-text-outline"
+              size={24}
+              color={Colors.textSecondary}
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
             onPress={() => router.push('/(app)/settings/')}
             hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
             style={styles.profileIcon}

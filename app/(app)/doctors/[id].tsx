@@ -16,6 +16,7 @@ import { Colors, Spacing, BorderRadius, FontFamily, FontSize, Layout } from '@th
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { doctorsService, Doctor, DoctorExperienceEntry } from '@services/api/doctorsService';
 import { DoctorPhoto } from '../../../src/components/ui/DoctorPhoto';
+import { useOpenChat } from '../../../src/services/api/directChatService';
 
 // 2. TYPES
 
@@ -31,6 +32,16 @@ export default function DoctorDetailScreen(): React.JSX.Element {
   const [doctor, setDoctor] = useState<Doctor | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<ProfileTab>('info');
+  const openChat = useOpenChat();
+
+  // The server allows a chat only after a visit with this doctor; its message says so.
+  const messageDoctor = (doctorUserId: string): void => {
+    openChat.mutate(doctorUserId, {
+      onSuccess: (chat) => router.push(`/(app)/chat/${chat.id}`),
+      onError: (err: any) =>
+        Alert.alert('Messages', err?.message || 'Could not open the chat. Try again.'),
+    });
+  };
 
   useEffect(() => {
     const fetchDoctor = async (): Promise<void> => {
@@ -237,6 +248,22 @@ export default function DoctorDetailScreen(): React.JSX.Element {
 
       {/* ── Fixed Bottom Action Bar ──────────────────────────────────────── */}
       <View style={[styles.bottomBarContainer, { paddingBottom: Spacing.base + bottomInset }]}>
+        {/* Message the doctor (needs a visit with them) */}
+        <TouchableOpacity
+          style={styles.btnIcon}
+          onPress={() => messageDoctor(doctor.id)}
+          disabled={openChat.isPending}
+          activeOpacity={0.8}
+          accessibilityRole="button"
+          accessibilityLabel="Message doctor"
+        >
+          {openChat.isPending ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : (
+            <MaterialCommunityIcons name="message-text-outline" size={20} color={Colors.primary} />
+          )}
+        </TouchableOpacity>
+
         {/* Left — Book Appointment (white bg, primary border) */}
         <TouchableOpacity
           style={styles.btnOutline}
@@ -854,6 +881,16 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
     fontSize: FontSize.sm,
     color: Colors.surface,
+  },
+  btnIcon: {
+    width: Layout.buttonHeight,
+    height: Layout.buttonHeight,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.surface,
   },
   btnOutline: {
     flex: 1,

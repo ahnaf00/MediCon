@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Image,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
@@ -21,6 +22,7 @@ import {
 } from '../../../../src/services/api/patientsService';
 import { ApiAppointment, useAppointments } from '../../../../src/services/api/consultationsService';
 import { ConsultationPanel } from '../../../../src/components/medical/ConsultationPanel';
+import { useOpenChat } from '../../../../src/services/api/directChatService';
 
 /**
  * Which of this doctor's appointments with the patient the screen is about:
@@ -66,6 +68,7 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
   const { id, appointmentId } = useLocalSearchParams<{ id: string; appointmentId?: string }>();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const openChat = useOpenChat();
   const [patient, setPatient] = useState<ApiPatient | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePrescription, setActivePrescription] = useState<Prescription | null>(null);
@@ -342,6 +345,26 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
           accessibilityRole="button"
         >
           <MaterialCommunityIcons name="prescription" size={24} color={Colors.primary} />
+        </TouchableOpacity>
+        {/* Chat with this patient; the server allows it only with a visit together. */}
+        <TouchableOpacity
+          style={styles.circleBtn}
+          disabled={openChat.isPending || !id}
+          onPress={() =>
+            openChat.mutate(String(id), {
+              onSuccess: (chat) => router.push(`/(app)/chat/${chat.id}`),
+              onError: (err: any) =>
+                Alert.alert('Messages', err?.message || 'Could not open the chat. Try again.'),
+            })
+          }
+          accessibilityLabel="Message patient"
+          accessibilityRole="button"
+        >
+          {openChat.isPending ? (
+            <ActivityIndicator size="small" color={Colors.primary} />
+          ) : (
+            <MaterialCommunityIcons name="message-text-outline" size={24} color={Colors.primary} />
+          )}
         </TouchableOpacity>
         {/* Only for a video visit that can still be joined; the call screen's Join starts it. */}
         {appointment?.format === 'video' &&

@@ -637,5 +637,18 @@
     "ask_ai": "Ask AI about this consultation",
     "recent_consultation": "Recent consultation",
     "ask_ai_short": "Ask AI"
+  },
+  "chat": {
+    "title": "Messages",
+    "unknown": "Unknown",
+    "you": "You",
+    "noMessages": "No messages yet",
+    "loadError": "Could not load your messages.",
+    "empty": "No messages yet. After booking a visit you can message your doctor from their profile.",
+    "threadError": "Could not load this chat.",
+    "startHint": "Send a message to start the conversation.",
+    "sendError": "Message not sent. Try again.",
+    "placeholder": "Write a message",
+    "send": "Send"
   }
 }
