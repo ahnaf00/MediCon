@@ -18,7 +18,10 @@
   "notifications": {
     "notifications": "Notifications",
     "title": "Notifications",
-    "unavailable": "In-app notifications are not available yet. Medicine reminders you turn on still arrive as phone notifications."
+    "markAllRead": "Mark all read",
+    "loadError": "Could not load your notifications.",
+    "empty": "No notifications yet. Answers, messages, report results and visit reminders appear here while you use the app.",
+    "inAppOnly": "These appear only inside the app. Medicine reminders you turn on still arrive as phone notifications."
   },
   "appointmentcard": {
     "no_upcoming_appointments": "No upcoming appointments",

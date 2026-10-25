@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -35,8 +35,13 @@ export default function ChatThreadScreen() {
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const userId = useAuthStore((s) => s.userId);
-  const { data: chats } = useDirectChats();
+  const { data: chats, refetch: refetchChats } = useDirectChats();
   const chat = chats?.find((c) => c.id === id);
+
+  // Opened from a notification, the cached list may not have this chat yet.
+  useEffect(() => {
+    if (chats && !chat) refetchChats();
+  }, [chats, chat, refetchChats]);
   const { data: messages = [], isLoading, isError } = useChatMessages(id);
   const send = useSendChatMessage(id as string);
   const [draft, setDraft] = useState('');

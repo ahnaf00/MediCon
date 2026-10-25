@@ -1,5 +1,6 @@
 // 1. IMPORTS
 import React from 'react';
+import { NotificationBell } from '../ui/NotificationBell';
 import {
   View,
   Text,
@@ -48,13 +49,7 @@ export const PatientDashboard = (): React.JSX.Element => {
               color={Colors.textSecondary}
             />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push('/(app)/notifications')}
-            hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}
-            accessibilityLabel={t('dashboard.notifications') || 'Notifications'}
-          >
-            <MaterialCommunityIcons name="bell-outline" size={24} color={Colors.textSecondary} />
-          </TouchableOpacity>
+          <NotificationBell />
           <TouchableOpacity
             onPress={() => router.push('/(app)/settings/')}
             hitSlop={{ top: 10, right: 10, bottom: 10, left: 10 }}

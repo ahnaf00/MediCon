@@ -19,6 +19,7 @@ import { useDoctorPresence } from '../../services/api/presenceService';
 import { useDoctorDashboard } from '../../hooks/useDoctorDashboard';
 import { AppointmentQueueCard } from '../cards/AppointmentQueueCard';
 import { DoctorPhoto } from '../ui/DoctorPhoto';
+import { NotificationBell } from '../ui/NotificationBell';
 
 /** A stored fee such as "700.00" shown as "৳700". */
 const formatTaka = (value?: string | number | null): string =>
@@ -70,6 +71,8 @@ export const DoctorDashboard = (): React.JSX.Element => {
               />
             </TouchableOpacity>
           </View>
+
+          <NotificationBell />
 
           <TouchableOpacity
             onPress={() => router.push('/(app)/chat')}
