@@ -31,6 +31,7 @@ const ICONS: Record<NoticeKind, keyof typeof MaterialCommunityIcons.glyphMap> = 
   summary_shared: 'clipboard-text-outline',
   visit_reminder: 'calendar-clock',
   account_reviewed: 'shield-account-outline',
+  visit_cancelled: 'calendar-remove-outline',
   other: 'bell-outline',
 };
 

@@ -20,6 +20,7 @@ export type NoticeKind =
   | 'summary_shared'
   | 'visit_reminder'
   | 'account_reviewed'
+  | 'visit_cancelled'
   | 'other';
 
 export interface NoticeTarget {
@@ -60,6 +61,7 @@ export const noticeRoute = (n: AppNotice): string | null => {
       }
       return '/(app)/doctors/history';
     case 'account_reviewed':
+    case 'visit_cancelled':
       return '/(app)/(tabs)';
     default:
       return null;

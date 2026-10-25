@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, ScrollView, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Alert, View, ScrollView, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +11,7 @@ import { ProfileSettings } from '../../../src/components/settings/ProfileSetting
 import { LanguageSettings } from '../../../src/components/settings/LanguageSettings';
 import { DependentsSettings } from '../../../src/components/settings/DependentsSettings';
 import { DevSettings } from '../../../src/components/settings/DevSettings';
+import { accountService } from '../../../src/services/api/accountService';
 
 type ActiveSheet = 'profile' | 'dependents' | 'language' | 'dev' | null;
 
@@ -48,6 +49,20 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { t } = useTranslation();
   const logout = useAuthStore((s) => s.logout);
+  const role = useAuthStore((s) => s.role);
+  const [exporting, setExporting] = useState(false);
+
+  // Audit L3: a copy of everything the app holds about this person.
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await accountService.shareMyData();
+    } catch (e: any) {
+      Alert.alert('Download my data', e?.message || 'Could not download your data. Try again.');
+    } finally {
+      setExporting(false);
+    }
+  };
   const insets = useSafeAreaInsets();
   const [activeSheet, setActiveSheet] = useState<ActiveSheet>(null);
 
@@ -91,6 +106,24 @@ export default function SettingsScreen() {
             onPress={() => setActiveSheet('language')}
             isLast={true}
           />
+        </View>
+
+        <View style={styles.section}>
+          <MenuItem
+            icon="download-outline"
+            title={exporting ? 'Preparing your data…' : t('settings.export', 'Download my data')}
+            onPress={exporting ? undefined : handleExport}
+            isLast={role === 'admin'}
+          />
+          {role !== 'admin' && (
+            <MenuItem
+              icon="account-remove-outline"
+              title={t('settings.deleteAccount', 'Delete account')}
+              onPress={() => router.push('/(app)/settings/delete-account')}
+              isLast={true}
+              danger={true}
+            />
+          )}
         </View>
 
         {__DEV__ && (

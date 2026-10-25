@@ -20,6 +20,7 @@ import { AuthPhoneForm } from '../../../src/components/forms/AuthPhoneForm';
 import { AuthOTPForm } from '../../../src/components/forms/AuthOTPForm';
 import { useTranslation } from 'react-i18next';
 import { apiErrorMessage } from '../../../src/services/api/consultationsService';
+import { accountService, formatPurgeDate } from '../../../src/services/api/accountService';
 
 // 2. TYPES
 type LoginStep = 'phone_entry' | 'otp_entry';
@@ -52,7 +53,33 @@ export default function LoginScreen(): React.JSX.Element {
       authService.verifyOtp(phone, otp),
     onSuccess: (result, variables) => {
       setError(undefined);
-      if (result.isNewUser) {
+      if (result.accountDeleted && result.restoreToken) {
+        const restoreToken = result.restoreToken;
+        Alert.alert(
+          'This account was deleted',
+          `It will be removed for good on ${formatPurgeDate(result.purgeAt)}. Restore it now?`,
+          [
+            { text: 'Not now', style: 'cancel' },
+            {
+              text: 'Restore',
+              onPress: async () => {
+                try {
+                  const signedIn = await accountService.restore(restoreToken);
+                  login({
+                    token: signedIn.token,
+                    role: signedIn.user.role,
+                    status: signedIn.user.status,
+                    userId: String(signedIn.user.id),
+                  });
+                  router.replace('/(app)/(tabs)');
+                } catch (e) {
+                  setError(apiErrorMessage(e, 'Could not restore the account. Sign in again.'));
+                }
+              },
+            },
+          ],
+        );
+      } else if (result.isNewUser) {
         // Navigate to registration with phone param
         router.replace({
           pathname: '/(auth)/register',

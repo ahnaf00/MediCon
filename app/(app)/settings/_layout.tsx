@@ -20,6 +20,7 @@ export default function SettingsLayout() {
         name="index"
         options={{ headerShown: false, title: t('settings.title') || 'Settings' }}
       />
+      <Stack.Screen name="delete-account" options={{ headerShown: false }} />
     </Stack>
   );
 }

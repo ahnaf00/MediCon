@@ -53,7 +53,16 @@ export const authService = {
   async verifyOtp(
     phone: string,
     otp: string,
-  ): Promise<{ isNewUser: boolean; token?: string; user?: User; registrationToken?: string }> {
+  ): Promise<{
+    isNewUser: boolean;
+    token?: string;
+    user?: User;
+    registrationToken?: string;
+    /** A deleted account still in its 30-day grace period (audit L3). */
+    accountDeleted?: boolean;
+    purgeAt?: string | null;
+    restoreToken?: string;
+  }> {
     // Laravel API: POST /auth/verify-otp
     const response = (await axiosClient.post('/auth/verify-otp', {
       phone,
@@ -63,6 +72,15 @@ export const authService = {
     if (response.isNewUser) {
       // Single-use proof that this phone passed OTP; register() must send it back.
       return { isNewUser: true, registrationToken: response.registration_token };
+    }
+
+    if (response.accountDeleted) {
+      return {
+        isNewUser: false,
+        accountDeleted: true,
+        purgeAt: response.purgeAt ?? null,
+        restoreToken: response.restore_token,
+      };
     }
 
     // Response returns access_token and user object

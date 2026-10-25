@@ -516,6 +516,8 @@
   "settings": {
     "title": "Settings",
     "profile": "Profile",
+    "export": "Download my data",
+    "deleteAccount": "Delete account",
     "dependents": "Dependents",
     "dependentsUnavailable": "Adding family members is not available yet. Each person needs their own account for now.",
     "language": "Language",
