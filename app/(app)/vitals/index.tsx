@@ -13,6 +13,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -346,6 +348,10 @@ export default function VitalsScreen(): React.JSX.Element {
   const isMountedRef = useRef(true);
 
   const [vitals, setVitals] = useState<ApiVital[]>([]);
+  // Readings come 20 per page, newest first (task H3): the last page loaded and the last there is.
+  const [vitalsPage, setVitalsPage] = useState({ page: 1, lastPage: 1 });
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<AppError | null>(null);
@@ -370,8 +376,12 @@ export default function VitalsScreen(): React.JSX.Element {
   const loadData = useCallback(async (): Promise<void> => {
     try {
       setError(null);
-      const data = await vitalsService.getVitals();
-      if (isMountedRef.current) setVitals(data);
+      const first = await vitalsService.getVitalsPage(1);
+      if (isMountedRef.current) {
+        setVitals(first.items);
+        setVitalsPage({ page: first.page, lastPage: first.lastPage });
+        setLoadMoreFailed(false);
+      }
     } catch (err) {
       if (isMountedRef.current)
         setError(createAppError('NETWORK_ERROR', 'Unable to load vitals. Please try again.'));
@@ -389,6 +399,36 @@ export default function VitalsScreen(): React.JSX.Element {
       isMountedRef.current = false;
     };
   }, [loadData]);
+
+  // Next page of history when the user scrolls near the bottom. `retry` comes from the footer.
+  const loadMore = useCallback(
+    async (retry = false): Promise<void> => {
+      if (loadingMore || (loadMoreFailed && !retry) || vitalsPage.page >= vitalsPage.lastPage)
+        return;
+      setLoadMoreFailed(false);
+      setLoadingMore(true);
+      try {
+        const next = await vitalsService.getVitalsPage(vitalsPage.page + 1);
+        if (isMountedRef.current) {
+          setVitals((prev) => {
+            const seen = new Set(prev.map((v) => v.id));
+            return [...prev, ...next.items.filter((v) => !seen.has(v.id))];
+          });
+          setVitalsPage({ page: next.page, lastPage: next.lastPage });
+        }
+      } catch {
+        if (isMountedRef.current) setLoadMoreFailed(true);
+      } finally {
+        if (isMountedRef.current) setLoadingMore(false);
+      }
+    },
+    [loadingMore, loadMoreFailed, vitalsPage],
+  );
+
+  const onScroll = ({ nativeEvent }: NativeSyntheticEvent<NativeScrollEvent>): void => {
+    const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+    if (layoutMeasurement.height + contentOffset.y >= contentSize.height - 400) loadMore();
+  };
 
   const onRefresh = async (): Promise<void> => {
     setRefreshing(true);
@@ -535,6 +575,8 @@ export default function VitalsScreen(): React.JSX.Element {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={onScroll}
+        scrollEventThrottle={200}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -570,6 +612,17 @@ export default function VitalsScreen(): React.JSX.Element {
         ) : (
           vitals.map((v) => <HistoryRow key={v.id} vital={v} />)
         )}
+        {loadingMore ? (
+          <ActivityIndicator style={styles.listFooter} color={Colors.primary} />
+        ) : loadMoreFailed ? (
+          <TouchableOpacity
+            style={styles.listFooter}
+            onPress={() => loadMore(true)}
+            accessibilityRole="button"
+          >
+            <Text style={styles.listFooterText}>Couldn't load more. Tap to try again.</Text>
+          </TouchableOpacity>
+        ) : null}
 
         <View style={{ height: Spacing.xxl }} />
       </ScrollView>
@@ -900,5 +953,15 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     fontWeight: '700',
     color: Colors.surface,
+  },
+  listFooter: {
+    paddingVertical: Spacing.lg,
+    alignItems: 'center',
+  },
+  listFooterText: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.md,
+    color: Colors.primary,
+    textAlign: 'center',
   },
 });

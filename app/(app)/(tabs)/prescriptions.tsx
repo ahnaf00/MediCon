@@ -47,6 +47,10 @@ export default function PrescriptionsScreen(): React.JSX.Element {
 
   // ── List data ───────────────────────────────────────────────────────────────
   const [doctorRxs, setDoctorRxs] = useState<Prescription[]>([]);
+  // Doctor-issued prescriptions come 20 per page (task H3): the last page loaded and the last page there is.
+  const [rxPage, setRxPage] = useState({ page: 1, lastPage: 1 });
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
   const [uploadedRxs, setUploadedRxs] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -68,10 +72,11 @@ export default function PrescriptionsScreen(): React.JSX.Element {
       setError(null);
       // Doctor-issued prescriptions (role-filtered by the backend) and, for
       // patients, their uploaded paper prescriptions (task 1.7).
-      const [issued, uploads] = await Promise.all([
-        prescriptionsService.getPrescriptions(),
+      const [issuedPage, uploads] = await Promise.all([
+        prescriptionsService.getPrescriptionsPage({}, 1),
         isPatient ? prescriptionUploadsService.getUploads() : Promise.resolve([]),
       ]);
+      const issued = issuedPage.items;
       // A prescription the doctor cancelled must not keep reminding (audit G1).
       if (isPatient)
         useReminderStore
@@ -80,6 +85,8 @@ export default function PrescriptionsScreen(): React.JSX.Element {
           .catch(() => {});
       if (isMountedRef.current) {
         setDoctorRxs(issued);
+        setRxPage({ page: issuedPage.page, lastPage: issuedPage.lastPage });
+        setLoadMoreFailed(false);
         setUploadedRxs(uploads.map(uploadToPrescription));
       }
     } catch (err) {
@@ -112,6 +119,38 @@ export default function PrescriptionsScreen(): React.JSX.Element {
       if (hasFocusedRef.current) loadData();
       hasFocusedRef.current = true;
     }, [loadData]),
+  );
+
+  // Next page of doctor-issued prescriptions when the list nears its end.
+  // `retry` is true only from the "tap to try again" footer (onEndReached passes an object).
+  const loadMoreRx = useCallback(
+    async (retry?: unknown): Promise<void> => {
+      const failedBefore = loadMoreFailed && retry !== true;
+      if (activeTab !== 'doctors' || loadingMore || failedBefore || rxPage.page >= rxPage.lastPage)
+        return;
+      setLoadMoreFailed(false);
+      setLoadingMore(true);
+      try {
+        const next = await prescriptionsService.getPrescriptionsPage({}, rxPage.page + 1);
+        if (isPatient)
+          useReminderStore
+            .getState()
+            .dropCancelled(next.items)
+            .catch(() => {});
+        if (isMountedRef.current) {
+          setDoctorRxs((prev) => {
+            const seen = new Set(prev.map((p) => String(p.id)));
+            return [...prev, ...next.items.filter((p) => !seen.has(String(p.id)))];
+          });
+          setRxPage({ page: next.page, lastPage: next.lastPage });
+        }
+      } catch {
+        if (isMountedRef.current) setLoadMoreFailed(true);
+      } finally {
+        if (isMountedRef.current) setLoadingMore(false);
+      }
+    },
+    [activeTab, loadingMore, loadMoreFailed, rxPage, isPatient],
   );
 
   const onRefresh = async (): Promise<void> => {
@@ -330,6 +369,21 @@ export default function PrescriptionsScreen(): React.JSX.Element {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={activeTab === 'doctors' ? renderEmptyDoctor() : renderEmptyUploads()}
+          onEndReached={loadMoreRx}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            activeTab !== 'doctors' ? null : loadingMore ? (
+              <ActivityIndicator style={styles.listFooter} color={Colors.primary} />
+            ) : loadMoreFailed ? (
+              <TouchableOpacity
+                style={styles.listFooter}
+                onPress={() => loadMoreRx(true)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.listFooterText}>Couldn't load more. Tap to try again.</Text>
+              </TouchableOpacity>
+            ) : null
+          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -668,5 +722,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  listFooter: {
+    paddingVertical: Spacing.lg,
+    alignItems: 'center',
+  },
+  listFooterText: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.md,
+    color: Colors.primary,
+    textAlign: 'center',
   },
 });

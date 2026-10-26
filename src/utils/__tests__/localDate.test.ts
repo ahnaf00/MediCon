@@ -1,4 +1,4 @@
-import { fromLocalDateString, toLocalDateString } from '../localDate';
+import { fromLocalDateString, localDayBounds, toLocalDateString } from '../localDate';
 
 describe('fromLocalDateString', () => {
   it('returns local midnight of the printed date', () => {
@@ -31,5 +31,16 @@ describe('toLocalDateString', () => {
 
   it('uses the local date just after midnight, not the UTC date', () => {
     expect(toLocalDateString(new Date(2026, 9, 4, 0, 30))).toBe('2026-10-04');
+  });
+});
+
+describe('localDayBounds (H3)', () => {
+  it('spans the local calendar day, whatever the time of day', () => {
+    const late = new Date(2026, 9, 26, 23, 30);
+    const { from, to } = localDayBounds(late);
+
+    expect(new Date(from).getTime()).toBe(new Date(2026, 9, 26).getTime());
+    expect(new Date(to).getTime()).toBe(new Date(2026, 9, 27).getTime());
+    expect(toLocalDateString(new Date(from))).toBe('2026-10-26');
   });
 });

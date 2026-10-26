@@ -159,8 +159,10 @@ export const pickNextMedicine = (
  * next medication period from the patient's active prescriptions.
  */
 export const usePatientDashboard = (): PatientDashboardData => {
-  const appointments = useAppointments();
-  const prescriptions = usePrescriptions();
+  // Only scheduled and running visits, soonest first (task H3).
+  const appointments = useAppointments({ when: 'upcoming' });
+  // Only active prescriptions feed the next-medicine widget (task H3).
+  const prescriptions = usePrescriptions({ status: 'active' });
 
   // The home tab stays mounted, so refresh when it regains focus.
   const refetchAppointments = appointments.refetch;

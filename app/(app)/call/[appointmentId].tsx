@@ -44,7 +44,7 @@ import {
 } from 'livekit-client';
 import { BorderRadius, Colors, FontFamily, FontSize, Spacing } from '../../../src/theme';
 import { useAuthStore } from '../../../src/store';
-import { apiErrorMessage, useAppointments } from '../../../src/services/api/consultationsService';
+import { apiErrorMessage, useAppointment } from '../../../src/services/api/consultationsService';
 import {
   type CallSession,
   useCallConsent,
@@ -65,8 +65,8 @@ export default function CallScreen() {
   const [serverRole, setServerRole] = useState<Role | null>(null);
   const role = serverRole ?? storedRole;
 
-  const { data: appointments } = useAppointments();
-  const appointment = appointments?.find((a) => String(a.id) === String(appointmentId));
+  // Only this visit, not the whole list (task H3).
+  const { data: appointment } = useAppointment(appointmentId);
   const otherName =
     (role === 'doctor' ? appointment?.patient?.name : appointment?.doctor?.name) ?? null;
 

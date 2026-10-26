@@ -20,7 +20,11 @@ import {
   ApiPatient,
   splitProfileList,
 } from '../../../../src/services/api/patientsService';
-import { ApiAppointment, useAppointments } from '../../../../src/services/api/consultationsService';
+import {
+  ApiAppointment,
+  useAppointment,
+  useAppointments,
+} from '../../../../src/services/api/consultationsService';
 import { ConsultationPanel } from '../../../../src/components/medical/ConsultationPanel';
 import { useOpenChat } from '../../../../src/services/api/directChatService';
 
@@ -76,8 +80,13 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
   // review the medicine explanations the patient reads (audit G4).
   const [patientPrescriptions, setPatientPrescriptions] = useState<Prescription[]>([]);
   const [loadingPrescription, setLoadingPrescription] = useState(true);
-  const appointments = useAppointments();
-  const appointment = pickAppointment(appointments.data, id, appointmentId);
+  // With a visit id: that visit. Without: this patient's visits only, newest 50 (task H3).
+  const visitById = useAppointment(appointmentId);
+  const patientVisits = useAppointments({ patientUserId: id }, !appointmentId && !!id);
+  const appointments = appointmentId ? visitById : patientVisits;
+  const appointment = appointmentId
+    ? (visitById.data ?? null)
+    : pickAppointment(patientVisits.data, id, undefined);
 
   useEffect(() => {
     let isMounted = true;
@@ -107,7 +116,8 @@ export default function DoctorConsultationScreen(): React.JSX.Element {
       let isMounted = true;
       const fetchPrescriptions = async () => {
         try {
-          const data = await prescriptionsService.getPrescriptions();
+          // Only this patient's prescriptions from this doctor (task H3).
+          const data = await prescriptionsService.getAllPrescriptions({ patientUserId: id });
           // Since we don't have a specific endpoint for patient's active meds,
           // we'll try to find the latest prescription for this patient (optional feature)
           if (isMounted) {

@@ -20,6 +20,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
+import { getAllPages, getPage, mapPage, type Page } from './pagination';
 import { AllergyConflict, Prescription } from '../../types/medical.types';
 import { toDosePattern } from '../../utils/prescriptionFormatters';
 
@@ -133,6 +134,19 @@ export interface StorePrescriptionPayload {
 
 // ─── Mapper Function ────────────────────────────────────────────────────────────
 
+/** Filters for GET /prescriptions (task H3). The server scopes to the caller first. */
+export interface PrescriptionFilters {
+  status?: 'active' | 'completed' | 'cancelled';
+  patientUserId?: number | string;
+}
+
+const toRxParams = (filters: PrescriptionFilters): Record<string, unknown> => {
+  const params: Record<string, unknown> = {};
+  if (filters.status) params.status = filters.status;
+  if (filters.patientUserId) params.patient_user_id = filters.patientUserId;
+  return params;
+};
+
 const mapApiToPrescription = (api: ApiPrescription): Prescription => {
   return {
     id: api.id.toString(),
@@ -172,14 +186,30 @@ const mapApiToPrescription = (api: ApiPrescription): Prescription => {
 
 export const prescriptionsService = {
   /**
-   * Goal: Retrieve all prescriptions visible to the authenticated user.
+   * One page (20) of the prescriptions visible to the authenticated user, newest first.
    * How: GET /api/v1/prescriptions — backend role-filters automatically:
    *      patients receive prescriptions issued to them,
    *      doctors receive prescriptions they have issued.
    */
-  getPrescriptions: async (): Promise<Prescription[]> => {
-    const res = (await axiosClient.get('/prescriptions')) as any;
-    const items = Array.isArray(res) ? res : (res?.data ?? []);
+  getPrescriptionsPage: async (
+    filters: PrescriptionFilters = {},
+    page = 1,
+  ): Promise<Page<Prescription>> => {
+    return mapPage(
+      await getPage<ApiPrescription>('/prescriptions', toRxParams(filters), page),
+      mapApiToPrescription,
+    );
+  },
+
+  /**
+   * Every prescription matching `filters` (e.g. only active ones, or one patient's), read
+   * 50 per page and capped by getAllPages. For short, filtered lists only (task H3).
+   */
+  getAllPrescriptions: async (filters: PrescriptionFilters = {}): Promise<Prescription[]> => {
+    const items = await getAllPages<ApiPrescription>('/prescriptions', {
+      ...toRxParams(filters),
+      per_page: 50,
+    });
     return items.map(mapApiToPrescription);
   },
 
@@ -242,11 +272,11 @@ export const prescriptionsService = {
 
 // ─── TanStack Query v5 Hooks ──────────────────────────────────────────────────
 
-/** Fetch and cache all prescriptions for the current user. */
-export const usePrescriptions = () =>
+/** Fetch and cache the current user's prescriptions matching `filters` (task H3). */
+export const usePrescriptions = (filters: PrescriptionFilters = {}) =>
   useQuery({
-    queryKey: ['prescriptions'],
-    queryFn: prescriptionsService.getPrescriptions,
+    queryKey: ['prescriptions', 'list', filters],
+    queryFn: () => prescriptionsService.getAllPrescriptions(filters),
   });
 
 /** Fetch a single prescription by ID. Only runs when id is truthy. */

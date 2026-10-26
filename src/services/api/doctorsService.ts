@@ -166,12 +166,12 @@ export const doctorsService = {
   },
 
   /**
-   * Retrieves the current user's consultation history.
-   * Based on Laravel routes: GET /appointments
+   * One page of the current user's consultation history, newest first
+   * (GET /appointments, 20 per page; task H3).
    */
-  getConsultationHistory: async (): Promise<ConsultationHistoryItem[]> => {
-    const appointments = (await axiosClient.get('/appointments')) as any;
-    return appointments.map((appt: any) => ({
+  getConsultationHistoryPage: async (page = 1): Promise<Page<ConsultationHistoryItem>> => {
+    const appointments = await getPage<any>('/appointments', {}, page);
+    return mapPage(appointments, (appt: any) => ({
       id: appt.id.toString(),
       doctorId: appt.doctor?.id?.toString() || '',
       doctorName: appt.doctor?.name || 'Doctor',

@@ -34,7 +34,8 @@ export default function InteractionCheckerScreen() {
     let isMounted = true;
     (async () => {
       try {
-        const prescriptions = await prescriptionsService.getPrescriptions();
+        // Current medicines = active prescriptions only (task H3).
+        const prescriptions = await prescriptionsService.getAllPrescriptions({ status: 'active' });
         if (isMounted) {
           const meds = prescriptions.flatMap((p) =>
             p.medicines.map((m) => ({ id: String(m.id), name: m.name })),

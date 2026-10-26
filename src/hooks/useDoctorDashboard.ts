@@ -4,7 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { dashboardService, DoctorDashboardStats } from '../services/api/dashboardService';
 import { ApiAppointment, useAppointments } from '../services/api/consultationsService';
-import { fromLocalDateString, toLocalDateString } from '../utils/localDate';
+import { fromLocalDateString, localDayBounds, toLocalDateString } from '../utils/localDate';
 
 // 2. TYPES
 export interface DoctorQueueAppointment {
@@ -80,7 +80,9 @@ export const useDoctorDashboard = (): DoctorDashboardData => {
     queryKey: ['doctor-dashboard'],
     queryFn: dashboardService.getDoctorStats,
   });
-  const appointmentsQuery = useAppointments();
+  // Only today's visits (the device's calendar day), not the whole list (task H3).
+  const { from, to } = localDayBounds(new Date());
+  const appointmentsQuery = useAppointments({ from, to });
 
   // New bookings and status changes happen elsewhere; refresh on returning to the
   // dashboard and once a minute while it is on screen (no push notifications yet).

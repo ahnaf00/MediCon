@@ -1,12 +1,14 @@
 // 1. IMPORTS
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors, Spacing, FontFamily, FontSize } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { doctorsService, ConsultationHistoryItem } from '../../../src/services/api/doctorsService';
+import { nextPageParam } from '../../../src/services/api/pagination';
 import { DoctorCard } from '../../../src/components/cards/DoctorCard';
 import { apiErrorMessage } from '../../../src/utils/errors';
 import { appointmentsService } from '../../../src/services/api/appointmentsService';
@@ -22,44 +24,46 @@ export default function ConsultationHistoryScreen(): React.JSX.Element {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
-  const [history, setHistory] = useState<ConsultationHistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  // 20 visits per page, newest first; the next page loads near the end (task H3).
+  // A failed background refresh keeps the list already shown.
+  const {
+    data,
+    isLoading: loading,
+    isError,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+  } = useInfiniteQuery({
+    queryKey: ['appointments', 'history'],
+    queryFn: ({ pageParam }) => doctorsService.getConsultationHistoryPage(pageParam),
+    initialPageParam: 1,
+    getNextPageParam: nextPageParam,
+    // No push notifications yet: while a video visit may be about to start, re-check every
+    // 15 s so "Join video call" appears without a manual refresh.
+    refetchInterval: (query) =>
+      query.state.data?.pages.some((p) =>
+        p.items.some((h) =>
+          isAwaitingVideoStart({ format: h.format, status: h.status, datetime: h.startsAt }),
+        ),
+      )
+        ? 15_000
+        : false,
+  });
 
-  const fetchHistory = useCallback(async (silent = false) => {
-    try {
-      if (!silent) setLoading(true);
-      const data = await doctorsService.getConsultationHistory();
-      setHistory(data);
-    } catch {
-      // A failed background refresh keeps the list already shown.
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, []);
+  const history = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
+  const fetchHistory = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
-  useEffect(() => {
-    // Fetch on mount; the state updates happen once the request settles.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchHistory();
-  }, [fetchHistory]);
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
 
   // Coming back to this screen: statuses may have changed (e.g. the doctor started a call).
-  useFocusEffect(
-    useCallback(() => {
-      fetchHistory(true);
-    }, [fetchHistory]),
-  );
-
-  // No push notifications yet: while a video visit may be about to start, re-check every
-  // 15 s so "Join video call" appears without a manual refresh.
-  const awaitingStart = history.some((h) =>
-    isAwaitingVideoStart({ format: h.format, status: h.status, datetime: h.startsAt }),
-  );
-  useEffect(() => {
-    if (!awaitingStart) return;
-    const timer = setInterval(() => fetchHistory(true), 15_000);
-    return () => clearInterval(timer);
-  }, [awaitingStart, fetchHistory]);
+  useFocusEffect(fetchHistory);
 
   const handleCancel = useCallback(
     (id: string) => {
@@ -78,7 +82,7 @@ export default function ConsultationHistoryScreen(): React.JSX.Element {
                 'Not cancelled',
                 apiErrorMessage(error, 'Failed to cancel appointment. Please try again.'),
               );
-              fetchHistory(true);
+              fetchHistory();
             }
           },
         },
@@ -133,6 +137,16 @@ export default function ConsultationHistoryScreen(): React.JSX.Element {
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
         </View>
+      ) : isError && history.length === 0 ? (
+        <View style={styles.centerContainer}>
+          <MaterialCommunityIcons name="wifi-off" size={48} color={Colors.textTertiary} />
+          <Text style={styles.emptyText}>
+            {t('history.load_failed', "Couldn't load your visits. Check your connection.")}
+          </Text>
+          <TouchableOpacity style={styles.exploreButton} onPress={fetchHistory}>
+            <Text style={styles.exploreButtonText}>{t('common.retry', 'Try again')}</Text>
+          </TouchableOpacity>
+        </View>
       ) : history.length === 0 ? (
         <View style={styles.centerContainer}>
           <MaterialCommunityIcons name="history" size={48} color={Colors.textTertiary} />
@@ -161,6 +175,25 @@ export default function ConsultationHistoryScreen(): React.JSX.Element {
             { paddingBottom: Math.max(insets.bottom, Spacing.md) },
           ]}
           showsVerticalScrollIndicator={false}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          refreshing={isRefetching && !isFetchingNextPage}
+          onRefresh={fetchHistory}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator style={styles.footer} color={Colors.primary} />
+            ) : isFetchNextPageError ? (
+              <TouchableOpacity
+                style={styles.footer}
+                onPress={() => fetchNextPage()}
+                accessibilityRole="button"
+              >
+                <Text style={styles.retryText}>
+                  {t('history.load_more_failed', "Couldn't load more. Tap to try again.")}
+                </Text>
+              </TouchableOpacity>
+            ) : null
+          }
         />
       )}
     </View>
@@ -294,5 +327,15 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.bold,
     fontSize: FontSize.md,
     color: Colors.surface,
+  },
+  footer: {
+    paddingVertical: Spacing.lg,
+    alignItems: 'center',
+  },
+  retryText: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.md,
+    color: Colors.primary,
+    textAlign: 'center',
   },
 });

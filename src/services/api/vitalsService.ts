@@ -1,4 +1,5 @@
 import { axiosClient } from './axiosClient';
+import { getPage, mapPage, type Page } from './pagination';
 import { ApiVital } from '../../types/medical.types';
 
 // ─── Payload Types ─────────────────────────────────────────────────────────────
@@ -27,13 +28,11 @@ const mapApiToVital = (api: any): ApiVital => ({
 
 export const vitalsService = {
   /**
-   * Fetch all vitals for the authenticated patient.
+   * One page (20) of the authenticated patient's vitals, newest first (task H3).
    * GET /api/v1/vitals — ordered by logged_at desc on backend.
    */
-  getVitals: async (): Promise<ApiVital[]> => {
-    const res = (await axiosClient.get('/vitals')) as any;
-    const items = Array.isArray(res) ? res : (res?.data ?? []);
-    return items.map(mapApiToVital);
+  getVitalsPage: async (page = 1): Promise<Page<ApiVital>> => {
+    return mapPage(await getPage<any>('/vitals', {}, page), mapApiToVital);
   },
 
   /**

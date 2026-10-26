@@ -1,7 +1,8 @@
 // src/services/api/consultationsService.ts
 // ─────────────────────────────────────────────────────────────────────────────
 // Appointment lifecycle + consultation summaries.
-//   GET   /appointments                              → the caller's appointments
+//   GET   /appointments                              → the caller's appointments (paged, H3)
+//   GET   /appointments/{id}                         → one appointment, either participant
 //   PATCH /appointments/{id}/status                  → doctor: in_progress | completed | no_show
 //   GET   /consultations/{appointmentId}/summary     → either participant
 //   PUT   /consultations/{appointmentId}/summary     → the appointment's doctor
@@ -9,6 +10,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { axiosClient } from './axiosClient';
 import { appointmentsService } from './appointmentsService';
+import { getPage, type Page } from './pagination';
 
 export type AppointmentStatus =
   | 'scheduled'
@@ -18,6 +20,16 @@ export type AppointmentStatus =
   | 'no_show'
   // Nobody started it within its window (audit F10).
   | 'expired';
+
+/** Filters for GET /appointments (task H3). `from`/`to` are ISO-8601 instants. */
+export interface AppointmentFilters {
+  when?: 'upcoming' | 'past';
+  status?: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'expired';
+  patientUserId?: number | string;
+  from?: string;
+  to?: string;
+  perPage?: number;
+}
 
 export interface ApiAppointment {
   id: number;
@@ -94,9 +106,24 @@ export interface ConsultationSummaryInput {
 export { apiErrorMessage } from '../../utils/errors';
 
 export const consultationsService = {
-  getAppointments: async (): Promise<ApiAppointment[]> => {
-    const res = (await axiosClient.get('/appointments')) as unknown;
-    return Array.isArray(res) ? (res as ApiAppointment[]) : [];
+  /**
+   * One page of the caller's visits (GET /appointments, task H3). Without `when` the list is
+   * newest first; `when: 'upcoming'` and a from/to window are soonest first.
+   */
+  getAppointmentsPage: async (
+    filters: AppointmentFilters = {},
+    page = 1,
+  ): Promise<Page<ApiAppointment>> => {
+    const { patientUserId, perPage, ...rest } = filters;
+    const params: Record<string, unknown> = { ...rest };
+    if (patientUserId) params.patient_user_id = patientUserId;
+    if (perPage) params.per_page = perPage;
+    return getPage<ApiAppointment>('/appointments', params, page);
+  },
+
+  /** GET /appointments/{id}: one visit, for either person in it. */
+  getAppointment: async (id: number | string): Promise<ApiAppointment> => {
+    return (await axiosClient.get(`/appointments/${id}`)) as unknown as ApiAppointment;
   },
 
   getConsultation: async (appointmentId: number | string): Promise<ConsultationDetails> => {
@@ -137,19 +164,37 @@ export const isAwaitingVideoStart = (
   return now >= start - LIVE_WINDOW_BEFORE_MS && now <= start + LATE_START_GRACE_MS;
 };
 
-export const useAppointments = () =>
+/**
+ * The first page (up to 50) of the caller's visits matching `filters`. Each screen asks only
+ * for what it shows: upcoming visits, one day, one patient (task H3).
+ */
+export const useAppointments = (filters: AppointmentFilters = {}, enabled = true) =>
   useQuery({
-    queryKey: ['appointments'],
-    queryFn: () => consultationsService.getAppointments(),
+    queryKey: ['appointments', 'list', filters],
+    queryFn: async () =>
+      (await consultationsService.getAppointmentsPage({ perPage: 50, ...filters })).items,
+    enabled,
     refetchInterval: (query) =>
       query.state.data?.some((a) => isAwaitingVideoStart(a)) ? LIVE_POLL_MS : false,
   });
 
-/** The caller's most recent completed consultation that has a doctor's summary, or null. */
+/** One visit by id (the call screen). */
+export const useAppointment = (id: number | string | undefined) =>
+  useQuery({
+    queryKey: ['appointments', 'one', String(id)],
+    queryFn: () => consultationsService.getAppointment(id!),
+    enabled: !!id,
+  });
+
+/**
+ * The caller's most recent completed consultation that has a doctor's summary, or null.
+ * Looks at the 20 most recent completed visits.
+ */
 export const useRecentConsultation = () =>
   useQuery({
-    queryKey: ['appointments'],
-    queryFn: () => consultationsService.getAppointments(),
+    queryKey: ['appointments', 'list', { status: 'completed' }],
+    queryFn: async () =>
+      (await consultationsService.getAppointmentsPage({ status: 'completed' })).items,
     select: (appointments): ApiAppointment | null =>
       appointments
         .filter((a) => a.status === 'completed' && a.hasSummary)

@@ -25,3 +25,13 @@ export const fromLocalDateString = (value: string): Date | null => {
     ? date
     : null;
 };
+
+/**
+ * The device's local calendar day as two instants, [start, next day's start), for asking the
+ * server for "today's" visits (task H3). Built from local midnights, then sent as UTC instants.
+ */
+export const localDayBounds = (date: Date): { from: string; to: string } => {
+  const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+  return { from: start.toISOString(), to: end.toISOString() };
+};

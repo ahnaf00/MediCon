@@ -36,8 +36,9 @@ export default function DoctorsScreen(): React.JSX.Element {
     isLoading: historyLoading,
     refetch: refetchHistory,
   } = useQuery({
-    queryKey: ['consultationHistory'],
-    queryFn: doctorsService.getConsultationHistory,
+    // The 20 most recent visits, newest first (task H3); "view all" opens the full history.
+    queryKey: ['appointments', 'history-preview'],
+    queryFn: async () => (await doctorsService.getConsultationHistoryPage(1)).items,
     // While a video visit may be about to start, re-check so "Join video call" appears.
     refetchInterval: (query) =>
       query.state.data?.some((h) =>

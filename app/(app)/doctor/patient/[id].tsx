@@ -28,7 +28,7 @@ export default function PatientDetailScreen() {
   // GET /patients/{id}: the server only answers for a patient who has booked with this doctor.
   const { data: patient, isLoading } = usePatient(id);
   // The server returns only prescriptions this doctor wrote; keep this patient's.
-  const prescriptionsQuery = usePrescriptions();
+  const prescriptionsQuery = usePrescriptions({ patientUserId: id });
   const prescriptions = (prescriptionsQuery.data ?? []).filter(
     (p) => String(p.patient?.id) === String(id),
   );
