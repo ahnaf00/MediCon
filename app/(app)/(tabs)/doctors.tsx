@@ -47,13 +47,14 @@ export default function DoctorsScreen(): React.JSX.Element {
         : false,
   });
 
+  // The server sends only doctors online right now: the first 20, A-Z (task H3).
   const {
-    data: doctors = [],
+    data: onlinePage,
     isLoading: doctorsLoading,
     refetch: refetchDoctors,
   } = useQuery({
-    queryKey: ['doctors'],
-    queryFn: () => doctorsService.getDoctors(),
+    queryKey: ['doctors', 'online'],
+    queryFn: () => doctorsService.getDoctorsPage({ online: true }),
   });
 
   // Statuses and who is online change while the app is open; refresh on returning here.
@@ -64,8 +65,7 @@ export default function DoctorsScreen(): React.JSX.Element {
     }, [refetchHistory, refetchDoctors]),
   );
 
-  // Since we only want online doctors here:
-  const onlineDoctors = doctors.filter((doc) => doc.isOnline);
+  const onlineDoctors = onlinePage?.items ?? [];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

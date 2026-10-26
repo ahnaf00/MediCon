@@ -1,4 +1,5 @@
 import { axiosClient } from './axiosClient';
+import { getPage, mapPage, type Page } from './pagination';
 import { DoctorProfile } from '../../types/medical.types';
 import type { ImageSourcePropType } from 'react-native';
 import { toLocalDateString } from '../../utils/localDate';
@@ -92,14 +93,18 @@ export const doctorsService = {
   },
 
   /**
-   * Retrieves a list of doctors, optionally filtered by category
+   * One page of verified doctors, A-Z (GET /doctors, 20 per page; task H3).
+   * `specialty` filters by category; `online` keeps only doctors online right now.
    */
-  getDoctors: async (categoryId?: string): Promise<Doctor[]> => {
-    // Laravel API: GET /doctors
-    const params = categoryId ? { specialty: categoryId } : {};
-    const doctors = (await axiosClient.get('/doctors', { params })) as any;
+  getDoctorsPage: async (
+    options: { specialty?: string; online?: boolean; page?: number } = {},
+  ): Promise<Page<Doctor>> => {
+    const params: Record<string, unknown> = {};
+    if (options.specialty) params.specialty = options.specialty;
+    if (options.online) params.online = 1;
+    const page = await getPage<any>('/doctors', params, options.page ?? 1);
     // Map backend UserResource with nested doctorProfile to frontend Doctor interface
-    return doctors.map((doc: any, index: number) => ({
+    return mapPage(page, (doc: any) => ({
       id: doc.id.toString(),
       fullName: doc.name,
       department: doc.doctorProfile?.specialty || 'General',
@@ -120,6 +125,11 @@ export const doctorsService = {
       // Server-computed: the doctor's toggle is on and their app has checked in recently.
       isOnline: doc.doctorProfile?.isOnline === true,
       image: doc.avatarUrl ? { uri: doc.avatarUrl } : undefined,
+      // Filled the same way as getDoctorDetails so the list items are complete Doctors.
+      userId: doc.id.toString(),
+      licenseNumber: 'N/A',
+      reviewCount: 0,
+      about: doc.doctorProfile?.bio || '',
     }));
   },
 

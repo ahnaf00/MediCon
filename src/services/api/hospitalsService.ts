@@ -1,5 +1,6 @@
 import { Hospital } from '../../types/medical.types';
 import { axiosClient } from './axiosClient';
+import { getPage, mapPage, type Page } from './pagination';
 
 interface ApiHospital {
   id: string | number;
@@ -23,17 +24,14 @@ const toHospital = (h: ApiHospital): Hospital => ({
 });
 
 export const hospitalsService = {
-  /** GET /hospitals (?search= matches name or address). */
-  async getNearbyHospitals(search?: string): Promise<Hospital[]> {
+  /** One page of GET /hospitals, A-Z, 20 per page (?search= matches name or address; task H3). */
+  async getHospitalsPage(search?: string, page = 1): Promise<Page<Hospital>> {
     const params = search?.trim() ? { search: search.trim() } : {};
-    const response = (await axiosClient.get('/hospitals', { params })) as ApiHospital[];
-    return response.map(toHospital);
+    return mapPage(await getPage<ApiHospital>('/hospitals', params, page), toHospital);
   },
 
-  /** There is no GET /hospitals/{id}; find it in the list. */
+  /** GET /hospitals/{id}: one visible hospital (404 if hidden or unknown). */
   async getHospitalDetails(id: string): Promise<Hospital> {
-    const hospital = (await hospitalsService.getNearbyHospitals()).find((h) => h.id === id);
-    if (!hospital) throw new Error('Hospital not found');
-    return hospital;
+    return toHospital((await axiosClient.get(`/hospitals/${id}`)) as unknown as ApiHospital);
   },
 };

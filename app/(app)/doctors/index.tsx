@@ -1,12 +1,14 @@
 // 1. IMPORTS
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Colors, Spacing, FontFamily, FontSize } from '@theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { FlashList } from '@shopify/flash-list';
 import { doctorsService, Doctor } from '../../../src/services/api/doctorsService';
+import { nextPageParam } from '../../../src/services/api/pagination';
 import { DoctorCard } from '../../../src/components/cards/DoctorCard';
 import { useTranslation } from 'react-i18next';
 
@@ -20,21 +22,30 @@ export default function DoctorsListScreen(): React.JSX.Element {
   const { category } = useLocalSearchParams<{ category?: string }>();
   const insets = useSafeAreaInsets();
 
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [loading, setLoading] = useState(true);
+  // 20 doctors per page; the next page loads as the list nears the end (task H3).
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+  } = useInfiniteQuery({
+    queryKey: ['doctors', 'list', category ?? 'all'],
+    queryFn: ({ pageParam }) =>
+      doctorsService.getDoctorsPage({ specialty: category, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: nextPageParam,
+  });
 
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        setLoading(true);
-        const data = await doctorsService.getDoctors(category);
-        setDoctors(data);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchDoctors();
-  }, [category]);
+  const doctors = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
+
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
 
   const renderItem = useCallback(
     ({ item }: { item: Doctor }) => (
@@ -67,13 +78,25 @@ export default function DoctorsListScreen(): React.JSX.Element {
           >
             <MaterialCommunityIcons name="arrow-left" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>{category ? category : 'Online Doctors'}</Text>
+          <Text style={styles.headerTitle}>
+            {category ? category : t('doctors.all_doctors', 'All Doctors')}
+          </Text>
         </View>
       </View>
 
-      {loading ? (
+      {isLoading ? (
         <View style={styles.centerContainer}>
           <ActivityIndicator size="large" color={Colors.primary} />
+        </View>
+      ) : isError && doctors.length === 0 ? (
+        <View style={styles.centerContainer}>
+          <MaterialCommunityIcons name="wifi-off" size={48} color={Colors.textTertiary} />
+          <Text style={styles.emptyText}>
+            {t('doctors.load_failed', "Couldn't load doctors. Check your connection.")}
+          </Text>
+          <TouchableOpacity onPress={() => refetch()} accessibilityRole="button">
+            <Text style={styles.retryText}>{t('common.retry', 'Try again')}</Text>
+          </TouchableOpacity>
         </View>
       ) : doctors.length === 0 ? (
         <View style={styles.centerContainer}>
@@ -92,6 +115,25 @@ export default function DoctorsListScreen(): React.JSX.Element {
             { paddingBottom: Math.max(insets.bottom, Spacing.md) },
           ]}
           showsVerticalScrollIndicator={false}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          refreshing={isRefetching && !isFetchingNextPage}
+          onRefresh={refetch}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator style={styles.footer} color={Colors.primary} />
+            ) : isFetchNextPageError ? (
+              <TouchableOpacity
+                style={styles.footer}
+                onPress={() => fetchNextPage()}
+                accessibilityRole="button"
+              >
+                <Text style={styles.retryText}>
+                  {t('doctors.load_more_failed', "Couldn't load more. Tap to try again.")}
+                </Text>
+              </TouchableOpacity>
+            ) : null
+          }
         />
       )}
     </View>
@@ -151,5 +193,16 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     color: Colors.textSecondary,
     lineHeight: FontSize.md * 1.5,
+    textAlign: 'center',
+  },
+  retryText: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.md,
+    color: Colors.primary,
+    textAlign: 'center',
+  },
+  footer: {
+    paddingVertical: Spacing.lg,
+    alignItems: 'center',
   },
 });

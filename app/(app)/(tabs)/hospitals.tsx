@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,11 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Colors, Spacing, FontFamily, FontSize, BorderRadius } from '../../../src/theme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { hospitalsService } from '../../../src/services/api/hospitalsService';
+import { nextPageParam } from '../../../src/services/api/pagination';
 import { Hospital } from '../../../src/types/medical.types';
 import { HospitalCard } from '../../../src/components/cards/HospitalCard';
 import { SymptomSearchBar } from '../../../src/components/forms/SymptomSearchBar';
@@ -25,10 +26,29 @@ export default function HospitalsScreen() {
   const [selectedHospital, setSelectedHospital] = useState<Hospital | null>(null);
   const [search, setSearch] = useState('');
 
-  const { data: hospitals = [], isLoading } = useQuery({
+  // 20 hospitals per page; the next page loads as the list nears the end (task H3).
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    isRefetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+  } = useInfiniteQuery({
     queryKey: ['hospitals', search],
-    queryFn: () => hospitalsService.getNearbyHospitals(search),
+    queryFn: ({ pageParam }) => hospitalsService.getHospitalsPage(search, pageParam),
+    initialPageParam: 1,
+    getNextPageParam: nextPageParam,
   });
+
+  const hospitals = useMemo(() => data?.pages.flatMap((p) => p.items) ?? [], [data]);
+
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
 
   const handleHospitalPress = (hospital: Hospital) => {
     router.push(`/(app)/hospitals/${hospital.id}`);
@@ -82,8 +102,33 @@ export default function HospitalsScreen() {
             { paddingBottom: insets.bottom + Spacing.xl },
           ]}
           ItemSeparatorComponent={() => <View style={{ height: Spacing.md }} />}
+          onEndReached={loadMore}
+          onEndReachedThreshold={0.5}
+          refreshing={isRefetching && !isFetchingNextPage}
+          onRefresh={refetch}
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator style={styles.footer} color={Colors.primary} />
+            ) : isFetchNextPageError ? (
+              <TouchableOpacity
+                style={styles.footer}
+                onPress={() => fetchNextPage()}
+                accessibilityRole="button"
+              >
+                <Text style={styles.retryText}>
+                  {t('hospitals.load_more_failed', "Couldn't load more. Tap to try again.")}
+                </Text>
+              </TouchableOpacity>
+            ) : null
+          }
           ListEmptyComponent={
-            search ? (
+            isError ? (
+              <TouchableOpacity onPress={() => refetch()} accessibilityRole="button">
+                <Text style={styles.emptyText}>
+                  {t('hospitals.load_failed', "Couldn't load hospitals. Tap to try again.")}
+                </Text>
+              </TouchableOpacity>
+            ) : search ? (
               <Text style={styles.emptyText}>
                 {t('hospitals.no_results', { query: search }) || `No hospitals match "${search}".`}
               </Text>
@@ -150,6 +195,16 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     textAlign: 'center',
     paddingTop: Spacing.xl,
+  },
+  retryText: {
+    fontFamily: FontFamily.semiBold,
+    fontSize: FontSize.md,
+    color: Colors.primary,
+    textAlign: 'center',
+  },
+  footer: {
+    paddingVertical: Spacing.lg,
+    alignItems: 'center',
   },
   centerContainer: {
     flex: 1,
